@@ -10,6 +10,12 @@ from xml.etree.ElementTree import ParseError
 
 
 
+def funornone(entity, fun, default="None"):
+  ''' Apply fun to entity if it is not NoneType. Otherwise, return default '''
+  if entity is None:
+    return default
+  return fun(entity)
+
 def whitelistmatch(wlist, sents):
   ''' given a list of words and a list of strings, return true if at least one word is in at least one string '''
   return any(any(w in s for s in sents) for w in wlist)
