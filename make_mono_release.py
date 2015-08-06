@@ -21,7 +21,7 @@ def main():
   parser.add_argument("--corpora", "-c", nargs='+', help="prefixes that have at minimum a manifest and original/ file")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
   parser.add_argument("--psmfile", "-p", nargs='?', type=argparse.FileType('r'), default=None, help="psm annotation file")
-  parser.add_argument("--annroot", "-a", default=None, help="root directory of annotation xml files")
+  parser.add_argument("--annfile", "-a", nargs='?', type=argparse.FileType('r'), default=None, help="entity annotation file")
 
   try:
     args = parser.parse_args()
@@ -33,11 +33,16 @@ def main():
   outfile = args.outfile
 #  outfile = writer(args.outfile)
 
-  psms = dd(lambda: dd(lambda: dd(list)))
-  # psms: document/start/type/data
-  # handles headline and author, which are percolated down to segments
-  # spans of length 0 are discarded (these seem to be multiply occurring authors/datetimes/ids
+  # for every document, for every position, a list of (pointers to) annotations
+  # then for every segment, retrieve the sublist and create the set of annotations relevant to the annotation
 
+  # needs to be two-pass so we create the proper list size
+  psmsizes = dd(int)
+  psmtemp = dd(list)
+
+  # data is kind (headline/post) id start length then if 'post', author timestamp
+
+  # spans of length 0 are discarded (these seem to be multiply occurring authors/datetimes/ids
   # TODO: what's with these bad entries?? There's a lot of them. sometimes they make my window hang but sometimes they look totally normal
 
   if args.psmfile is not None:
@@ -51,11 +56,41 @@ def main():
         if int(toks[3]) == 0:
           psmdiscardcount+=1
           continue
-        psms[toks[1]][toks[2]][toks[0]].append(toks[3:])
+        end = int(toks[2])+int(toks[3])
+        doc = toks[1]
+        psmsizes[doc] = max(end, psmsizes[doc])
+        psmtemp[doc].append(toks)
       except:
         print ln
         raise
     sys.stderr.write("Discarded %d psm entries\n" % psmdiscardcount)
+  # will fill on demand
+  psms = dd(lambda: dd(list))
+  # entities: document/start/kind/data
+
+  # data is kind (NE/FE/SSA) id start end menid span, then
+  # if NE, type
+  # if FE, class (mention/head), subtype (NAM/NOM/TTL/?/None), entid, type
+  # if SSA, pred/arg agent/patient/act/location/state, pred reference (check readme)
+  # anns = dd(lambda: dd(lambda: dd(list)))
+
+  # if args.annfile is not None:
+  #   anndiscardcount = 0
+  #   for ln, line in enumerate(reader(args.annfile)):
+  #     try:
+  #       toks = line.strip().split('\t')
+  #       if len(toks) < 6:
+  #         sys.stderr.write("Skipping line %d of annfile; bad data (%d toks)\n" % (ln, len(toks)))
+  #         continue;
+  #       if int(toks[3])-int(toks[2]) == 0:
+  #         anndiscardcount+=1
+  #         continue
+  #       anns[toks[1]][toks[2]][toks[0]].append(toks[3:])
+  #     except:
+  #       print ln
+  #       raise
+  #   sys.stderr.write("Discarded %d psm entries\n" % psmdiscardcount)
+
   # each segment is a legit xml block. the corpus/language/document are faked
   # TODO: corpus/document
   # TODO: make this more generalizable!
@@ -76,7 +111,6 @@ def main():
       morphline =   morphline.strip()
       man = manline.strip().split('\t')
       fullid = man[1]
-      startchar = man[3]
       fields = fullid.split('_') # genre, provenance, lang, id, date
       xroot = ET.Element('SEGMENT')
       subelements = []
@@ -91,22 +125,42 @@ def main():
       subelements.append(("LRLP_MORPH_SOURCE", morphline))
 
 
-      # TODO: FIXME! authorship can go beyond a single sentence!!!
-      if fullid in psms and startchar in psms[fullid]:
-        psmitem = psms[fullid].pop(startchar)
-        if 'headline' in psmitem:
-          subelements.append(("IS_HEADLINE","1"))
-        if 'post' in psmitem:
-          if len(psmitem['post']) > 1:
-            sys.stderr.write("Warning: more than one author seen for %s %s: %s\n" % (fullid, startchar, str(psmitem[startchar['post']])))
-          for post in psmitem['post']:
-            subelements.append(("AUTHOR", post[1]))
-            subelements.append(("POST_DATE_TIME", post[2]))
+      # on-demand fill of psms hash that assumes it will be used contiguously
+      if fullid in psmtemp:
+        print "loading "+fullid
+        psms.clear()
+        data = psmtemp.pop(fullid)
+        for tup in data:
+          start = int(tup[2])
+          end = start+int(tup[3])
+          for i in xrange(start, end):
+            psms[key][i].append(tup)
+
+      if fullid in psms:
+        # collect the annotations
+        psmcoll = set()
+        startchar = int(man[3])
+        endchar = int(man[4])
+        if endchar > len(psms[fullid]):
+          endchar = None
+        for slot in psms[fullid][startchar:endchar]:
+          psmcoll.update(map(tuple, slot))
+        for psmitem in psmcoll:
+          if psmitem[0]=='headline':
+            subelements.append(("IS_HEADLINE","1"))
+            continue
+          if psmitem[0]=='post':
+            subelements.append(("AUTHOR", psmitem[4]))
+            subelements.append(("POST_DATE_TIME", psmitem[5]))
+          else:
+            sys.stderr.write("Not sure what to do with item that starts "+psmitem[0]+"\n")
+            sys.exit(1)
       # TODO: more tokenizations, etc.
       for key, text in subelements:
         se = ET.SubElement(xroot, key)
         se.text = text
-      # TODO: annotations
+      # entity/semantic annotations in their own block
+      #if fullid in anns
 
 
         
