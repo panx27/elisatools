@@ -14,11 +14,9 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 import datetime
 
 
-# TODO:
 # scrape monolingual psms for posts and headlines
-# also process unzipped entries where they exist
 #(elsewhere) scrape annotation files for full/simple entities and semantic annotation
-#(elsewhere) separate this into multiple scripts
+
 
 def main():
   import codecs

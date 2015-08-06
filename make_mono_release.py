@@ -94,6 +94,7 @@ def main():
   # each segment is a legit xml block. the corpus/language/document are faked
   # TODO: corpus/document
   # TODO: make this more generalizable!
+  outfile.write("<CORPUS>\n")
   for corpus in args.corpora:
     manifest = reader(open(os.path.join(args.rootdir, "%s.manifest" % corpus)))
     origfile = reader(open(os.path.join(args.rootdir, "original", "%s.flat" % corpus)))
@@ -102,6 +103,7 @@ def main():
     cdectoklcfile = reader(open(os.path.join(args.rootdir, "cdec-tokenized", "%s.flat.lc" % corpus)))
     morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized", "%s.flat" % corpus)))
     morphfile = reader(open(os.path.join(args.rootdir, "morph", "%s.flat" % corpus)))
+    lastfullid=None
     for manline, origline, tokline, cdectokline, cdectoklcline, morphtokline, morphline in izip(manifest, origfile, tokfile, cdectokfile, cdectoklcfile, morphtokfile, morphfile):
       origline = origline.strip()
       tokline = tokline.strip()
@@ -111,10 +113,19 @@ def main():
       morphline =   morphline.strip()
       man = manline.strip().split('\t')
       fullid = man[1]
-      fields = fullid.split('_') # genre, provenance, lang, id, date
+      fullidsplit = fullid.split('_')
+      fullidfields = ['GENRE', 'PROVENANCE', 'LANGUAGE', 'INDEX_ID', 'DATE']
+      # faking the document-level
+      if lastfullid != fullid:
+        if lastfullid is not None:
+          outfile.write("</DOCUMENT>\n")
+        lastfullid = fullid
+        outfile.write("<DOCUMENT>\n")
+        for label, value in zip(fullidfields, fullidsplit):
+          outfile.write("  <%s>%s</%s>\n" % (label, value, label))
       xroot = ET.Element('SEGMENT')
       subelements = []
-      subelements.extend(zip(['GENRE', 'PROVENANCE', 'LANGUAGE', 'INDEX_ID', 'DATE'], man[1].split('_')))
+      subelements.extend(zip(fullidfields, fullidsplit))
       subelements.extend(zip(['SEGMENT_ID', 'START_CHAR', 'END_CHAR'], man[2:]))
       subelements.append(("FULL_ID", man[1]))
       subelements.append(("ORIG_RAW_SOURCE", origline))
@@ -212,6 +223,8 @@ def main():
         
       xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8', xml_declaration=False)
       outfile.write(xmlstr)
+    outfile.write("</DOCUMENT>\n")
+  outfile.write("</CORPUS>\n")
   # TODO /corpus/document
   # TODO: verify empty psm
   for key in psmtemp.keys():
