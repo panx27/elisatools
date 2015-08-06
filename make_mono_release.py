@@ -37,9 +37,9 @@ def main():
   # then for every segment, retrieve the sublist and create the set of annotations relevant to the annotation
 
   # needs to be two-pass so we create the proper list size
-  psmsizes = dd(int)
+  # TODO: no it doesn't
   psmtemp = dd(list)
-
+  
   # data is kind (headline/post) id start length then if 'post', author timestamp
 
   # spans of length 0 are discarded (these seem to be multiply occurring authors/datetimes/ids
@@ -56,9 +56,7 @@ def main():
         if int(toks[3]) == 0:
           psmdiscardcount+=1
           continue
-        end = int(toks[2])+int(toks[3])
         doc = toks[1]
-        psmsizes[doc] = max(end, psmsizes[doc])
         psmtemp[doc].append(toks)
       except:
         print ln
@@ -73,23 +71,25 @@ def main():
   # if FE, class (mention/head), subtype (NAM/NOM/TTL/?/None), entid, type
   # if SSA, pred/arg agent/patient/act/location/state, pred reference (check readme)
   # anns = dd(lambda: dd(lambda: dd(list)))
-
-  # if args.annfile is not None:
-  #   anndiscardcount = 0
-  #   for ln, line in enumerate(reader(args.annfile)):
-  #     try:
-  #       toks = line.strip().split('\t')
-  #       if len(toks) < 6:
-  #         sys.stderr.write("Skipping line %d of annfile; bad data (%d toks)\n" % (ln, len(toks)))
-  #         continue;
-  #       if int(toks[3])-int(toks[2]) == 0:
-  #         anndiscardcount+=1
-  #         continue
-  #       anns[toks[1]][toks[2]][toks[0]].append(toks[3:])
-  #     except:
-  #       print ln
-  #       raise
-  #   sys.stderr.write("Discarded %d psm entries\n" % psmdiscardcount)
+  anntemp = dd(list)
+  if args.annfile is not None:
+    anndiscardcount = 0
+    for ln, line in enumerate(reader(args.annfile)):
+      try:
+        toks = line.strip().split('\t')
+        if len(toks) < 6:
+          sys.stderr.write("Skipping line %d of annfile; bad data (%d toks)\n" % (ln, len(toks)))
+          continue;
+        if int(toks[3])-int(toks[2]) == 0:
+          anndiscardcount+=1
+          continue
+        anntemp[toks[1]].append(toks)
+      except:
+        print ln
+        raise
+    sys.stderr.write("Discarded %d ann entries\n" % anndiscardcount)
+  # will fill on demand
+  anns = dd(lambda: dd(list))
 
   # each segment is a legit xml block. the corpus/language/document are faked
   # TODO: corpus/document
@@ -116,6 +116,7 @@ def main():
       subelements = []
       subelements.extend(zip(['GENRE', 'PROVENANCE', 'LANGUAGE', 'INDEX_ID', 'DATE'], man[1].split('_')))
       subelements.extend(zip(['SEGMENT_ID', 'START_CHAR', 'END_CHAR'], man[2:]))
+      subelements.append(("FULL_ID", man[1]))
       subelements.append(("ORIG_RAW_SOURCE", origline))
       subelements.append(("MD5_HASH", hashlib.md5(origline.encode('utf-8')).hexdigest()))
       subelements.append(("LRLP_TOKENIZED_SOURCE", tokline))
@@ -125,16 +126,15 @@ def main():
       subelements.append(("LRLP_MORPH_SOURCE", morphline))
 
 
-      # on-demand fill of psms hash that assumes it will be used contiguously
+      # on-demand fill of psms and anns hashes that assumes it will be used contiguously
       if fullid in psmtemp:
-        print "loading "+fullid
         psms.clear()
         data = psmtemp.pop(fullid)
         for tup in data:
           start = int(tup[2])
           end = start+int(tup[3])
           for i in xrange(start, end):
-            psms[key][i].append(tup)
+            psms[fullid][i].append(tup)
 
       if fullid in psms:
         # collect the annotations
@@ -143,18 +143,64 @@ def main():
         endchar = int(man[4])
         if endchar > len(psms[fullid]):
           endchar = None
-        for slot in psms[fullid][startchar:endchar]:
+        for i in xrange(startchar, endchar):
+          slot = psms[fullid][i]
           psmcoll.update(map(tuple, slot))
         for psmitem in psmcoll:
           if psmitem[0]=='headline':
             subelements.append(("IS_HEADLINE","1"))
             continue
           if psmitem[0]=='post':
-            subelements.append(("AUTHOR", psmitem[4]))
-            subelements.append(("POST_DATE_TIME", psmitem[5]))
+            if len(psmitem) >= 5:
+              subelements.append(("AUTHOR", psmitem[4]))
+              if len(psmitem) >= 6:
+                subelements.append(("POST_DATE_TIME", psmitem[5]))
           else:
             sys.stderr.write("Not sure what to do with item that starts "+psmitem[0]+"\n")
-            sys.exit(1)
+            continue
+
+      if fullid in anntemp:
+        anns.clear()
+        data = anntemp.pop(fullid)
+        for tup in data:
+          start = int(tup[2])
+          end = int(tup[3])
+          for i in xrange(start, end):
+            anns[fullid][i].append(tup)
+
+      if fullid in anns:
+
+        # collect the annotations
+        anncoll = set()
+        startchar = int(man[3])
+        endchar = min(len(anns[fullid]), int(man[4]))
+        for i in xrange(startchar, endchar):
+          slot = anns[fullid][i]
+          anncoll.update(map(tuple, slot))
+        if len(anncoll) > 0:
+          ae = ET.SubElement(xroot, "ANNOTATIONS")
+        for annitem in anncoll:
+          se = ET.SubElement(ae, "ANNOTATION", {'task':annitem[0], 'annotation_id': annitem[4], 'start_char':annitem[2], 'end_char':annitem[3]})
+          se.text=annitem[5]
+          subsubs = []
+          if annitem[0]=='NE':
+            subsubs.append(("ENTITY_TYPE", annitem[6]))
+          elif annitem[0]=='FE':
+            subsubs.append(("ENTITY_TYPE", annitem[9]))
+            subsubs.append(("ANNOTATION_KIND", annitem[6]))
+            subsubs.append(("MENTION_TYPE", annitem[7]))
+            subsubs.append(("ENTITY_ID", annitem[8]))
+          elif annitem[1]=='SSA':
+            se.set('pred_or_arg', annitem[6])
+            subsubs.append(("ROLE", annitem[7]))
+            if annitem[6] == "argument":
+              subsubs.append(("PREDICATE", annitem[8]))
+          else:
+            sys.stderr.write("Not sure what to do with item that starts "+annitem[0]+"\n")
+            continue
+          for key, text in subsubs:
+            sse = ET.SubElement(se, key)
+            sse.text = text
       # TODO: more tokenizations, etc.
       for key, text in subelements:
         se = ET.SubElement(xroot, key)
@@ -168,5 +214,9 @@ def main():
       outfile.write(xmlstr)
   # TODO /corpus/document
   # TODO: verify empty psm
+  for key in psmtemp.keys():
+    print "Unvisited psm: "+key
+  for key in anntemp.keys():
+    print "Unvisited ann: "+key
 if __name__ == '__main__':
   main()
