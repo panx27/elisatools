@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# TODO: there are some logical flaws here involving what happens when trying to re-extract
+#       .1, .2, etc. should be part of the language prefix perhaps?
+#       language specified on input could be auto-detected
+
 yell() { echo "$0: $*" >&2; }
 die() { yell "$*"; exit 111; }
 try() { "$@" || die "cannot $*"; }

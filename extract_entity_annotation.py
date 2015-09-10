@@ -67,7 +67,7 @@ def main():
               continue
             continue
           xextent = xann.find("EXTENT")
-          tup = [anntask, docid, xextent.get("start_char"), xextent.get("end_char"), annid, xextent.text]
+          tup = [anntask, docid, xextent.get("start_char") or "None", xextent.get("end_char") or "None", annid or "None", xextent.text or "None"]
           if anntask == "NE": # simple ne annotation
             tup.append(xann.get("type"))
           else: # everything else has category/tag style

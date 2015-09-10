@@ -98,12 +98,12 @@ def main():
           tok_fh.write(' '.join(toktext)+"\n")
           morphtok_fh.write(' '.join(morphtoktext)+"\n")
           morph_fh.write(' '.join(morphtext)+"\n")
-  cdec_cmd = "%s -i %s -o %s -t %s" % (args.cdectokenizer, 
-                                       orig_fh.name,
-                                       os.path.join(cdectokoutdir, "%s.flat.lc" % inbase),
-                                       os.path.join(cdectokoutdir, "%s.flat" % inbase))
-  p = subprocess.Popen(shlex.split(cdec_cmd))
-  p.wait()
+    cdec_cmd = "%s -i %s -o %s -t %s" % (args.cdectokenizer, 
+                                         orig_fh.name,
+                                         os.path.join(cdectokoutdir, "%s.flat.lc" % inbase),
+                                         os.path.join(cdectokoutdir, "%s.flat" % inbase))
+    p = subprocess.Popen(shlex.split(cdec_cmd))
+    p.wait()
 
 if __name__ == '__main__':
   main()
