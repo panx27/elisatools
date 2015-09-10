@@ -108,7 +108,8 @@ Using [ $SCRIPT $COMMANDLINE ] from $PWD
 $NEWBASENAME comes from $LRLPNAME
 EOF
   #echo "about to run tar -C $EXPLOC -zxf $LRLPNAME "
-  ORIGBASENAME=`tar -ztf $LRLPNAME | head -1`
+  # WARNING: very brittle way to find the directory name
+  ORIGBASENAME=`tar -ztf $LRLPNAME | grep -v "^\." | grep "/" | head -1`
   tar -C $EXPLOC -zxf $LRLPNAME
   mv $EXPLOC/$ORIGBASENAME $EXPLOC/$NEWBASENAME
   echo "$EXPLOC/$NEWBASENAME"

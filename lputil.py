@@ -123,21 +123,21 @@ def pair_files(srcdir, trgdir, ext='txt'):
 
   # from trg news:
   # AFP_ENG_20020426.0319.uzb.rsd.txt vs AFP_ENG_20020426.0319.rsd.txt
-  pat_from_trg_news = re.compile(r"([^_]+)_..._([\d\.]+).*\."+ext)
+  pat_from_trg_news = re.compile(r"([^\._]+)_..._([\d\.]+).*\."+ext)
   repl_from_trg_news = r"%s_..._%s.*\."+ext
   pats.append((pat_from_trg_news, repl_from_trg_news ))
 
   # from trg elic
   # XXX_Elicitation, elicitation_sentences, ???
 
-  pat_from_trg_elic = re.compile(r"(.*licitation[^.]*).*\."+ext)
+  pat_from_trg_elic = re.compile(r"([^\.].*licitation[^.]*).*\."+ext)
   repl_from_trg_elic = r"%s.*\."+ext
   pats.append((pat_from_trg_elic, repl_from_trg_elic ))
 
 
   # from trg pbook
 
-  pat_from_trg_pbook = re.compile(r"(.*Phrasebook).*\."+ext)
+  pat_from_trg_pbook = re.compile(r"([^\.].*Phrasebook).*\."+ext)
   repl_from_trg_pbook = r"%s.*\."+ext
   pats.append((pat_from_trg_pbook, repl_from_trg_pbook ))
 

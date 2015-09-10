@@ -13,7 +13,7 @@ import datetime
 def main():
   import codecs
   parser = argparse.ArgumentParser(description="Extract lexicon file from xml")
-  parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input lexicon file")
+  parser.add_argument("--infile", "-i", nargs='+', type=argparse.FileType('r'), default=[sys.stdin,], help="input lexicon file")
   parser.add_argument("--outdir", "-o", help="output directory")
 
 
@@ -31,12 +31,13 @@ def main():
     counter += 1
 
   of = codecs.open(outfile, 'w', 'utf-8')
-  xobj = ET.parse(args.infile)
-  for entry in xobj.findall(".//ENTRY"):
-    of.write("%s\t%s\t%s\n" % (entry.find(".//WORD").text, entry.find(".//POS").text, entry.find(".//GLOSS").text))
+  for infile in args.infile:
+    xobj = ET.parse(infile)
+    for entry in xobj.findall(".//ENTRY"):
+      of.write("%s\t%s\t%s\n" % (entry.find(".//WORD").text, entry.find(".//POS").text, entry.find(".//GLOSS").text))
 
-  source_fh = open(os.path.join(args.outdir, "source"), 'a')
-  source_fh.write("Extracted lexicon from %s to %s on %s\nusing %s; command issued from %s\n" % (args.infile.name, outfile, datetime.datetime.now(), ' '.join(sys.argv), os.getcwd()))
+    source_fh = open(os.path.join(args.outdir, "source"), 'a')
+    source_fh.write("Extracted lexicon from %s to %s on %s\nusing %s; command issued from %s\n" % (infile.name, outfile, datetime.datetime.now(), ' '.join(sys.argv), os.getcwd()))
 
 
 if __name__ == '__main__':

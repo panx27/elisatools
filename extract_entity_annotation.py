@@ -15,7 +15,7 @@ import datetime
 from lputil import funornone
 
 # TODO:
-#(elsewhere) scrape annotation files for full/simple entities and semantic annotation
+# handle noun phrase chunking
 
 #http://stackoverflow.com/questions/2865278/in-python-how-to-find-all-the-files-under-a-directory-including-the-files-in-s
 def recursive_file_gen(mydir):
@@ -44,8 +44,12 @@ def main():
     sys.exit(0)
   print anndir
   for annfile in recursive_file_gen(anndir):
-    if annfile.endswith("laf.xml"):
-      xobj = ET.parse(annfile)
+    if annfile.endswith("laf.xml") and not os.path.basename(annfile).startswith("."):
+      try:  
+        xobj = ET.parse(annfile)
+      except:
+        sys.stderr.write("Problem parsing "+annfile+"\n")
+        continue
       for xdoc in xobj.findall("DOC"):
         docid = xdoc.get("id")
         # store all annotations by id. if they have an extent, spit them out.
@@ -59,8 +63,8 @@ def main():
           anntask = xann.get("task")
           if xann.find("EXTENT") is None:
             if anntask != "FE":
-              sys.stderr.write("Warning: extent-free non-full annotation: "+ET.tostring(xann)+"\n")
-              sys.exit(1)
+              sys.stderr.write("Warning: extent-free non-full annotation in "+annfile+": "+ET.tostring(xann)+"\n")
+              continue
             continue
           xextent = xann.find("EXTENT")
           tup = [anntask, docid, xextent.get("start_char"), xextent.get("end_char"), annid, xextent.text]
@@ -74,7 +78,7 @@ def main():
                 if xann.find("ENTITY") is not None:
                   eid = xann.find("ENTITY").get("entity_id")
                   tup.append(eid)
-                  tup.append(annset[eid].find("TAG").text)
+                  tup.append(annset[eid].find("TAG").text if annset[eid].find("TAG") is not None else "NONE")
                 elif xann.find("PHRASE") is not None:
                   tup.append(xann.find("PHRASE").get("phrase_id"))
                 else:
@@ -84,7 +88,7 @@ def main():
                 if xann.find("PREDICATE") is not None:
                   tup.append(xann.find("PREDICATE").get("predicate_id"))
               else:
-                sys.stderr.write("Don't know how to process "+anntask)
+                sys.stderr.write(annfile+": Don't know how to process "+anntask+"\n")
                 continue
             except:
               print annfile
