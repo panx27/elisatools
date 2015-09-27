@@ -99,12 +99,12 @@ EXPLOC=$WORKROOT/$LRL_LANG/expanded;
   cat >>$LRLPLOC/source <<EOF
 Linked $TARBALL to $LRLPNAME on $(date).
 Will extract to $EXPLOC;
-Using [ $SCRIPT $COMMANDLINE ] from $PWD 
+Using [ $SCRIPT $COMMANDLINE ] from $PWD
 EOF
   mkdir -p $EXPLOC;
   cat >>$EXPLOC/source <<EOF
 Extracted $LRLPNAME here on $(date).
-Using [ $SCRIPT $COMMANDLINE ] from $PWD 
+Using [ $SCRIPT $COMMANDLINE ] from $PWD
 $NEWBASENAME comes from $LRLPNAME
 EOF
   #echo "about to run tar -C $EXPLOC -zxf $LRLPNAME "
