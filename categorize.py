@@ -49,7 +49,7 @@ def main():
       fhs[catfile]=writer(open(catfile, 'w'))
     cats[doc]=fhs[catfile]
 
-  for lid, (doc, data) in enumerate(izip(idfile, infile)):
+  for doc, data in izip(idfile, infile):
     cats[doc.strip()].write(data)
 
 if __name__ == '__main__':
