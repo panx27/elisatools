@@ -8,6 +8,16 @@ import os.path
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError
 
+# http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+import os, errno
+def mkdir_p(path):
+  try:
+    os.makedirs(path)
+  except OSError as exc: # Python >2.5
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+      pass
+    else: raise
+    
 def funornone(entity, fun, default="None"):
   ''' Apply fun to entity if it is not NoneType. Otherwise, return default '''
   if entity is None:

@@ -21,20 +21,20 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
   ''' Find files and print them out '''
   src_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, src)), 'w')
   trg_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, trg)), 'w')
-  src_orig_fh=open(os.path.join(origoutdir, "%s.%s.flat" % (prefix,src)), 'w')
-  trg_orig_fh=open(os.path.join(origoutdir, "%s.%s.flat" % (prefix,trg)), 'w')
-  src_tok_fh=open(os.path.join(tokoutdir, "%s.tok.%s.flat" % (prefix,src)), 'w')
-  trg_tok_fh=open(os.path.join(tokoutdir, "%s.tok.%s.flat" % (prefix,trg)), 'w')
-  src_morphtok_fh=open(os.path.join(morphtokoutdir, "%s.morphtok.%s.flat" % \
-                                    (prefix,src)),'w')
-  trg_morphtok_fh=open(os.path.join(morphtokoutdir, "%s.morphtok.%s.flat" % \
-                                    (prefix,trg)),'w')
-  src_morph_fh=open(os.path.join(morphoutdir, "%s.morph.%s.flat" % \
-                                 (prefix,src)),'w')
-  trg_morph_fh=open(os.path.join(morphoutdir, "%s.morph.%s.flat" % \
-                                 (prefix,trg)),'w')
-  src_pos_fh=open(os.path.join(posoutdir, "%s.pos.%s.flat" % (prefix,src)),'w')
-  trg_pos_fh=open(os.path.join(posoutdir, "%s.pos.%s.flat" % (prefix,trg)),'w')
+  src_orig_fh=open(os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % (prefix,origoutdir,src)), 'w')
+  trg_orig_fh=open(os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % (prefix,origoutdir,trg)), 'w')
+  src_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % (prefix,tokoutdir,src)), 'w')
+  trg_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % (prefix,tokoutdir,trg)), 'w')
+  src_morphtok_fh=open(os.path.join(outdir, morphtokoutdir, "%s.%s.%s.flat" % \
+                                    (prefix,morphtokoutdir,src)),'w')
+  trg_morphtok_fh=open(os.path.join(outdir, morphtokoutdir, "%s.%s.%s.flat" % \
+                                    (prefix,morphtokoutdir,trg)),'w')
+  src_morph_fh=open(os.path.join(outdir, morphoutdir, "%s.%s.%s.flat" % \
+                                 (prefix,morphoutdir,src)),'w')
+  trg_morph_fh=open(os.path.join(outdir, morphoutdir, "%s.%s.%s.flat" % \
+                                 (prefix,morphoutdir,trg)),'w')
+  src_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % (prefix,posoutdir,src)),'w')
+  trg_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % (prefix,posoutdir,trg)),'w')
 
   xml = True
   if prefix == 'fromsource.tweet':
@@ -186,20 +186,19 @@ def main():
   except IOError, msg:
     parser.error(str(msg))
 
-  origoutdir=os.path.join(args.outdir, args.origsubdir)
-  tokoutdir=os.path.join(args.outdir, args.toksubdir)
-  morphtokoutdir=os.path.join(args.outdir, args.morphtoksubdir)
-  morphoutdir=os.path.join(args.outdir, args.morphsubdir)
-  posoutdir=os.path.join(args.outdir, args.possubdir)
-  dirs = [args.outdir,
+  origoutdir=args.origsubdir
+  tokoutdir=args.toksubdir
+  morphtokoutdir=args.morphtoksubdir
+  morphoutdir=args.morphsubdir
+  posoutdir=args.possubdir
+  dirs = [origoutdir,
           tokoutdir,
-          origoutdir,
           morphtokoutdir,
           morphoutdir,
           posoutdir]
   for dir in dirs:
-    if not os.path.exists(dir):
-      os.makedirs(dir)
+    fulldir = os.path.join(args.outdir, dir)
+    lputil.mkdir_p(fulldir)
 
   source_fh = open(os.path.join(args.outdir, "source"), 'a')
   source_fh.write("Extracted parallel data from %s to %s on %s\nusing %s;" \
@@ -239,7 +238,7 @@ def main():
   # Found data
   printout("found.generic",
            args.rootdir, args.src, args.trg, args.outdir, origoutdir,
-           tokoutdir, morphoutdir, morphoutdir, posoutdir,
+           tokoutdir, morphtokoutdir, morphoutdir, posoutdir,
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
   # Tweet data
   process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)

@@ -6,17 +6,8 @@ from itertools import izip, cycle
 from collections import defaultdict as dd
 import re
 import os.path
+from lputil import mkdir_p
 scriptdir = os.path.dirname(os.path.abspath(__file__))
-
-# http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
-import os, errno
-def mkdir_p(path):
-  try:
-    os.makedirs(path)
-  except OSError as exc: # Python >2.5
-    if exc.errno == errno.EEXIST and os.path.isdir(path):
-      pass
-    else: raise
 
 def main():
   parser = argparse.ArgumentParser(description="Given category per doc, idfile, data file, put data in category-specific dir",
