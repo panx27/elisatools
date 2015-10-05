@@ -2,6 +2,7 @@
 import argparse
 import sys
 import codecs
+from itertools import izip, cycle
 from collections import defaultdict as dd
 import re
 import os.path
@@ -16,7 +17,8 @@ def getoverlap(terms, words):
 def main():
   parser = argparse.ArgumentParser(description="Rank documents by bag-of-words type overlap with triggers",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file, presumed to be tab-sep docid, segment")
+  parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input data file used for making ranking decisions (original english)")
+  parser.add_argument("--idfile", "-d", nargs='?', type=argparse.FileType('r'), help="id file (docid per line)")
   parser.add_argument("--termfile", "-t", nargs='?', type=argparse.FileType('r'), help="term file, presumed to be one term per line")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
 
@@ -28,6 +30,7 @@ def main():
   reader = codecs.getreader('utf8')
   writer = codecs.getwriter('utf8')
   infile = reader(args.infile)
+  idfile = reader(args.idfile)
   termfile = reader(args.termfile)
   outfile = writer(args.outfile)
 
@@ -35,8 +38,9 @@ def main():
   docs = dd(set)
   for line in termfile:
     terms.add(line.strip().lower())
-  for line in infile:
-    doc, seg = line.strip().split('\t')
+  for doc, seg in izip(idfile, infile):
+    doc = doc.strip()
+    seg = seg.strip()
     docs[doc].update([x.lower() for x in seg.split()])
   scores = []
   for doc, words in docs.iteritems():
