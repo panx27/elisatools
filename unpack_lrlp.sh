@@ -112,6 +112,8 @@ EOF
   ORIGBASENAME=`tar -ztf $LRLPNAME | grep -v "^\." | grep "/" | head -1`
   tar -C $EXPLOC -zxf $LRLPNAME
   mv $EXPLOC/$ORIGBASENAME $EXPLOC/$NEWBASENAME
+  # get rid of dot files; nothing but trouble
+  find $EXPLOC/$NEWBASENAME -name "\.*" | xargs rm
   echo "$EXPLOC/$NEWBASENAME"
 
 

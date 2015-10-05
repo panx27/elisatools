@@ -19,8 +19,9 @@ def whitelistmatch(wlist, sents):
   at least one word is in at least one string '''
   return any(any(w in s for s in sents) for w in wlist)
 
+# note: 'segment' is ignored
 def get_aligned_sentences(srcfile, trgfile, alignfile,
-                          tokenize=False, xml=False):
+                          tokenize=False, xml=False, segment=False):
   if xml:
     return get_aligned_sentences_xml(srcfile, trgfile,
                                      alignfile, tokenize=tokenize)
