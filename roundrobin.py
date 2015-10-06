@@ -14,10 +14,10 @@ def main():
   parser = argparse.ArgumentParser(description="Given word counts and preferred order and distributions, assign documents to categories",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--wcfile", "-w", nargs='?', type=argparse.FileType('r'), help="word count file (docid count)")
-  parser.add_argument("--filelist", "-f", nargs='?', type=argparse.FileType('r'), help="documents in order of distribution")
+  parser.add_argument("--filelist", "-f", nargs='?', type=argparse.FileType('r'), help="documents in order of distribution, possibly with other information")
   parser.add_argument("--sizes", "-s", nargs='+', type=int, help="list of sizes desired in each category")
   parser.add_argument("--categories", "-c", nargs='+', help="list of categories. Must match sizes")
-  parser.add_argument("--remainder", "-r", help="remainder category. Should be a new category")
+  parser.add_argument("--remainder", "-r", default="train", help="remainder category. Should be a new category")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="docid category")
 
 
@@ -40,7 +40,7 @@ def main():
   minsize = min(counts.values())
   files = []
   for line in filelist:
-    files.append(line.strip())
+    files.append(line.strip().split()[0])
   if len(args.sizes) != len(args.categories):
     raise Exception("Sizes and categories must be same dimension")
   data = {}
