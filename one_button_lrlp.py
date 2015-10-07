@@ -6,6 +6,7 @@ from itertools import izip
 from collections import defaultdict as dd
 import re
 import os.path
+import glob
 from subprocess import check_output, check_call, CalledProcessError
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -62,7 +63,7 @@ def make_action(steps):
 def main():
 
   steps = []
-  
+
   # put additional steps in here. Arguments, stdin/stdout, etc. get set below
   steps.append(Step('unpack_lrlp.sh', call=check_output, help="untars lrlp into position for further processing"))
   steps.append(Step('get_tweet_by_id.rb', help="download tweets. must have twitter gem installed and full internet"))
@@ -72,11 +73,12 @@ def main():
   steps.append(Step('extract_entity_annotation.py', help="get entity and other annotations into entity.ann", abortOnFail=False))
   steps.append(Step('extract_parallel.py', help="get flat form parallel data"))
   steps.append(Step('extract_mono.py', help="get flat form mono data"))
+  steps.append(Step('make_mono_release.py', help="package mono flat data"))
+  steps.append(Step('make_parallel_release.py', help="package parallel flat data"))
 
   stepsbyname = {}
   for step in steps:
     stepsbyname[step.prog] = step
-
 
   parser = argparse.ArgumentParser(description="Process a LRLP into flat format",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -125,16 +127,24 @@ def main():
 
     stepsbyname["extract_lexicon.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'lexicon', '*.xml'), os.path.join(rootdir, language, 'lexicon'))
     stepsbyname["extract_lexicon.py"].stderr=os.path.join(rootdir, language, 'extract_lexicon.err')
+    psmpath = os.path.join(rootdir, language, 'psm.ann')
+    stepsbyname["extract_psm_annotation.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'monolingual_text', 'zipped', '*.psm.zip'), psmpath)
+    entitypath = os.path.join(rootdir, language, 'entity.ann')
+    stepsbyname["extract_entity_annotation.py"].argstring="-r %s -o %s -et %s" % (expdir, entitypath, os.path.join(rootdir, language, 'tweet'))
 
-    stepsbyname["extract_psm_annotation.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'monolingual_text', 'zipped', '*.psm.zip'), os.path.join(rootdir, language, 'psm.ann'))
-
-    stepsbyname["extract_entity_annotation.py"].argstring="-r %s -o %s -et %s" % (expdir, os.path.join(rootdir, language, 'entity.ann'),  os.path.join(rootdir, language, 'tweet'))
-
-    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % (expdir, os.path.join(rootdir, language, 'parallel', 'extracted'), language, os.path.join(rootdir, language, 'tweet'))
+    paralleldir = os.path.join(rootdir, language, 'parallel', 'extracted')
+    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % (expdir, parallelpath, language, os.path.join(rootdir, language, 'tweet'))
     stepsbyname["extract_parallel.py"].stderr=os.path.join(rootdir, language, 'extract_parallel.err')
 
-    stepsbyname["extract_mono.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data','monolingual_text','zipped','*.ltf.zip'), os.path.join(rootdir, language, 'mono','extracted'))
+    monodir = os.path.join(rootdir, language, 'mono','extracted')
+    stepsbyname["extract_mono.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data','monolingual_text','zipped','*.ltf.zip'), monodir)
     stepsbyname["extract_mono.py"].stderr=os.path.join(rootdir, language, 'extract_mono.err')
+
+    stepsbyname["make_mono_release.py"].argstring="-r %s -o %s -l %s -c %s -a %s -p %s" % (monodir, os.path.join(rootdir, language, 'elisa.%s.y1r1.v1.xml' % language), language, ' '.join([re.sub('.manifest', '', f) for f in os.listdir(monodir) if re.match('(.+)\.manifest', f)]), entitypath, psmpath)
+    stepsbyname["make_mono_release.py"].stderr=os.path.join(rootdir, language, 'make_mono_release.err')
+
+    stepsbyname["make_parallel_release.py"].argstring="-r %s -o %s -l %s -c %s -a %s -p %s -e %s" % (paralleldir, os.path.join(rootdir, language, 'elisa.%s-eng.y1r1.v1.xml' % language), language, ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir(paralleldir) if re.match('(.+)\.eng.manifest', f)]), entitypath, psmpath, 'True')
+    stepsbyname["make_parallel_release.py"].stderr=os.path.join(rootdir, language, 'make_parallel_release.err')
 
     for step in steps[start:stop]:
       step.run()
