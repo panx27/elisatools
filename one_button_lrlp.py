@@ -133,7 +133,7 @@ def main():
     stepsbyname["extract_entity_annotation.py"].argstring="-r %s -o %s -et %s" % (expdir, entitypath, os.path.join(rootdir, language, 'tweet'))
 
     paralleldir = os.path.join(rootdir, language, 'parallel', 'extracted')
-    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % (expdir, parallelpath, language, os.path.join(rootdir, language, 'tweet'))
+    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % (expdir, paralleldir, language, os.path.join(rootdir, language, 'tweet'))
     stepsbyname["extract_parallel.py"].stderr=os.path.join(rootdir, language, 'extract_parallel.err')
 
     monodir = os.path.join(rootdir, language, 'mono','extracted')
