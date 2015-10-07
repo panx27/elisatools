@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+#PBS -l walltime=12:00:00
+#PBS -T allcores
+#PBS -N cdectok
+#PBS -q isi
 
 # wrap cdec tokenizer/safe LC
 
