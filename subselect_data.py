@@ -28,8 +28,8 @@ def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes
       if os.path.exists(os.path.join(indir, filetype)):
         for flang in [srclang, 'eng']:
           flatfile = os.path.join(indir, filetype, "%s.%s.%s.flat" % (prefix, filetype, flang))
-          cmd_output=check_output("%s/categorize.py -i %s -d %s -c %s -p %s" % 
-                                  (scriptdir, flatfile, idfile, catfile, outdir), stderr=STDOUT, shell=True)
+          cmd_output=check_output("%s/categorize.py -i %s -d %s -c %s -p %s -P %s" % 
+                                  (scriptdir, flatfile, idfile, catfile, outdir, filetype), stderr=STDOUT, shell=True)
   except CalledProcessError as exc:
     print "Status : FAIL", exc.returncode, exc.output
     sys.exit(1)

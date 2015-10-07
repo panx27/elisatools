@@ -16,6 +16,7 @@ def main():
   parser.add_argument("--idfile", "-d", nargs='?', type=argparse.FileType('r'), help="id file (docid per line)")
   parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
   parser.add_argument("--prefix", "-p", default=".", help="directory prefix for categories")
+  parser.add_argument("--postfix", "-P", default=".", help="directory postfix after categories")
 
   try:
     args = parser.parse_args()
@@ -33,7 +34,7 @@ def main():
   fhs = {}
   for line in catfile:
     doc, cat = line.strip().split('\t')
-    prefix = os.path.join(args.prefix, cat)
+    prefix = os.path.join(args.prefix, cat, args.postfix)
     catfile = os.path.join(prefix, basefile)
     if catfile not in fhs:      
       mkdir_p(prefix)
