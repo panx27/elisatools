@@ -240,12 +240,12 @@ def main():
            args.rootdir, args.src, args.trg, args.outdir, origoutdir,
            tokoutdir, morphtokoutdir, morphoutdir, posoutdir,
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
-  # Tweet data
-  process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
-  printout("fromsource.tweet",
-           os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
-           args.src, args.trg, args.outdir, origoutdir,
-           tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
+  # # Tweet data
+  # process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
+  # printout("fromsource.tweet",
+  #          os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
+  #          args.src, args.trg, args.outdir, origoutdir,
+  #          tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
 
 if __name__ == '__main__':
   main()
