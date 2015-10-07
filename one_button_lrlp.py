@@ -154,6 +154,7 @@ def main():
 
   # Patchups for the rest
   if stop > 0:
+<<<<<<< HEAD
     # TWEET
     tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing')
     stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
@@ -208,6 +209,37 @@ def main():
     stepsbyname["extract_mono.py"].argstring = "-i %s -o %s" % \
       (monoindir, monooutdir)
     stepsbyname["extract_mono.py"].stderr = monoerr
+=======
+    stepsbyname["get_tweet_by_id.rb"].progpath=os.path.join(expdir, 'tools', 'twitter-processing')
+    stepsbyname["get_tweet_by_id.rb"].argstring=os.path.join(rootdir, language, 'tweet')
+    stepsbyname["get_tweet_by_id.rb"].stdin= os.path.join(expdir, 'docs', 'twitter_info.tab')
+    stepsbyname["get_tweet_by_id.rb"].stderr=os.path.join(rootdir, language, 'extract_tweet.err')
+
+    stepsbyname["ltf2rsd.perl"].argstring=os.path.join(expdir, 'data', 'translation', 'from_'+language, 'eng')
+    stepsbyname["ltf2rsd.perl"].progpath=os.path.join(expdir, 'tools', 'ltf2rsd')
+    stepsbyname["ltf2rsd.perl"].stderr=os.path.join(rootdir, language, 'ltf2rsd.err')
+
+    stepsbyname["extract_lexicon.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'lexicon', '*.xml'), os.path.join(rootdir, language, 'lexicon'))
+    stepsbyname["extract_lexicon.py"].stderr=os.path.join(rootdir, language, 'extract_lexicon.err')
+    psmpath = os.path.join(rootdir, language, 'psm.ann')
+    stepsbyname["extract_psm_annotation.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'monolingual_text', 'zipped', '*.psm.zip'), psmpath)
+    entitypath = os.path.join(rootdir, language, 'entity.ann')
+    stepsbyname["extract_entity_annotation.py"].argstring="-r %s -o %s -et %s" % (expdir, entitypath, os.path.join(rootdir, language, 'tweet'))
+
+    paralleldir = os.path.join(rootdir, language, 'parallel', 'extracted')
+    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % (expdir, paralleldir, language, os.path.join(rootdir, language, 'tweet'))
+    stepsbyname["extract_parallel.py"].stderr=os.path.join(rootdir, language, 'extract_parallel.err')
+
+    monodir = os.path.join(rootdir, language, 'mono','extracted')
+    stepsbyname["extract_mono.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data','monolingual_text','zipped','*.ltf.zip'), monodir)
+    stepsbyname["extract_mono.py"].stderr=os.path.join(rootdir, language, 'extract_mono.err')
+
+    stepsbyname["make_mono_release.py"].argstring="-r %s -o %s -l %s -c %s -a %s -p %s" % (monodir, os.path.join(rootdir, language, 'elisa.%s.y1r1.v1.xml' % language), language, ' '.join([re.sub('.manifest', '', f) for f in os.listdir(monodir) if re.match('(.+)\.manifest', f)]), entitypath, psmpath)
+    stepsbyname["make_mono_release.py"].stderr=os.path.join(rootdir, language, 'make_mono_release.err')
+
+    stepsbyname["make_parallel_release.py"].argstring="-r %s -o %s -l %s -c %s -a %s -p %s -e %s" % (paralleldir, os.path.join(rootdir, language, 'elisa.%s-eng.y1r1.v1.xml' % language), language, ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir(paralleldir) if re.match('(.+)\.eng.manifest', f)]), entitypath, psmpath, 'True')
+    stepsbyname["make_parallel_release.py"].stderr=os.path.join(rootdir, language, 'make_parallel_release.err')
+>>>>>>> origin/master
 
     for step in steps[start:stop]:
       step.run()
