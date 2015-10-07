@@ -4,14 +4,11 @@ import sys
 import codecs
 from collections import defaultdict as dd
 import lxml.etree as ET
-# import xml.etree.ElementTree as ET
 import gzip
 import re
 import os.path
 import hashlib
 from itertools import izip
-# from itertools import izip_longest
-#from xml.dom import minidom
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 # TODO: option to build gzip file
@@ -124,25 +121,33 @@ def main():
     #                                        "%s.flat" % corpus)))
     # cdectoklcfile = reader(open(os.path.join(args.rootdir, "cdec-tokenized",
     #                                          "%s.flat.lc" % corpus)))
+
+    # ==========================================================================
+    # Do not have cdec-tokenized tool, cannot test
     cdectokfile = reader(open(os.path.join(args.rootdir,"morph-tokenized",
                                            "%s.flat" % corpus)))
     cdectoklcfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
                                              "%s.flat" % corpus)))
+    # ==========================================================================
+
     morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
                                             "%s.flat" % corpus)))
     morphfile = reader(open(os.path.join(args.rootdir, "morph",
                                          "%s.flat" % corpus)))
+    posfile = reader(open(os.path.join(args.rootdir, "pos",
+                                         "%s.flat" % corpus)))
     lastfullid = None
 
     for manline, origline, tokline, cdectokline, cdectoklcline, morphtokline, \
-    morphline in izip(manifest, origfile, tokfile, cdectokfile,
-                      cdectoklcfile, morphtokfile, morphfile):
+    morphline, posline in izip(manifest, origfile, tokfile, cdectokfile,
+                              cdectoklcfile, morphtokfile, morphfile, posfile):
       origline = origline.strip()
       tokline = tokline.strip()
       cdectokline = cdectokline.strip()
       cdectoklcline = cdectoklcline.strip()
       morphtokline = morphtokline.strip()
       morphline = morphline.strip()
+      morphline = posline.strip()
       man = manline.strip().split('\t')
       fullid = man[1]
       fullidsplit = fullid.split('_')
@@ -176,6 +181,7 @@ def main():
       subelements.append(("CDEC_TOKENIZED_LC_SOURCE", cdectoklcline))
       subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", morphtokline))
       subelements.append(("LRLP_MORPH_SOURCE", morphline))
+      subelements.append(("LRLP_POSTAG_SOURCE", posline))
 
       # On-demand fill of psms and anns hashes that assumesit will be
       # used contiguously
@@ -263,7 +269,7 @@ def main():
           elif annitem[0]=='NPC':
             pass
           else:
-            sys.stderr.write("1Not sure what to do with item that starts " \
+            sys.stderr.write("Not sure what to do with item that starts " \
                              +annitem[0]+"\n")
             continue
           for key, text in subsubs:
