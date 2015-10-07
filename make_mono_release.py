@@ -108,7 +108,7 @@ def main():
   # TODO: corpus/document
   # TODO: make this more generalizable!
   outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS "elisa.lrlp.v1.0.dtd">\n')
+  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS SYSTEM "elisa.lrlp.v1.0.dtd">\n')
   outfile.write('<ELISA_LRLP_CORPUS language="%s">\n' % args.lang)
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')

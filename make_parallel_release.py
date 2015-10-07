@@ -108,7 +108,8 @@ def main():
   # TODO: corpus/document
   # TODO: make this more generalizable!
   outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS "elisa.lrlp-eng.v1.0.dtd">\n')
+  outfile.write('<!DOCTYPE ELISA_BILINGUAL_LRLP_CORPUS SYSTEM ' \
+                '"elisa.lrlp-eng.v1.0.dtd">\n')
   outfile.write('<ELISA_BILINGUAL_LRLP_CORPUS source_language="%s" ' \
                 'target_language="eng">\n' % args.lang)
   count = 0
@@ -119,31 +120,31 @@ def main():
     trg_manifest = reader(open(os.path.join(args.rootdir, "%s.eng.manifest" % \
                                             (corpus))))
     src_origfile = reader(open(os.path.join(args.rootdir, "original",
-                                            "%s.original.%s.flat" %(corpus, args.lang))))
+                                            "%s.original.%s.flat" % \
+                                            (corpus, args.lang))))
     trg_origfile = reader(open(os.path.join(args.rootdir, "original",
                                             "%s.original.eng.flat" % (corpus))))
     src_tokfile = reader(open(os.path.join(args.rootdir, "tokenized",
-                                           "%s.tokenized.%s.flat" % (corpus, args.lang))))
+                                           "%s.tokenized.%s.flat" % \
+                                           (corpus, args.lang))))
     trg_tokfile = reader(open(os.path.join(args.rootdir, "tokenized",
                                            "%s.tokenized.eng.flat" % (corpus))))
     ### TODO: Add cede, isi tokenization
-    # cdectokfile = reader(open(os.path.join(args.rootdir,"cdec-tokenized",
-    #                                        "%s.cdec-tokenized.%s.flat" % (corpus, args.lang))))
-    # cdectoklcfile = reader(open(os.path.join(args.rootdir, "cdec-tokenized",
-    #                                         "%s.cdec-tokenized.%s.flat.lc" % (corpus, args.lang))))
 
     src_morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
                                                 "%s.morph-tokenized.%s.flat" % \
                                                 (corpus,args.lang))))
     trg_morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
-                                                "%s.morph-tokenized.eng.flat" %(corpus))))
+                                               "%s.morph-tokenized.eng.flat" % \
+                                                (corpus))))
     src_morphfile = reader(open(os.path.join(args.rootdir, "morph",
                                              "%s.morph.%s.flat" % \
                                              (corpus, args.lang))))
     trg_morphfile = reader(open(os.path.join(args.rootdir, "morph",
                                              "%s.morph.eng.flat" % (corpus))))
     src_posfile = reader(open(os.path.join(args.rootdir, "pos",
-                                           "%s.pos.%s.flat" % (corpus, args.lang))))
+                                           "%s.pos.%s.flat" % \
+                                           (corpus, args.lang))))
     trg_posfile = reader(open(os.path.join(args.rootdir, "pos",
                                            "%s.pos.eng.flat" % (corpus))))
     src_lastfullid = None
