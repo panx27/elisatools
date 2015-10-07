@@ -172,7 +172,7 @@ def pair_files(srcdir, trgdir, ext='txt'):
       matches.append((os.path.join(srcdir, srcfile),
                       os.path.join(trgdir, filematch)))
     else:
-      print "No match for "+srcdir+"/"+srcfile
+      sys.stderr.write("No match for "+srcdir+"/"+srcfile+"\n")
       # unsrcs.append(srcfile)
       unsrcs.append(srcdir+"/"+srcfile)
   return (matches, unsrcs, ['%s/%s' % (trgdir, i) for i in trgfiles])

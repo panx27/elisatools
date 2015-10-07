@@ -25,9 +25,11 @@ def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes
                             (scriptdir, countfile, rankfile, sizes, categories, remainder, catfile), stderr=STDOUT, shell=True)
     # TODO: also do manifest here!!
     for filetype in filetypes:
-      for flang in [srclang, 'eng']:
-        cmd_output=check_output("%s/categorize.py -i %s/%s/%s.%s.%s.flat -d %s -c %s -p %s" % 
-                                (scriptdir, indir, filetype, prefix, filetype, flang, idfile, catfile, outdir), stderr=STDOUT, shell=True)
+      if os.path.exists(os.path.join(indir, filetype)):
+        for flang in [srclang, 'eng']:
+          flatfile = os.path.join(indir, filetype, "%s.%s.%s.flat" % (prefix, filetype, flang))
+          cmd_output=check_output("%s/categorize.py -i %s -d %s -c %s -p %s" % 
+                                  (scriptdir, flatfile, idfile, catfile, outdir), stderr=STDOUT, shell=True)
   except CalledProcessError as exc:
     print "Status : FAIL", exc.returncode, exc.output
     sys.exit(1)
@@ -59,11 +61,11 @@ def main():
   termfile = args.termfile
   # TODO: find these?
   # doc = keep full docs together  (can detect this by counting number of unique docs)
-  docprefixes = ["found.generic", "fromsource.generic", "fromsource.tweet"]
+  docprefixes = ["found.generic", "fromsource.generic", "fromsource.tweet", "fromtarget.news"]
   nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook"]
 
   # TODO: find these
-  filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized"]
+  filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc"]
 
   extractpath = os.path.join(indir, 'extracted')
   origpath = os.path.join(extractpath, 'original')
@@ -89,7 +91,7 @@ def main():
   for prefix in docprefixes+nodocprefixes:
     mult = fullsizes[prefix]/sizesum
     adjsizes[prefix] = map(lambda x: max(args.minimum, int(mult*x)), origsizes)
-
+    print prefix,adjsizes[prefix]
   # doc-based processing
   catlist = ' '.join(args.categories)
   for prefix in docprefixes:
@@ -102,5 +104,18 @@ def main():
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
     sizelist = ' '.join(map(str, adjsizes[prefix])) 
     runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
+  # nodoc-based processing
+
+  for prefix in nodocprefixes:
+    idfile = os.path.join(outpath, "%s.fakeids" % prefix)
+    try:
+      mansize = int(check_output("wc -l %s" % os.path.join(extractpath, "%s.eng.manifest" % prefix), shell=True).split(' ')[0])
+      check_output("seq %d > %s" % (mansize, idfile), stderr=STDOUT, shell=True)
+    except CalledProcessError as exc:
+      print "Status : FAIL", exc.returncode, exc.output
+    engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
+    sizelist = ' '.join(map(str, adjsizes[prefix])) 
+    runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
+
 if __name__ == '__main__':
   main()

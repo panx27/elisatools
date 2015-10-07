@@ -109,7 +109,7 @@ $NEWBASENAME comes from $LRLPNAME
 EOF
   #echo "about to run tar -C $EXPLOC -zxf $LRLPNAME "
   # WARNING: very brittle way to find the directory name
-  ORIGBASENAME=`tar -ztf $LRLPNAME | grep -v "^\." | grep "/" | head -1`
+  ORIGBASENAME=`(tar -ztf $LRLPNAME | grep -v "^\." | grep "/" | head -1) 2>/dev/null`
   tar -C $EXPLOC -zxf $LRLPNAME
   mv $EXPLOC/$ORIGBASENAME $EXPLOC/$NEWBASENAME
   # get rid of dot files; nothing but trouble

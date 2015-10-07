@@ -24,16 +24,16 @@ class Step:
     kwargs = {}
     kwargs["shell"]=True
     if self.stdin is not None:
-      kwargs["stdin"]=self.stdin
+      kwargs["stdin"]=open(self.stdin)
     if self.stdout is not None:
-      kwargs["stdout"]=self.stdout
+      kwargs["stdout"]=open(self.stdout, 'w')
     if self.stderr is not None:
-      kwargs["stderr"]=self.stderr
+      kwargs["stderr"]=open(self.stderr, 'w')
     prog = os.path.join(self.progpath, self.prog)
     # TODO: could check that prog exists and is executable
     # TODO: fail or succeed based on return code and specified behavior
     try:
-      localstderr =  self.stderr if self.stderr is not None else sys.stderr
+      localstderr =  kwargs["stderr"] if self.stderr is not None else sys.stderr
       localstderr.write("Calling %s %s\n" % (prog, self.argstring))
       retval = self.call("%s %s" % (prog, self.argstring), **kwargs)
       sys.stderr.write("%s: Done\n" % prog)
@@ -66,10 +66,10 @@ def main():
   # put additional steps in here. Arguments, stdin/stdout, etc. get set below
   steps.append(Step('unpack_lrlp.sh', call=check_output, help="untars lrlp into position for further processing"))
   steps.append(Step('get_tweet_by_id.rb', help="download tweets. must have twitter gem installed and full internet"))
-  steps.append(Step('ltf2rsd.perl', help="get flat form of tweet translations"))
+  steps.append(Step('ltf2rsd.perl', help="get flat form of tweet translations", abortOnFail=False))
   steps.append(Step('extract_lexicon.py', help="get flat form of bilingual lexicon"))
-  steps.append(Step('extract_psm_annotation.py', help="get annotations from psm files into psm.ann"))
-  steps.append(Step('extract_entity_annotation.py', help="get entity and other annotations into entity.ann"))
+  steps.append(Step('extract_psm_annotation.py', help="get annotations from psm files into psm.ann", abortOnFail=False))
+  steps.append(Step('extract_entity_annotation.py', help="get entity and other annotations into entity.ann", abortOnFail=False))
   steps.append(Step('extract_parallel.py', help="get flat form parallel data"))
   steps.append(Step('extract_mono.py', help="get flat form mono data"))
 
@@ -101,43 +101,44 @@ def main():
 
   rootdir = args.root
   language = args.language
-  start = 0
+  start = args.start
   stop = args.stop+1
   # patchups for step 0
   stepsbyname["unpack_lrlp.sh"].argstring="-l %s -r %s %s" % (language, rootdir, args.tarball)
 
   if start == 0:
-    expdir = steps[0].run()
+    expdir = steps[0].run().strip()
     start+=1
   else:
     expdir = args.expdir
 
   # patchups for the rest
+  if stop > 0:
+    stepsbyname["get_tweet_by_id.rb"].progpath=os.path.join(expdir, 'tools', 'twitter-processing')
+    stepsbyname["get_tweet_by_id.rb"].argstring=os.path.join(rootdir, language, 'tweet')
+    stepsbyname["get_tweet_by_id.rb"].stdin= os.path.join(expdir, 'docs', 'twitter_info.tab')
+    stepsbyname["get_tweet_by_id.rb"].stderr=os.path.join(rootdir, language, 'extract_tweet.err')
 
-  stepsbyname["get_tweet_by_id.rb"].progpath=os.path.join(expdir, 'tools', 'twitter-processing')
-  stepsbyname["get_tweet_by_id.rb"].argstring=os.path.join(rootdir, language, 'tweet')
-  stepsbyname["get_tweet_by_id.rb"].stdin=open(os.path.join(expdir, 'docs', 'twitter_info.tab'))
-  stepsbyname["get_tweet_by_id.rb"].stderr=open(os.path.join(rootdir, language, 'extract_tweet.err'), 'w')
+    stepsbyname["ltf2rsd.perl"].argstring=os.path.join(expdir, 'data', 'translation', 'from_'+language, 'eng')
+    stepsbyname["ltf2rsd.perl"].progpath=os.path.join(expdir, 'tools', 'ltf2rsd')
+    stepsbyname["ltf2rsd.perl"].stderr=os.path.join(rootdir, language, 'ltf2rsd.err')
 
-  stepsbyname["ltf2rsd.perl"].argstring=os.path.join(expdir, 'data', 'translation', 'from_'+language, 'eng')
-  stepsbyname["ltf2rsd.perl"].progpath=os.path.join(expdir, 'tools', 'ltf2rsd')
-  stepsbyname["ltf2rsd.perl"].stderr=open(os.path.join(rootdir, language, 'ltf2rsd.err'), 'w')
+    stepsbyname["extract_lexicon.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'lexicon', '*.xml'), os.path.join(rootdir, language, 'lexicon'))
+    stepsbyname["extract_lexicon.py"].stderr=os.path.join(rootdir, language, 'extract_lexicon.err')
 
-  stepsbyname["extract_lexicon.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'lexicon', '*.xml'), os.path.join(rootdir, language, 'lexicon'))
-  stepsbyname["extract_lexicon.py"].stderr=open(os.path.join(rootdir, language, 'extract_lexicon.err'), 'w')
+    stepsbyname["extract_psm_annotation.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'monolingual_text', 'zipped', '*.psm.zip'), os.path.join(rootdir, language, 'psm.ann'))
 
-  stepsbyname["extract_psm_annotation.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data', 'monolingual_text', 'zipped', '*.psm.zip'), os.path.join(rootdir, language, 'psm.ann'))
+    stepsbyname["extract_entity_annotation.py"].argstring="-r %s -o %s -et %s" % (expdir, os.path.join(rootdir, language, 'entity.ann'),  os.path.join(rootdir, language, 'tweet'))
 
-  stepsbyname["extract_entity_annotation.py"].argstring="-r %s -o %s -et %s" % (expdir, os.path.join(rootdir, language, 'entity.ann'),  os.path.join(rootdir, language, 'tweet'))
+    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % (expdir, os.path.join(rootdir, language, 'parallel', 'extracted'), language, os.path.join(rootdir, language, 'tweet'))
+    stepsbyname["extract_parallel.py"].stderr=os.path.join(rootdir, language, 'extract_parallel.err')
 
-  stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % (expdir, os.path.join(rootdir, language, 'parallel', 'extracted'), language, os.path.join(rootdir, language, 'tweet'))
-  stepsbyname["extract_parallel.py"].stderr=open(os.path.join(rootdir, language, 'extract_parallel.err'), 'w')
+    stepsbyname["extract_mono.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data','monolingual_text','zipped','*.ltf.zip'), os.path.join(rootdir, language, 'mono','extracted'))
+    stepsbyname["extract_mono.py"].stderr=os.path.join(rootdir, language, 'extract_mono.err')
 
-  stepsbyname["extract_mono.py"].argstring="-i %s -o %s" % (os.path.join(expdir, 'data','monolingual_text','zipped','*.ltf.zip'), os.path.join(rootdir, language, 'mono','extracted'))
-  stepsbyname["extract_mono.py"].stderr=open(os.path.join(rootdir, language, 'extract_mono.err'), 'w')
-
-  for step in steps[start:stop]:
-    step.run()
+    for step in steps[start:stop]:
+      step.run()
+  print "Done. Expdir is "+expdir
 
 if __name__ == '__main__':
   main()

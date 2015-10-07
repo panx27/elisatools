@@ -37,7 +37,7 @@ def main():
   for line in wcfile:
     word, count = line.strip().split('\t')
     counts[word]=int(count)
-  minsize = min(counts.values())
+
   files = []
   for line in filelist:
     files.append(line.strip().split()[0])
