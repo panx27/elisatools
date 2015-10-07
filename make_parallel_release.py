@@ -28,6 +28,8 @@ def main():
                       default=None, help="psm annotation file")
   parser.add_argument("--annfile", "-a", nargs='?', type=argparse.FileType('r'),
                       default=None, help="entity annotation file")
+  parser.add_argument("--evaluation", "-e", nargs='?', type=bool,
+                      default=False, help="prodece source side only if True")
 
   try:
     args = parser.parse_args()
@@ -177,6 +179,7 @@ def main():
       trg_morphline = trg_morphline.strip()
       trg_posline = trg_posline.strip()
       trg_man = trg_manline.strip().split('\t')
+      trg_fullid = trg_man[1]
 
       fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
                       'INDEX_ID', 'DATE']
@@ -197,28 +200,14 @@ def main():
                       re.match('(\w+)\..+', corpus).group(1))
 
       xroot = ET.Element('PARALLEL')
-      xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
-
+      # xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
       src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
       src_seg.set('id', src_man[2])
       src_seg.set('start_char', src_man[3])
       src_seg.set('end_char', src_man[4])
 
-      trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
-      trg_seg.set('id', trg_man[2])
-      trg_seg.set('start_char', trg_man[3])
-      trg_seg.set('end_char', trg_man[4])
-      # Target doesn't need to check psm and ana
-      ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
-      trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
-      ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
-      ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
-      ET.SubElement(trg_seg,
-                    "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
-      ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
-      ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
-
       subelements = []
+      subelements.append(("FULL_ID_SOURCE", src_man[1]))
       subelements.append(("ORIG_RAW_SOURCE", src_origline))
       src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
       subelements.append(("MD5_HASH_SOURCE", src_md5))
@@ -325,6 +314,22 @@ def main():
         se = ET.SubElement(src_seg, key)
         se.text = text
       # Entity/semantic annotations in their own block if fullid in anns
+
+      # Target segements
+      if not args.evaluation:
+        trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
+        trg_seg.set('id', trg_man[2])
+        trg_seg.set('start_char', trg_man[3])
+        trg_seg.set('end_char', trg_man[4])
+        ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
+        ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
+        trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
+        ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
+        ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
+        ET.SubElement(trg_seg,
+                      "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
+        ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
+        ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
 
       xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
                            xml_declaration=False)
