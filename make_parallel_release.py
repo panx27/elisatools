@@ -195,46 +195,57 @@ def main():
         outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
                       re.match('(\w+)\..+', corpus).group(1))
 
-      xroot = ET.Element('SEGMENT')
-      xroot.set('id', src_man[2])
-      xroot.set('start_char', src_man[3])
-      xroot.set('end_char', src_man[4])
+      xroot = ET.Element('PARALLEL')
+      xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
+
+      src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
+      src_seg.set('id', src_man[2])
+      src_seg.set('start_char', src_man[3])
+      src_seg.set('end_char', src_man[4])
+
+      trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
+      trg_seg.set('id', trg_man[2])
+      trg_seg.set('start_char', trg_man[3])
+      trg_seg.set('end_char', trg_man[4])
+      # Target doesn't need to check psm and ana
+      ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
+      trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
+      ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
+      ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
+      ET.SubElement(trg_seg,
+                    "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
+      ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
+      ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
+
       subelements = []
       subelements.append(("ORIG_RAW_SOURCE", src_origline))
-      subelements.append(("ORIG_RAW_TARGET", trg_origline))
-      subelements.append(("MD5_HASH_SOURCE",
-                         hashlib.md5(src_origline.encode('utf-8')).hexdigest()))
-      subelements.append(("MD5_HASH_TARGET",
-                         hashlib.md5(trg_origline.encode('utf-8')).hexdigest()))
+      src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
+      subelements.append(("MD5_HASH_SOURCE", src_md5))
       subelements.append(("LRLP_TOKENIZED_SOURCE", src_tokline))
-      subelements.append(("LRLP_TOKENIZED_TARGET", trg_tokline))
       subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
-      subelements.append(("LRLP_MORPH_TOKENIZED_TARGET", trg_morphtokline))
       subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
-      subelements.append(("LRLP_MORPH_TARGET", trg_morphline))
       subelements.append(("LRLP_POSTAG_SOURCE", src_posline))
-      subelements.append(("LRLP_POSTAG_TARGET", trg_posline))
 
       # On-demand fill of psms and anns hashes that assumesit will be
       # used contiguously
       if src_fullid in psmtemp:
         psms.clear()
-        data = psmtemp.pop(fullid)
+        data = psmtemp.pop(src_fullid)
         for tup in data:
           start = int(tup[2])
           end = start+int(tup[3])
           for i in xrange(start, end):
-            psms[fullid][i].append(tup)
+            psms[src_fullid][i].append(tup)
 
       if src_fullid in psms:
         # Collect the annotations
         psmcoll = set()
-        startchar = int(man[3])
-        endchar = int(man[4])
-        if endchar > len(psms[fullid]):
+        startchar = int(src_man[3])
+        endchar = int(src_man[4])
+        if endchar > len(psms[src_fullid]):
           endchar = None
         for i in xrange(startchar, endchar):
-          slot = psms[fullid][i]
+          slot = psms[src_fullid][i]
           psmcoll.update(map(tuple, slot))
         for psmitem in psmcoll:
           if psmitem[0]=='headline':
@@ -252,23 +263,23 @@ def main():
 
       if src_fullid in anntemp:
         anns.clear()
-        data = anntemp.pop(fullid)
+        data = anntemp.pop(src_fullid)
         for tup in data:
           start = int(tup[2])
           end = int(tup[3])
           for i in xrange(start, end):
-            anns[fullid][i].append(tup)
+            anns[src_fullid][i].append(tup)
 
       if src_fullid in anns:
         # Collect the annotations
         anncoll = set()
-        startchar = int(man[3])
-        endchar = min(len(anns[fullid]), int(man[4]))
+        startchar = int(src_man[3])
+        endchar = min(len(anns[src_fullid]), int(src_man[4]))
         for i in xrange(startchar, endchar):
-          slot = anns[fullid][i]
+          slot = anns[src_fullid][i]
           anncoll.update(map(tuple, slot))
         if len(anncoll) > 0:
-          ae = ET.SubElement(xroot, "ANNOTATIONS")
+          ae = ET.SubElement(src_seg, "ANNOTATIONS")
         for annitem in anncoll: # TODO: sort by start_char?
           se = ET.SubElement(ae, "ANNOTATION", \
                              {'task':annitem[0],'annotation_id': annitem[4]})
@@ -310,24 +321,26 @@ def main():
 
       # TODO: more tokenizations, etc.
       for key, text in subelements:
-        se = ET.SubElement(xroot, key)
+        se = ET.SubElement(src_seg, key)
         se.text = text
       # Entity/semantic annotations in their own block if fullid in anns
 
       xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
                            xml_declaration=False)
       outfile.write(xmlstr)
+      count += 1
     outfile.write("</DOCUMENT>\n")
   outfile.write("</ELISA_BILINGUAL_LRLP_CORPUS>\n")
 
-  # TODO /corpus/document
-  # TODO: verify empty psm
-  for key in psmtemp.keys():
-    print "Unvisited psm: " + key
-    sys.stderr.write("Unvisited psm: %s\n" % key)
-  for key in anntemp.keys():
-    print "Unvisited ann: " + key
-    sys.stderr.write("Unvisited ann: %s\n" % key)
+  # Cannot retrieve all psm and ann
+  # # TODO /corpus/document
+  # # TODO: verify empty psm
+  # for key in psmtemp.keys():
+  #   print "Unvisited psm: " + key
+  #   sys.stderr.write("Unvisited psm: %s\n" % key)
+  # for key in anntemp.keys():
+  #   print "Unvisited ann: " + key
+  #   sys.stderr.write("Unvisited ann: %s\n" % key)
 
 if __name__ == '__main__':
   main()
