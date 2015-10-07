@@ -80,6 +80,8 @@ def main():
         annset = {}
         for xann in xdoc.findall("ANNOTATION"):
           annid = xann.get("id")
+          if annid.startswith('doc-'):
+              annid = re.sub('doc-\d+', docid, annid)
           annset[annid] = xann
           anntask = xann.get("task")
           if xann.find("EXTENT") is None:

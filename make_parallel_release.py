@@ -108,84 +108,116 @@ def main():
   # TODO: corpus/document
   # TODO: make this more generalizable!
   outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS "elisa.lrlp.v1.0.dtd">\n')
-  outfile.write('<ELISA_LRLP_CORPUS language="%s">\n' % args.lang)
+  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS "elisa.lrlp-eng.v1.0.dtd">\n')
+  outfile.write('<ELISA_BILINGUAL_LRLP_CORPUS source_language="%s" ' \
+                'target_language="eng">\n' % args.lang)
+  count = 0
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')
-    manifest = reader(open(os.path.join(args.rootdir, "%s.manifest" % corpus)))
-    origfile = reader(open(os.path.join(args.rootdir,
-                                        "original", "%s.flat" % corpus)))
-    tokfile = reader(open(os.path.join(args.rootdir,
-                                       "tokenized", "%s.flat" % corpus)))
+    src_manifest = reader(open(os.path.join(args.rootdir, "%s.%s.manifest" % \
+                                            (corpus, args.lang))))
+    trg_manifest = reader(open(os.path.join(args.rootdir, "%s.eng.manifest" % \
+                                            (corpus))))
+    src_origfile = reader(open(os.path.join(args.rootdir, "original",
+                                            "%s.original.%s.flat" %(corpus, args.lang))))
+    trg_origfile = reader(open(os.path.join(args.rootdir, "original",
+                                            "%s.original.eng.flat" % (corpus))))
+    src_tokfile = reader(open(os.path.join(args.rootdir, "tokenized",
+                                           "%s.tokenized.%s.flat" % (corpus, args.lang))))
+    trg_tokfile = reader(open(os.path.join(args.rootdir, "tokenized",
+                                           "%s.tokenized.eng.flat" % (corpus))))
+    ### TODO: Add cede, isi tokenization
     # cdectokfile = reader(open(os.path.join(args.rootdir,"cdec-tokenized",
-    #                                        "%s.flat" % corpus)))
+    #                                        "%s.cdec-tokenized.%s.flat" % (corpus, args.lang))))
     # cdectoklcfile = reader(open(os.path.join(args.rootdir, "cdec-tokenized",
-    #                                          "%s.flat.lc" % corpus)))
+    #                                         "%s.cdec-tokenized.%s.flat.lc" % (corpus, args.lang))))
 
-    # ==========================================================================
-    # Do not have cdec-tokenized tool, cannot test
-    cdectokfile = reader(open(os.path.join(args.rootdir,"morph-tokenized",
-                                           "%s.flat" % corpus)))
-    cdectoklcfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
-                                             "%s.flat" % corpus)))
-    # ==========================================================================
+    src_morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
+                                                "%s.morph-tokenized.%s.flat" % \
+                                                (corpus,args.lang))))
+    trg_morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
+                                                "%s.morph-tokenized.eng.flat" %(corpus))))
+    src_morphfile = reader(open(os.path.join(args.rootdir, "morph",
+                                             "%s.morph.%s.flat" % \
+                                             (corpus, args.lang))))
+    trg_morphfile = reader(open(os.path.join(args.rootdir, "morph",
+                                             "%s.morph.eng.flat" % (corpus))))
+    src_posfile = reader(open(os.path.join(args.rootdir, "pos",
+                                           "%s.pos.%s.flat" % (corpus, args.lang))))
+    trg_posfile = reader(open(os.path.join(args.rootdir, "pos",
+                                           "%s.pos.eng.flat" % (corpus))))
+    src_lastfullid = None
 
-    morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
-                                            "%s.flat" % corpus)))
-    morphfile = reader(open(os.path.join(args.rootdir, "morph",
-                                         "%s.flat" % corpus)))
-    posfile = reader(open(os.path.join(args.rootdir, "pos",
-                                         "%s.flat" % corpus)))
-    lastfullid = None
+    for src_manline, trg_manline, \
+        src_origline, trg_origline, \
+        src_tokline, trg_tokline, \
+        src_morphtokline, trg_morphtokline, \
+        src_morphline, trg_morphline, \
+        src_posline, trg_posline \
+        in izip(src_manifest, trg_manifest,
+                src_origfile, trg_origfile,
+                src_tokfile, trg_tokfile,
+                src_morphtokfile, trg_morphtokfile,
+                src_morphfile, trg_morphfile,
+                src_posfile, trg_posfile):
 
-    for manline, origline, tokline, cdectokline, cdectoklcline, morphtokline, \
-    morphline, posline in izip(manifest, origfile, tokfile, cdectokfile,
-                              cdectoklcfile, morphtokfile, morphfile, posfile):
-      origline = origline.strip()
-      tokline = tokline.strip()
-      cdectokline = cdectokline.strip()
-      cdectoklcline = cdectoklcline.strip()
-      morphtokline = morphtokline.strip()
-      morphline = morphline.strip()
-      posline = posline.strip()
-      man = manline.strip().split('\t')
-      fullid = man[1]
-      fullidsplit = fullid.split('_')
-      fullidfields = ['GENRE', 'PROVENANCE', 'LANGUAGE', 'INDEX_ID', 'DATE']
+      src_origline = src_origline.strip()
+      src_tokline = src_tokline.strip()
+      src_morphtokline = src_morphtokline.strip()
+      src_morphline = src_morphline.strip()
+      src_posline = src_posline.strip()
+      src_man = src_manline.strip().split('\t')
+      src_fullid = src_man[1]
+      src_fullidsplit = src_fullid.split('_')
+
+      trg_origline = trg_origline.strip()
+      trg_tokline = trg_tokline.strip()
+      trg_morphtokline = trg_morphtokline.strip()
+      trg_morphline = trg_morphline.strip()
+      trg_posline = trg_posline.strip()
+      trg_man = trg_manline.strip().split('\t')
+
+      fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
+                      'INDEX_ID', 'DATE']
 
       # Faking the document-level
-      if lastfullid != fullid:
-        if lastfullid is not None:
+      if src_lastfullid != src_fullid:
+        if src_lastfullid is not None:
           outfile.write("</DOCUMENT>\n")
-        lastfullid = fullid
+        src_lastfullid = src_fullid
         # outfile.write('<DOCUMENT id="%s" ' % fullid +
         #               'genre="%s" provenance="%s" language="%s" ' \
         #               'index_id="%s" date="%s">\n' % tuple(fullidsplit))
-        outfile.write('<DOCUMENT id="%s">\n' % fullid)
-        for label, value in zip(fullidfields, fullidsplit):
+        outfile.write('<DOCUMENT id="%s">\n' % src_fullid)
+        for label, value in zip(fullidfields, src_fullidsplit):
           outfile.write("  <%s>%s</%s>\n" % (label, value, label))
+        outfile.write("  <TARGET_LANGUAGE>ENG</TARGET_LANGUAGE>\n")
+        outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
+                      re.match('(\w+)\..+', corpus).group(1))
 
       xroot = ET.Element('SEGMENT')
-      xroot.set('id', man[2])
-      xroot.set('start_char', man[3])
-      xroot.set('end_char', man[4])
+      xroot.set('id', src_man[2])
+      xroot.set('start_char', src_man[3])
+      xroot.set('end_char', src_man[4])
       subelements = []
-      # subelements.extend(zip(fullidfields, fullidsplit))
-      # subelements.extend(zip(['SEGMENT_ID', 'START_CHAR', 'END_CHAR'], man[2:]))
-      # subelements.append(("FULL_ID", man[1]))
-      subelements.append(("ORIG_RAW_SOURCE", origline))
-      subelements.append(("MD5_HASH",
-                          hashlib.md5(origline.encode('utf-8')).hexdigest()))
-      subelements.append(("LRLP_TOKENIZED_SOURCE", tokline))
-      subelements.append(("CDEC_TOKENIZED_SOURCE", cdectokline))
-      subelements.append(("CDEC_TOKENIZED_LC_SOURCE", cdectoklcline))
-      subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", morphtokline))
-      subelements.append(("LRLP_MORPH_SOURCE", morphline))
-      subelements.append(("LRLP_POSTAG_SOURCE", posline))
+      subelements.append(("ORIG_RAW_SOURCE", src_origline))
+      subelements.append(("ORIG_RAW_TARGET", trg_origline))
+      subelements.append(("MD5_HASH_SOURCE",
+                         hashlib.md5(src_origline.encode('utf-8')).hexdigest()))
+      subelements.append(("MD5_HASH_TARGET",
+                         hashlib.md5(trg_origline.encode('utf-8')).hexdigest()))
+      subelements.append(("LRLP_TOKENIZED_SOURCE", src_tokline))
+      subelements.append(("LRLP_TOKENIZED_TARGET", trg_tokline))
+      subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
+      subelements.append(("LRLP_MORPH_TOKENIZED_TARGET", trg_morphtokline))
+      subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
+      subelements.append(("LRLP_MORPH_TARGET", trg_morphline))
+      subelements.append(("LRLP_POSTAG_SOURCE", src_posline))
+      subelements.append(("LRLP_POSTAG_TARGET", trg_posline))
 
       # On-demand fill of psms and anns hashes that assumesit will be
       # used contiguously
-      if fullid in psmtemp:
+      if src_fullid in psmtemp:
         psms.clear()
         data = psmtemp.pop(fullid)
         for tup in data:
@@ -194,7 +226,7 @@ def main():
           for i in xrange(start, end):
             psms[fullid][i].append(tup)
 
-      if fullid in psms:
+      if src_fullid in psms:
         # Collect the annotations
         psmcoll = set()
         startchar = int(man[3])
@@ -218,7 +250,7 @@ def main():
                              psmitem[0]+"\n")
             continue
 
-      if fullid in anntemp:
+      if src_fullid in anntemp:
         anns.clear()
         data = anntemp.pop(fullid)
         for tup in data:
@@ -227,7 +259,7 @@ def main():
           for i in xrange(start, end):
             anns[fullid][i].append(tup)
 
-      if fullid in anns:
+      if src_fullid in anns:
         # Collect the annotations
         anncoll = set()
         startchar = int(man[3])
@@ -286,7 +318,7 @@ def main():
                            xml_declaration=False)
       outfile.write(xmlstr)
     outfile.write("</DOCUMENT>\n")
-  outfile.write("</ELISA_LRLP_CORPUS>\n")
+  outfile.write("</ELISA_BILINGUAL_LRLP_CORPUS>\n")
 
   # TODO /corpus/document
   # TODO: verify empty psm
