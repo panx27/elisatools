@@ -72,7 +72,7 @@ def main():
             if not os.path.isfile('%s/%s.rsd.txt' % (twtdir, docid)):
                 continue
 
-        # store all annotations by id. if they have an extent, spit them out.
+        # Store all annotations by id. if they have an extent, spit them out.
         # if no extent, check they are entities; nothing else should be
         # extent-free PREDICATE, ENTITY, and PHRASE are cross references to ids;
         # for ENTITY the core type is copied, for everything else just the cross
@@ -80,6 +80,8 @@ def main():
         annset = {}
         for xann in xdoc.findall("ANNOTATION"):
           annid = xann.get("id")
+          if annid.startswith('doc-'):
+              annid = re.sub('doc-\d+', docid, annid)
           annset[annid] = xann
           anntask = xann.get("task")
           if xann.find("EXTENT") is None:

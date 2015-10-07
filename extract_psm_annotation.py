@@ -13,7 +13,7 @@ import os
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 import datetime
 
-# scrape monolingual psms for posts and headlines (elsewhere)
+# Scrape monolingual psms for posts and headlines (elsewhere)
 
 def main():
   import codecs
@@ -42,9 +42,9 @@ def main():
     inbase = '.'.join(os.path.basename(infile.name).split('.')[:-2])
     archive = zf(infile)
     for info in archive.infolist():
-      if info.file_size < 20: ### Xiaoman: why?
+      if info.file_size < 20:
         continue
-      # assume psm structure
+      # Assume psm structure
       if os.path.dirname(info.filename) != 'psm':
         continue
       with archive.open(info, 'rU') as ifh:
@@ -72,7 +72,7 @@ def main():
           raise
           sys.exit(1)
 
-        # genre/lang/date info will be gleaned from filename later.
+        # GENRE/LANG/DATE info will be gleaned from filename later.
         # assume psm.xml and strip it off
         fname = os.path.basename(info.filename).split(".psm.xml")[0]
         for h in headlines:
