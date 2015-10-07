@@ -172,7 +172,7 @@ def main():
       subelements = []
       # subelements.extend(zip(fullidfields, fullidsplit))
       # subelements.extend(zip(['SEGMENT_ID', 'START_CHAR', 'END_CHAR'], man[2:]))
-      # subelements.append(("FULL_ID", man[1]))
+      subelements.append(("FULL_ID", man[1]))
       subelements.append(("ORIG_RAW_SOURCE", origline))
       subelements.append(("MD5_HASH",
                           hashlib.md5(origline.encode('utf-8')).hexdigest()))
