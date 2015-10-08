@@ -45,9 +45,10 @@ def main():
   except IOError, msg:
     parser.error(str(msg))
 
-  # writer = codecs.getwriter('utf8')
-  # outfile = writer(args.outfile)
-  outfile = open(args.outfile, 'w')
+  reader = codecs.getreader('utf8')
+  writer = codecs.getwriter('utf8')
+  outfile = writer(open(args.outfile, 'w'))
+  #outfile = open(args.outfile, 'w')
   twtdir = args.extwtdir
   anndir = os.path.join(args.rootdir, 'data', 'annotation')
   if not os.path.exists(anndir):
@@ -93,7 +94,7 @@ def main():
           xextent = xann.find('EXTENT')
           if docid.startswith('SN_TWT_'): # No string head for TWT
               strhead = xextent.text
-              tweet = list(open('%s/%s.rsd.txt' % (twtdir, docid)).read())
+              tweet = list(reader(open('%s/%s.rsd.txt' % (twtdir, docid))).read())
               suffixnum = int(re.match('\S+\-(\d{2})', docid).group(1))
               beg = int(xextent.get("start_char")) - suffixnum # LDC offsets counting bug???
               end = int(xextent.get("end_char")) + 1 - suffixnum
