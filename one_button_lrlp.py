@@ -6,60 +6,10 @@ from itertools import izip
 from collections import defaultdict as dd
 import re
 import os.path
+from lputil import Step, make_action
 from subprocess import check_output, check_call, CalledProcessError
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
-class Step:
-  def __init__(self, prog, progpath=scriptdir, argstring="", stdin=None,
-               stdout=None, stderr=None, help=None, call=check_call,
-               abortOnFail=True):
-    self.prog = prog
-    self.help = help
-    self.progpath = progpath
-    self.argstring = argstring
-    self.stdin = stdin
-    self.stdout = stdout
-    self.stderr = stderr
-    self.call = call
-    self.abortOnFail = abortOnFail
-
-  def run(self):
-    kwargs = {}
-    kwargs["shell"] = True
-    if self.stdin is not None:
-      kwargs["stdin"] = open(self.stdin)
-    if self.stdout is not None:
-      kwargs["stdout"] = open(self.stdout, 'w')
-    if self.stderr is not None:
-      kwargs["stderr"] = open(self.stderr, 'w')
-    prog = os.path.join(self.progpath, self.prog)
-    # TODO: could check that prog exists and is executable
-    # TODO: fail or succeed based on return code and specified behavior
-    try:
-      localstderr =  kwargs["stderr"] if self.stderr is not None else sys.stderr
-      localstderr.write("Calling %s %s\n" % (prog, self.argstring))
-      retval = self.call("%s %s" % (prog, self.argstring), **kwargs)
-      sys.stderr.write("%s: Done\n" % prog)
-    except CalledProcessError as exc:
-      sys.stderr.write("%s: FAIL: %d %s\n" % (prog, exc.returncode, exc.output))
-      if self.abortOnFail:
-        sys.exit(1)
-    return retval
-
-class listSteps(argparse.Action):
-  def __call__(self, parser, args, values, option_string=None):
-    print "This is where I list steps"
-
-def make_action(steps):
-  class customAction(argparse.Action):
-    def __call__(self, parser, args, values, option_string=None):
-      for stepnum, step in enumerate(steps):
-        sys.stderr.write("%d: %s" % (stepnum, step.prog))
-        if step.help is not None:
-          sys.stderr.write(" = " + step.help)
-        sys.stderr.write("\n")
-      sys.exit(0)
-  return customAction
 
 def main():
   steps = []
@@ -68,6 +18,9 @@ def main():
   # unpack_lrlp.sh
   steps.append(Step('unpack_lrlp.sh', call=check_output,
                     help="untars lrlp into position for further processing"))
+  # gather_ephemera.py
+  steps.append(Step('gather_ephemera.py', 
+                    help="relocates assorted bits from lrlp"))
   # get_tweet_by_id.rb
   steps.append(Step('get_tweet_by_id.rb',
                     help="download tweets. must have twitter gem installed " \
@@ -93,12 +46,6 @@ def main():
   # extract_mono.py
   steps.append(Step('extract_mono.py',
                     help="get flat form mono data"))
-  # make_mono_release.py
-  steps.append(Step('make_mono_release.py',
-                    help="package mono flat data"))
-  # make_parallel_release.py
-  steps.append(Step('make_parallel_release.py',
-                    help="package parallel flat data"))
 
   stepsbyname = {}
   for step in steps:
@@ -162,6 +109,14 @@ def main():
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
 
+    # EPHEMERA
+    ephemdir = os.path.join(rootdir, language, 'ephemera')
+    stepsbyname['gather_ephemera.py'].argstring = "-s %s -t %s" %\
+                                                  (expdir, ephemdir)
+    ephemerr = os.path.join(rootdir, language, 'gather_ephemera.err')
+    stepsbyname['gather_ephemera.py'].stderr = ephemerr
+
+
     # LTF2RSD
     l2rindir = os.path.join(expdir, 'data', 'translation', 'from_'+language,
                             'eng') # Only converts from_SRC_tweet subdir
@@ -183,13 +138,17 @@ def main():
     psmindir = os.path.join(expdir, 'data', 'monolingual_text',
                             'zipped', '*.psm.zip')
     psmoutpath = os.path.join(rootdir, language, 'psm.ann')
+    psmerr = os.path.join(rootdir, language, 'extract_psm_annotation.err')
     stepsbyname["extract_psm_annotation.py"].argstring = "-i %s -o %s" % \
                                                          (psmindir, psmoutpath)
+    stepsbyname["extract_psm_annotation.py"].stderr = psmerr
 
     # ENTITY
     entityoutpath = os.path.join(rootdir, language, 'entity.ann')
+    entityerr = os.path.join(rootdir, language, 'extract_entity_annotation.err')
     stepsbyname["extract_entity_annotation.py"].argstring="-r %s -o %s -et %s" \
       % (expdir, entityoutpath, tweetdir)
+    stepsbyname["extract_entity_annotation.py"].stderr = entityerr
 
     # PARALLEL
     paralleloutdir = os.path.join(rootdir, language, 'parallel', 'extracted')
@@ -210,31 +169,6 @@ def main():
     for step in steps[start:stop]:
       step.run()
 
-    # MONO RELEASE
-    monoxml = os.path.join(rootdir, language,
-                           'elisa.%s.y1r1.v1.xml' % language)
-    manarg = ' '.join([re.sub('.manifest', '', f) for f in os.listdir \
-                       (monooutdir)if re.match('(.+)\.manifest', f)])
-    monoerr = os.path.join(rootdir, language, 'make_mono_release.err')
-    stepsbyname["make_mono_release.py"] \
-      .argstring = "-r %s -o %s -l %s -c %s -a %s -p %s" % \
-                   (monooutdir, monoxml, language, manarg,
-                    entityoutpath, psmoutpath)
-    stepsbyname["make_mono_release.py"].stderr = monoerr
-    stepsbyname["make_mono_release.py"].run()
-
-    # PARALLEL RELEASE
-    parallelxml = os.path.join(rootdir, language,
-                               'elisa.%s-eng.y1r1.v1.xml' % language)
-    pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
-                        (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
-    parallelerr = os.path.join(rootdir, language, 'make_parallel_release.err')
-    stepsbyname["make_parallel_release.py"] \
-      .argstring = "-r %s -o %s -l %s -c %s -a %s -p %s -e %s" % \
-                   (paralleloutdir, parallelxml, language, pmanarg,
-                    entityoutpath, psmoutpath, 'True')
-    stepsbyname["make_parallel_release.py"].stderr = parallelerr
-    stepsbyname["make_parallel_release.py"].run()
 
   print "Done.\nExpdir is %s" % expdir
 

@@ -22,14 +22,14 @@ def main():
   parser.add_argument("--lang", "-l", help="lrlp language code")
   parser.add_argument("--corpora", "-c", nargs='+', help="prefixes that have " \
                       "at minimum a manifest and original/ file")
-  parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'),
+  parser.add_argument("--outfile", "-o", type=argparse.FileType('w'),
                       default=sys.stdout, help="output file")
-  parser.add_argument("--psmfile", "-p", nargs='?', type=argparse.FileType('r'),
-                      default=None, help="psm annotation file")
-  parser.add_argument("--annfile", "-a", nargs='?', type=argparse.FileType('r'),
-                      default=None, help="entity annotation file")
-  parser.add_argument("--evaluation", "-e", nargs='?', type=bool,
-                      default=False, help="prodece source side only if True")
+  parser.add_argument("--psmfile", "-p", type=argparse.FileType('r'),
+                      help="psm annotation file")
+  parser.add_argument("--annfile", "-a", type=argparse.FileType('r'),
+                      help="entity annotation file")
+  parser.add_argument("--evaluation", "-e", action='store_true', 
+                      default=False, help="prodece source side only")
 
   try:
     args = parser.parse_args()

@@ -7,6 +7,8 @@ import re
 import os.path
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError
+from subprocess import check_output, check_call, CalledProcessError
+scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 # http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
 import os, errno
@@ -363,6 +365,57 @@ def extract_lines(s, t, xml=True, tokenize=False, segment=False):
     with codecs.open(t, 'r', 'utf-8') as f:
       tl = f.readlines()
   return (sl, tl)
+
+
+class Step:
+  def __init__(self, prog, progpath=scriptdir, argstring="", stdin=None,
+               stdout=None, stderr=None, help=None, call=check_call,
+               abortOnFail=True):
+    self.prog = prog
+    self.help = help
+    self.progpath = progpath
+    self.argstring = argstring
+    self.stdin = stdin
+    self.stdout = stdout
+    self.stderr = stderr
+    self.call = call
+    self.abortOnFail = abortOnFail
+
+  def run(self):
+    kwargs = {}
+    kwargs["shell"] = True
+    if self.stdin is not None:
+      kwargs["stdin"] = open(self.stdin)
+    if self.stdout is not None:
+      kwargs["stdout"] = open(self.stdout, 'w')
+    if self.stderr is not None:
+      kwargs["stderr"] = open(self.stderr, 'w')
+    prog = os.path.join(self.progpath, self.prog)
+    # TODO: could check that prog exists and is executable
+    # TODO: fail or succeed based on return code and specified behavior
+    try:
+      localstderr =  kwargs["stderr"] if self.stderr is not None else sys.stderr
+      localstderr.write("Calling %s %s\n" % (prog, self.argstring))
+      retval = self.call("%s %s" % (prog, self.argstring), **kwargs)
+      sys.stderr.write("%s: Done\n" % prog)
+    except CalledProcessError as exc:
+      sys.stderr.write("%s: FAIL: %d %s\n" % (prog, exc.returncode, exc.output))
+      if self.abortOnFail:
+        sys.exit(1)
+    return retval
+
+def make_action(steps):
+  class customAction(argparse.Action):
+    def __call__(self, parser, args, values, option_string=None):
+      for stepnum, step in enumerate(steps):
+        sys.stderr.write("%d: %s" % (stepnum, step.prog))
+        if step.help is not None:
+          sys.stderr.write(" = " + step.help)
+        sys.stderr.write("\n")
+      sys.exit(0)
+  return customAction
+
+
 
 def main():
   parser = argparse.ArgumentParser(description="Print parallel contents")

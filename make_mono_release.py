@@ -291,10 +291,8 @@ def main():
   # TODO /corpus/document
   # TODO: verify empty psm
   for key in psmtemp.keys():
-    print "Unvisited psm: " + key
     sys.stderr.write("Unvisited psm: %s\n" % key)
   for key in anntemp.keys():
-    print "Unvisited ann: " + key
     sys.stderr.write("Unvisited ann: %s\n" % key)
 
 if __name__ == '__main__':
