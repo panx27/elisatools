@@ -23,7 +23,6 @@ def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes
                             (scriptdir, engfile, idfile, countfile), stderr=STDOUT, shell=True)
     cmd_output=check_output("%s/roundrobin.py -w %s -f %s -s %s -c %s -r %s -o %s" % 
                             (scriptdir, countfile, rankfile, sizes, categories, remainder, catfile), stderr=STDOUT, shell=True)
-    # TODO: also do manifest here!!
     for filetype in filetypes:
       if os.path.exists(os.path.join(indir, filetype)):
         for flang in [srclang, 'eng']:
@@ -33,6 +32,7 @@ def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes
   except CalledProcessError as exc:
     print "Status : FAIL", exc.returncode, exc.output
     sys.exit(1)
+  return catfile
 
 def main():
   parser = argparse.ArgumentParser(description="Make dataset selections for experimentation",
@@ -84,7 +84,7 @@ def main():
         preflist.remove(prefix)
   for prefix in docprefixes+nodocprefixes:      
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
-    prefsize = int(check_output("wc -w %s" % engfile, shell=True).split(' ')[0])
+    prefsize = int(check_output("wc -w %s" % engfile, shell=True).strip().split(' ')[0])
     fullsizes[prefix] = prefsize
     sizesum +=prefsize
   # adjust size split by proportion, with minimum
@@ -103,19 +103,30 @@ def main():
       print "Status : FAIL", exc.returncode, exc.output
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
     sizelist = ' '.join(map(str, adjsizes[prefix])) 
-    runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
+    catfile = runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
+    for i in (args.language, 'eng'):
+      manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
+      cmd = "%s/categorize.py -i %s -d %s -c %s -p %s" % (scriptdir, manifest, idfile, catfile, outpath)
+      #print "Running "+cmd
+      check_output(cmd, stderr=STDOUT, shell=True)
+
   # nodoc-based processing
 
   for prefix in nodocprefixes:
     idfile = os.path.join(outpath, "%s.fakeids" % prefix)
     try:
-      mansize = int(check_output("wc -l %s" % os.path.join(extractpath, "%s.eng.manifest" % prefix), shell=True).split(' ')[0])
+      mansize = int(check_output("wc -l %s" % os.path.join(extractpath, "%s.eng.manifest" % prefix), shell=True).strip().split(' ')[0])
       check_output("seq %d > %s" % (mansize, idfile), stderr=STDOUT, shell=True)
     except CalledProcessError as exc:
       print "Status : FAIL", exc.returncode, exc.output
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
     sizelist = ' '.join(map(str, adjsizes[prefix])) 
-    runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
+    catfile = runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
+    for i in (args.language, 'eng'):
+      manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
+      cmd = "%s/categorize.py -i %s -d %s -c %s -p %s" % (scriptdir, manifest, idfile, catfile, outpath)
+      #print "Running "+cmd
+      check_output(cmd, stderr=STDOUT, shell=True)
 
 if __name__ == '__main__':
   main()

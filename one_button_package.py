@@ -13,18 +13,19 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 def main():
   steps = []
-
+  stepsbyname = {}
   # make_mono_release.py
   steps.append(Step('make_mono_release.py',
                     help="package mono flat data"))
-  # make_parallel_release.py
-  steps.append(Step('make_parallel_release.py',
-                    help="package parallel flat data"))
   # TODO: lexicon, audio, readme, tarball
-
-  stepsbyname = {}
   for step in steps:
     stepsbyname[step.prog] = step
+
+    # make_parallel_release.py
+  for i in ('train', 'dev', 'test', 'eval'):
+    steps.append(Step('make_parallel_release.py',
+                      help="package parallel flat %s data" % i))
+    stepsbyname["parallel-%s" % i]=steps[-1]
 
   parser = argparse.ArgumentParser(description="Process a flattened LRLP into xml tarballed release format",
                                    formatter_class= \
@@ -70,20 +71,22 @@ def main():
                   entityoutpath, psmoutpath)
   stepsbyname["make_mono_release.py"].stderr = monoerr
 
-  # PARALLEL RELEASE
-  # TODO: run this differently for train/tune/test/eval
-  paralleloutdir = os.path.join(rootdir, 'parallel', 'extracted')
-  parallelxml = os.path.join(rootdir, 
-                             'elisa.%s-eng.y%dr%d.v%d.xml' % \
-                             (language, args.year, args.part, args.version))
-  pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
+  # PARALLEL RELEASES
+  for i in ('train', 'dev', 'test', 'eval'):
+    paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
+    parallelxml = os.path.join(rootdir, 
+                               'elisa.%s-eng.%s.y%dr%d.v%d.xml' % \
+                             (language, i, args.year, args.part, args.version))
+    parallelerr = os.path.join(rootdir, 'make_parallel_release.err')
+
+    pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
                       (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
-  parallelerr = os.path.join(rootdir, 'make_parallel_release.err')
-  stepsbyname["make_parallel_release.py"] \
-    .argstring = "-r %s -o %s -l %s -c %s -a %s -p %s" % \
-                 (paralleloutdir, parallelxml, language, pmanarg,
-                  entityoutpath, psmoutpath)
-  stepsbyname["make_parallel_release.py"].stderr = parallelerr
+    extra = "-e" if i == "eval" else ""
+    stepsbyname["parallel-%s" % i] \
+      .argstring = "-r %s -o %s -l %s -c %s -a %s -p %s %s" % \
+                   (paralleloutdir, parallelxml, language, pmanarg,
+                    entityoutpath, psmoutpath, extra)
+    stepsbyname["parallel-%s" % i].stderr = parallelerr
 
 
 
