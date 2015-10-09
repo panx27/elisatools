@@ -61,7 +61,8 @@ def main():
   termfile = args.termfile
   # TODO: find these?
   # doc = keep full docs together  (can detect this by counting number of unique docs)
-  docprefixes = ["found.generic", "fromsource.generic", "fromsource.tweet", "fromtarget.news"]
+  # TODO: re-add found.generic to docprefixes
+  docprefixes = ["fromsource.generic", "fromsource.tweet", "fromtarget.news"]
   nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook"]
 
   # TODO: find these

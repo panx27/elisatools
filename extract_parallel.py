@@ -236,6 +236,7 @@ def main():
            args.src, args.trg, args.outdir, origoutdir,
            tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
   # Found data
+  # TODO: sentence alignment issues! This is not packaged up or subselected
   printout("found.generic",
            args.rootdir, args.src, args.trg, args.outdir, origoutdir,
            tokoutdir, morphtokoutdir, morphoutdir, posoutdir,
