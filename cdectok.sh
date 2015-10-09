@@ -15,6 +15,13 @@ NORM=`tput sgr0`
 BOLD=`tput bold`
 REV=`tput smso`
 
+unamestr=`uname`
+
+sed="sed"
+if [[ $unamestr == 'Darwin' ]]; then
+    sed="gsed";
+fi
+
 OUTFILE=/dev/stdout
 TOKFILE=/dev/null
 INFILE=/dev/stdin
@@ -71,6 +78,6 @@ shift $((OPTIND-1))  #This tells getopts to move on to the next argument.
 
 ### End getopts code ###
 
-$TOKENIZER < $INFILE 2> /dev/null | tee $TOKFILE | sed -e 's/\(.*\)/\L\1/' > $OUTFILE;
+$TOKENIZER < $INFILE 2> /dev/null | tee $TOKFILE | $sed -e 's/\(.*\)/\L\1/' > $OUTFILE;
 
 exit 0
