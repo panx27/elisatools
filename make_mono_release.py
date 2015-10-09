@@ -117,19 +117,10 @@ def main():
                                         "original", "%s.flat" % corpus)))
     tokfile = reader(open(os.path.join(args.rootdir,
                                        "tokenized", "%s.flat" % corpus)))
-    # cdectokfile = reader(open(os.path.join(args.rootdir,"cdec-tokenized",
-    #                                        "%s.flat" % corpus)))
-    # cdectoklcfile = reader(open(os.path.join(args.rootdir, "cdec-tokenized",
-    #                                          "%s.flat.lc" % corpus)))
-
-    # ==========================================================================
-    # Do not have cdec-tokenized tool, cannot test
-    cdectokfile = reader(open(os.path.join(args.rootdir,"morph-tokenized",
+    cdectokfile = reader(open(os.path.join(args.rootdir,"cdec-tokenized",
                                            "%s.flat" % corpus)))
-    cdectoklcfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
-                                             "%s.flat" % corpus)))
-    # ==========================================================================
-
+    cdectoklcfile = reader(open(os.path.join(args.rootdir, "cdec-tokenized",
+                                             "%s.flat.lc" % corpus)))
     morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
                                             "%s.flat" % corpus)))
     morphfile = reader(open(os.path.join(args.rootdir, "morph",

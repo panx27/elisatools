@@ -8,6 +8,7 @@
 
 #Set Script Name variable
 SCRIPT=`basename ${BASH_SOURCE[0]}`
+SCRIPTDIR=`dirname $0`
 
 #Set fonts for Help.
 NORM=`tput sgr0`
@@ -18,7 +19,7 @@ OUTFILE=/dev/stdout
 TOKFILE=/dev/null
 INFILE=/dev/stdin
 
-TOKENIZER=/home/rcf-40/jonmay/software/cdec/corpus/tokenize-anything.sh
+TOKENIZER=$SCRIPTDIR/cdectok/tokenize-anything.sh
 
 #Help function
 function HELP {

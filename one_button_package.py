@@ -21,11 +21,22 @@ def main():
   for step in steps:
     stepsbyname[step.prog] = step
 
-    # make_parallel_release.py
+  # package up audio and ephemera
+  steps.append(Step('make_tarball.py',
+                    help="package ephemera"))
+  stepsbyname["tar-ephemera"]=steps[-1]
+
+  # make_parallel_release.py
   for i in ('train', 'dev', 'test', 'eval'):
     steps.append(Step('make_parallel_release.py',
                       help="package parallel flat %s data" % i))
     stepsbyname["parallel-%s" % i]=steps[-1]
+
+
+  # package up everything
+  steps.append(Step('make_tarball.py',
+                    help="final package"))
+  stepsbyname["tar-all"]=steps[-1]
 
   parser = argparse.ArgumentParser(description="Process a flattened LRLP into xml tarballed release format",
                                    formatter_class= \
@@ -54,41 +65,61 @@ def main():
   start = args.start
   stop = args.stop + 1
 
-
+  finalitems = []
   # MONO RELEASE
   psmoutpath = os.path.join(rootdir, 'psm.ann')
   entityoutpath = os.path.join(rootdir, 'entity.ann')
   monooutdir = os.path.join(rootdir, 'mono', 'extracted')
   monoxml = os.path.join(rootdir,
-                         'elisa.%s.y%dr%d.v%d.xml' % \
+                         'elisa.%s.y%dr%d.v%d.xml.gz' % \
                          (language, args.year, args.part, args.version))
+  finalitems.append(monoxml)
+
   manarg = ' '.join([re.sub('.manifest', '', f) for f in os.listdir \
                      (monooutdir)if re.match('(.+)\.manifest', f)])
   monoerr = os.path.join(rootdir, 'make_mono_release.err')
   stepsbyname["make_mono_release.py"].\
-    argstring = "-r %s -o %s -l %s -c %s -a %s -p %s" % \
-                (monooutdir, monoxml, language, manarg,
-                  entityoutpath, psmoutpath)
+    argstring = "-r %s -l %s -c %s -a %s -p %s | gzip > %s" % \
+                (monooutdir, language, manarg,
+                  entityoutpath, psmoutpath, monoxml)
   stepsbyname["make_mono_release.py"].stderr = monoerr
 
+
+  # EPHEMERA PACKAGE
+  ephemerapack = os.path.join(rootdir, 'elisa.%s.additional.y%dr%d.v%d.tgz' % \
+                                                        (language, args.year, args.part, args.version))
+  finalitems.append(ephemerapack)
+  stepsbyname["tar-ephemera"].argstring = "-p additional -i %s -o %s" % \
+                                          (os.path.join(rootdir, 'ephemera', '*'),
+                                           ephemerapack)
+  stepsbyname["tar-ephemera"].stderr = os.path.join(rootdir, 'tar_ephemera.err')
+  
   # PARALLEL RELEASES
   for i in ('train', 'dev', 'test', 'eval'):
     paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
     parallelxml = os.path.join(rootdir, 
-                               'elisa.%s-eng.%s.y%dr%d.v%d.xml' % \
+                               'elisa.%s-eng.%s.y%dr%d.v%d.xml.gz' % \
                              (language, i, args.year, args.part, args.version))
+    if i != "eval":
+      finalitems.append(parallelxml)
     parallelerr = os.path.join(rootdir, 'make_parallel_release.err')
 
     pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
                       (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
     extra = "-e" if i == "eval" else ""
     stepsbyname["parallel-%s" % i] \
-      .argstring = "-r %s -o %s -l %s -c %s -a %s -p %s %s" % \
-                   (paralleloutdir, parallelxml, language, pmanarg,
-                    entityoutpath, psmoutpath, extra)
+      .argstring = "-r %s -l %s -c %s -a %s -p %s %s | gzip > %s" % \
+                   (paralleloutdir, language, pmanarg,
+                    entityoutpath, psmoutpath, extra, parallelxml)
     stepsbyname["parallel-%s" % i].stderr = parallelerr
 
 
+  # FINAL PACKAGE
+  finalpack = os.path.join(rootdir, 'elisa.%s.package.y%dr%d.v%d.tgz' % \
+                           (language, args.year, args.part, args.version))
+  finalpackprefix = os.path.basename(finalpack)[:-4]
+  stepsbyname["tar-all"].argstring = "-p %s -i %s -o %s" % \
+                                     (finalpackprefix, ' '.join(finalitems), finalpack)
 
   for step in steps[start:stop]:
     step.run()
