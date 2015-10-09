@@ -8,6 +8,7 @@ import os.path
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError
 from subprocess import check_output, check_call, CalledProcessError
+
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 # http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
@@ -31,12 +32,11 @@ def whitelistmatch(wlist, sents):
   at least one word is in at least one string '''
   return any(any(w in s for s in sents) for w in wlist)
 
-# note: 'segment' is ignored
 def get_aligned_sentences(srcfile, trgfile, alignfile,
                           tokenize=False, xml=False, segment=False):
   if xml:
     return get_aligned_sentences_xml(srcfile, trgfile,
-                                     alignfile, tokenize=tokenize)
+                                     alignfile, tokenize=tokenize, segment=segment)
   return get_aligned_sentences_flat(srcfile, trgfile, alignfile)
 
 def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
@@ -64,17 +64,17 @@ def spans_from_xml(spans, xml, tokenize=True):
   if tokenize:
     for tok in xml.findall(".//TOKEN"):
       toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
-                   tok.text))
+                   tok))
   else:
     for tok in xml.findall(".//SEG"):
       toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
-                   tok.find("ORIGINAL_TEXT").text))
+                   tok.find("ORIGINAL_TEXT")))
   for start, end in spans:
     span = []
     firsts = 0
     laste = 0
     # TODO: make more efficient; consume tokens!
-    for s, e, text in toks:
+    for s, e, tok in toks:
       # Not yet in range (move on)
       if e < start:
         continue
@@ -82,7 +82,7 @@ def spans_from_xml(spans, xml, tokenize=True):
       if s >= start and e <= end:
         if len(span) == 0:
           firsts = s
-        span.append(text)
+        span.append(tok)
         laste = e
         continue
       # Out of range (quit)
@@ -100,24 +100,46 @@ def spans_from_xml(spans, xml, tokenize=True):
       continue
     yield span
 
-def get_aligned_sentences_xml(srcfile, trgfile, alignfile, tokenize=False):
+# TODO: change to always get everything
+def get_aligned_sentences_xml(srcfile, trgfile, alignfile, tokenize=False, segment=False):
    ''' Build sentence pairs given xml files and character alignment info '''
    slines = []
    tlines = []
    srcspans = []
    trgspans = []
+   # TODO: make the 'segment' case less kludgy
+   # matching extract_lines; if 'segment' then return a list of 4 lists corresponding to 4 processing types
+   TOK=0
+   MORPHTOK=1
+   MORPH=2
+   POS=3
+   if segment:
+     for i in (slines, tlines):
+       for x in range(4):
+         i.append([])
    with open(alignfile) as f:
      for line in f.readlines():
        ss, sl, ts, tl = map(int, line.strip().split('\t'))
        srcspans.append((ss, ss+sl))
        trgspans.append((ts, ts+tl))
    import xml.etree.ElementTree as ET
-   sroot = ET.parse(srcfile)
-   for span in spans_from_xml(srcspans, sroot, tokenize):
-     slines.append(' '.join(span)+'\n')
-   troot = ET.parse(trgfile)
-   for span in spans_from_xml(trgspans, troot, tokenize):
-     tlines.append(' '.join(span)+'\n')
+   for file, spans, lines in zip((srcfile, trgfile), (srcspans, trgspans), (slines, tlines)):
+     root = ET.parse(file)
+     # cf. get_segments
+     for span in spans_from_xml(spans, root, tokenize or segment):
+       if segment:
+         lines[TOK].append(' '.join([x.text for x in span])+'\n')
+         lines[POS].append(' '.join([x.get("pos") for x in span])+'\n')
+         mt_tmp = []
+         mtt_tmp = []
+         for x in span:
+           for mt, mtt in morph_tok(x):
+             mt_tmp.append(mt)
+             mtt_tmp.append(mtt)
+         lines[MORPH].append(' '.join(mt_tmp)+'\n')
+         lines[MORPHTOK].append(' '.join(mtt_tmp)+'\n')
+       else:
+         lines.append(' '.join([x.text for x in span])+'\n')
    return (slines, tlines)
 
 def pair_files(srcdir, trgdir, ext='txt'):
@@ -303,6 +325,18 @@ def get_tokens(xml):
   return [ ' '.join([ y.text for y in x.findall(".//TOKEN") ])+"\n" \
            for x in xml.findall(".//SEG") ]
 
+def morph_tok(node):
+  ''' Get morph and morph tok from node if present, otherwise fall back to text '''
+  if node.get("morph") == "none" or node.get("morph") == "unanalyzable":
+    yield node.get("morph"), node.text
+  else:
+    morph = node.get("morph").split(' ')
+    for morphtok in morph:
+      try:
+        yield morphtok.split('=')[1], morphtok.split(':')[0]
+      except IndexError:
+        yield morphtok, morphtok
+
 def get_segments(xml):
   ''' Get segments from xml ltf file '''
   all_toktext = list()
@@ -318,18 +352,9 @@ def get_segments(xml):
     for y in tokens:
       toktext.append(y.text)
       postext.append(y.get("pos"))
-      if y.get("morph") == "none" or y.get("morph") == "unanalyzable":
-        morphtoktext.append(y.text)
-        morphtext.append(y.get("morph"))
-      else:
-        morph = y.get("morph").split(' ')
-        for morphtok in morph:
-          try:
-            morphtoktext.append(morphtok.split(':')[0])
-            morphtext.append(morphtok.split('=')[1])
-          except IndexError:
-            print docid, morphtok
-            exit(1)
+      for mt, mtt in morph_tok(y):
+        morphtext.append(mt)
+        morphtoktext.append(mtt)
     all_toktext.append(' '.join(toktext)+"\n")
     all_morphtoktext.append(' '.join(morphtoktext)+"\n")
     all_morphtext.append(' '.join(morphtext)+"\n")
@@ -337,8 +362,10 @@ def get_segments(xml):
   return all_toktext, all_morphtoktext, all_morphtext, all_postext
 
 def extract_lines(s, t, xml=True, tokenize=False, segment=False):
-  ''' given two files, open them and get data from them.
-  Return as two lists of strings '''
+  ''' given two files, open them and get data from them in various forms.
+  Return as two lists of lists of strings. (If not xml, only a single form is possible) '''
+
+  # TODO: if xml, get codes, offsets, native, tokens, segments. If not, return single list of lists. That's it.
   sl = []
   tl = []
   if xml:
@@ -393,6 +420,7 @@ class Step:
     prog = os.path.join(self.progpath, self.prog)
     # TODO: could check that prog exists and is executable
     # TODO: fail or succeed based on return code and specified behavior
+    retval = ""
     try:
       localstderr =  kwargs["stderr"] if self.stderr is not None else sys.stderr
       localstderr.write("Calling %s %s\n" % (prog, self.argstring))

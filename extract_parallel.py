@@ -78,9 +78,12 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
         trg_man_fh.write(m[1]+"\n")
 
     ### Write tokenized, morph tokenized, pos tag
+
+
     if not xml:
       continue
     src_segments, trg_segments = el(*m, xml=True, tokenize=False, segment=True)
+
     # Tokenized
     try:
       stlen = len(src_segments[0])
@@ -91,7 +94,10 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
       trg_tok_fh.write(''.join(trg_segments[0]))
     except:
       sys.stderr.write("Warning: different number of lines in token files:\n" \
-                       "%s %d\n%s %d\n" % (stlen, slen, ttlen, tlen))
+                       "%s %d %d\n%s %d %d\n" % (m[0], stlen, slen, m[1], ttlen, tlen))
+      print src_segments[0]
+      print len(src_segments)
+      sys.exit(1)
     # tsl, ttl = el(*m, xml=True, tokenize=True)
     # src_tok_fh.write(''.join(tsl).encode('utf-8'))
     # trg_tok_fh.write(''.join(ttl).encode('utf-8'))
