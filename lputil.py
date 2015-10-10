@@ -5,6 +5,7 @@ import sys
 import os
 import re
 import os.path
+from collections import defaultdict as dd
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError
 from subprocess import check_output, check_call, CalledProcessError
@@ -33,10 +34,10 @@ def whitelistmatch(wlist, sents):
   return any(any(w in s for s in sents) for w in wlist)
 
 def get_aligned_sentences(srcfile, trgfile, alignfile,
-                          tokenize=False, xml=False, segment=False):
+                          xml=False):
   if xml:
     return get_aligned_sentences_xml(srcfile, trgfile,
-                                     alignfile, tokenize=tokenize, segment=segment)
+                                     alignfile)
   return get_aligned_sentences_flat(srcfile, trgfile, alignfile)
 
 def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
@@ -44,6 +45,8 @@ def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
   ''' Build sentence pairs given raw files and character alignment info '''
   slines = []
   tlines = []
+  sids = []
+  tids = []
   s = None
   t = None
   with codecs.open(srcfile, 'r', 'utf-8') as f:
@@ -55,9 +58,14 @@ def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
       ss, sl, ts, tl = map(int, line.strip().split('\t'))
       slines.append(s[ss:ss+sl]+"\n")
       tlines.append(t[ts:ts+tl]+"\n")
-  return (slines, tlines)
+      sids.append(srcfile+"\n")
+      tids.append(trgfile+"\n")
+  ret = []
+  ret.append({"DOCID":sids,"ORIG":slines})
+  ret.append({"DOCID":tids,"ORIG":tlines})
+  return ret
 
-def spans_from_xml(spans, xml, tokenize=True):
+def spans_from_xml(spans, xml, tokenize):
   ''' utility function; given list of start, end tuples and
   xml node return list of list of words '''
   toks = []
@@ -100,47 +108,47 @@ def spans_from_xml(spans, xml, tokenize=True):
       continue
     yield span
 
-# TODO: change to always get everything
-def get_aligned_sentences_xml(srcfile, trgfile, alignfile, tokenize=False, segment=False):
-   ''' Build sentence pairs given xml files and character alignment info '''
-   slines = []
-   tlines = []
-   srcspans = []
-   trgspans = []
-   # TODO: make the 'segment' case less kludgy
-   # matching extract_lines; if 'segment' then return a list of 4 lists corresponding to 4 processing types
-   TOK=0
-   MORPHTOK=1
-   MORPH=2
-   POS=3
-   if segment:
-     for i in (slines, tlines):
-       for x in range(4):
-         i.append([])
-   with open(alignfile) as f:
-     for line in f.readlines():
-       ss, sl, ts, tl = map(int, line.strip().split('\t'))
-       srcspans.append((ss, ss+sl))
-       trgspans.append((ts, ts+tl))
-   import xml.etree.ElementTree as ET
-   for file, spans, lines in zip((srcfile, trgfile), (srcspans, trgspans), (slines, tlines)):
-     root = ET.parse(file)
-     # cf. get_segments
-     for span in spans_from_xml(spans, root, tokenize or segment):
-       if segment:
-         lines[TOK].append(' '.join([x.text for x in span])+'\n')
-         lines[POS].append(' '.join([x.get("pos") for x in span])+'\n')
-         mt_tmp = []
-         mtt_tmp = []
-         for x in span:
-           for mt, mtt in morph_tok(x):
-             mt_tmp.append(mt)
-             mtt_tmp.append(mtt)
-         lines[MORPH].append(' '.join(mt_tmp)+'\n')
-         lines[MORPHTOK].append(' '.join(mtt_tmp)+'\n')
-       else:
-         lines.append(' '.join([x.text for x in span])+'\n')
-   return (slines, tlines)
+
+
+# TODO: WHY SO MANY (0,0)
+
+def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
+  ''' Build sentence pairs given xml files and character alignment info '''
+  srcspans = []
+  trgspans = []
+  sdata = dd(list)
+  tdata = dd(list)
+  with open(alignfile) as f:
+    for line in f.readlines():
+      ss, sl, ts, tl = map(int, line.strip().split('\t'))
+      srcspans.append((ss, ss+sl))
+      trgspans.append((ts, ts+tl))
+  import xml.etree.ElementTree as ET
+  for file, spans, data in zip((srcfile, trgfile), (srcspans, trgspans), (sdata, tdata)):
+    root = ET.parse(file)
+    # cf. get_segments
+    for span in spans_from_xml(spans, root, True):
+      data["TOK"].append(' '.join([x.text for x in span])+'\n')
+      data["POS"].append(' '.join([x.get("pos") for x in span])+'\n')
+      mt_tmp = []
+      mtt_tmp = []
+      for x in span:
+        for mt, mtt in morph_tok(x):
+          mt_tmp.append(mt)
+          mtt_tmp.append(mtt)
+      data["MORPH"].append(' '.join(mt_tmp)+'\n')
+      data["MORPHTOK"].append(' '.join(mtt_tmp)+'\n')
+    # TODO: is this needed?
+    root = ET.parse(file)
+    for span in spans_from_xml(spans, root, False):
+      data["ORIG"].append(' '.join([x.text for x in span])+'\n')
+    lengths = [len(i) for i in data.values()]
+    for length in lengths[1:]:
+      if length != lengths[0]:
+        sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
+        sys.exit(1)
+
+  return [sdata, tdata]
 
 def pair_files(srcdir, trgdir, ext='txt'):
   ''' Heuristically pair files from rsd directories together based on observed
@@ -361,37 +369,50 @@ def get_segments(xml):
     all_postext.append(' '.join(postext)+"\n")
   return all_toktext, all_morphtoktext, all_morphtext, all_postext
 
-def extract_lines(s, t, xml=True, tokenize=False, segment=False):
+def get_info(node):
+  ''' get offset info from xml node '''
+  sdocid = node.findall(".//DOC")[0].get('id')
+  return [ [sdocid,]+[ x.get(y) for y in ('id', 'start_char', 'end_char') ] for x in node.findall(".//SEG") ]
+
+
+def extract_lines(s, t, xml=True):
   ''' given two files, open them and get data from them in various forms.
   Return as two lists of lists of strings. (If not xml, only a single form is possible) '''
-
-  # TODO: if xml, get codes, offsets, native, tokens, segments. If not, return single list of lists. That's it.
-  sl = []
-  tl = []
-  if xml:
-    try:
-      sroot = ET.parse(s)
-      troot = ET.parse(t)
-    except ParseError as detail:
-      sys.stderr.write("Parse error on "+s+" and/or "+t+": "+str(detail)+"\n")
-      return
-    if segment : # Return segments directly
-      src_segments = get_segments(sroot)
-      trg_segments = get_segments(troot)
-      return (src_segments, trg_segments)
-    if tokenize:
-      sl = get_tokens(sroot)
-      tl = get_tokens(troot)
+  from itertools import chain
+  # if xml, get codes, offsets, native, tokens, segments. If not, return codes and native only
+  ret = []
+  for x in (s, t):
+    l = dd(list)
+    if xml:
+      try:
+        root = ET.parse(x)
+      except ParseError as detail:
+        sys.stderr.write("Parse error on "+x+": "+str(detail)+"\n")
+        return
+      for (docid, segid, start, end) in get_info(root):
+        l["DOCID"].append(docid)
+        l["SEGID"].append(segid)
+        l["START"].append(start)
+        l["END"].append(end)
+      toks, morphtoks, morphs, poss = get_segments(root)
+      l["TOK"].extend(toks)
+      l["MORPHTOK"].extend(morphtoks)
+      l["MORPH"].extend(morphs)
+      l["POS"].extend(poss)
+      l["ORIG"].extend([ node.text+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
     else:
-      sl = [ x.text+"\n" for x in sroot.findall(".//ORIGINAL_TEXT") ]
-      tl = [ x.text+"\n" for x in troot.findall(".//ORIGINAL_TEXT") ]
-  else:
-    import codecs
-    with codecs.open(s, 'r', 'utf-8') as f:
-      sl = f.readlines()
-    with codecs.open(t, 'r', 'utf-8') as f:
-      tl = f.readlines()
-  return (sl, tl)
+      import codecs
+      with codecs.open(x, 'r', 'utf-8') as f:
+        l["ORIG"] = f.readlines()
+      l["DOCID"] = [x+"\n"]*len(l["ORIG"])
+    lengths = [len(i) for i in l.values()]
+    for length in lengths[1:]:
+      if length != lengths[0]:
+        sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
+        sys.exit(1)
+    ret.append(l)
+  # check that each side is internally consistentthe same length
+  return ret
 
 
 class Step:

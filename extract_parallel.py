@@ -40,104 +40,41 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
   if prefix == 'fromsource.tweet':
     xml = False # Tweets do not have .ltf format files
   for m in stp(path, src=src, trg=trg, xml=xml):
-    sl, tl = el(*m, xml=xml, tokenize=False, segment=False)
-    if sl is None or tl is None:
+    sdata, tdata = el(*m, xml=xml)
+    if sdata is None or tdata is None:
       sys.stderr.write("Warning: empty files:\n%s or %s\n" % (m[0], m[1]))
       continue
     # Strict rejection of different length lines. If these are desired,
     # do gale & church or brown et al or something similar here
-    slen = len(sl)
-    tlen = len(tl)
+    slen = len(sdata["ORIG"])
+    tlen = len(tdata["ORIG"])
     if slen != tlen:
       sys.stderr.write("Warning: different number of lines in files:\n" \
                        "%s %d\n%s %d\n" % (m[0], slen, m[1], tlen))
       continue
 
     ### Write original
-    src_orig_fh.write(''.join(sl))
-    trg_orig_fh.write(''.join(tl))
+    src_orig_fh.write(''.join(sdata["ORIG"]))
+    trg_orig_fh.write(''.join(tdata["ORIG"]))
 
     ### Write manifest
     if xml:
-      sxobj = ET.parse(m[0])
-      sdocid = sxobj.findall(".//DOC")[0].get('id')
-      src_seginfo = [ [ x.get(y) for y in ('id', 'start_char', 'end_char') ]
-                      for x in sxobj.findall(".//SEG") ]
-      for tup in src_seginfo:
-        src_man_fh.write("\t".join([m[0],sdocid]+tup)+"\n")
-      txobj = ET.parse(m[1])
-      tdocid = txobj.findall(".//DOC")[0].get('id')
-      trg_seginfo = [ [ x.get(y) for y in ('id', 'start_char', 'end_char') ]
-                      for x in txobj.findall(".//SEG") ]
-      for tup in trg_seginfo:
-        trg_man_fh.write("\t".join([m[1],tdocid]+tup)+"\n")
+      for fh, tupgen in zip((src_man_fh, trg_man_fh), (zip(sdata["DOCID"], sdata["SEGID"], sdata["START"], sdata["END"]),
+                                                       zip(tdata["DOCID"], tdata["SEGID"], tdata["START"], tdata["END"]))):
+        for tup in tupgen:
+          fh.write("\t".join(tup)+"\n")
     else:
-      for i in xrange(len(sl)):
-        src_man_fh.write(m[0]+"\n")
-      for i in xrange(len(tl)):
-        trg_man_fh.write(m[1]+"\n")
-
-    ### Write tokenized, morph tokenized, pos tag
-
+      for fh, field in zip((src_man_fh, trg_man_fh), (sdata["DOCID"], tdata["DOCID"])):
+        fh.write(field)
 
     if not xml:
       continue
-    src_segments, trg_segments = el(*m, xml=True, tokenize=False, segment=True)
-
-    # Tokenized
-    try:
-      stlen = len(src_segments[0])
-      ttlen = len(trg_segments[0])
-      assert stlen == slen
-      assert ttlen == tlen
-      src_tok_fh.write(''.join(src_segments[0]))
-      trg_tok_fh.write(''.join(trg_segments[0]))
-    except:
-      sys.stderr.write("Warning: different number of lines in token files:\n" \
-                       "%s %d %d\n%s %d %d\n" % (m[0], stlen, slen, m[1], ttlen, tlen))
-      print src_segments[0]
-      print len(src_segments)
-      sys.exit(1)
-    # tsl, ttl = el(*m, xml=True, tokenize=True)
-    # src_tok_fh.write(''.join(tsl).encode('utf-8'))
-    # trg_tok_fh.write(''.join(ttl).encode('utf-8'))
-
-    # Morph tokenized
-    try:
-      smtlen = len(src_segments[1])
-      tmtlen = len(trg_segments[1])
-      assert smtlen == slen
-      assert tmtlen == tlen
-      src_morphtok_fh.write(''.join(src_segments[1]))
-      trg_morphtok_fh.write(''.join(trg_segments[1]))
-    except:
-      sys.stderr.write("Warning: different number of lines in morph-tokenzied" \
-                       " files:\n %s %d\n%s %d\n" % (smtlen, slen,
-                                                     tmtlen, tlen))
-
-    # Morph
-    try:
-      smlen = len(src_segments[2])
-      tmlen = len(trg_segments[2])
-      assert smlen == slen
-      assert tmlen == tlen
-      src_morph_fh.write(''.join(src_segments[2]))
-      trg_morph_fh.write(''.join(trg_segments[2]))
-    except:
-      sys.stderr.write("Warning: different number of lines in morph files:\n" \
-                       "%s %d\n%s %d\n" % (smlen, slen, tmlen, tlen))
-
-    # Pos tag
-    try:
-      splen = len(src_segments[3])
-      tplen = len(trg_segments[3])
-      assert splen == slen
-      assert tplen == tlen
-      src_pos_fh.write(''.join(src_segments[3]))
-      trg_pos_fh.write(''.join(trg_segments[3]))
-    except:
-      sys.stderr.write("Warning: different number of lines in pos files:\n" \
-                       "%s %d\n%s %d\n" % (splen, slen, tplen, tlen))
+    ### Write tokenized, morph tokenized, pos tag
+    for fhset, data in zip(((src_tok_fh, src_morphtok_fh, src_morph_fh, src_pos_fh),
+                            (trg_tok_fh, trg_morphtok_fh, trg_morph_fh, trg_pos_fh)),
+                           (sdata, tdata)):
+      for fh, field in zip(fhset, ("TOK", "MORPHTOK", "MORPH", "POS")):
+        fh.write(''.join(data[field]))
 
 '''
  Merge trg tweets and extracted src tweets (.rsd)
@@ -242,11 +179,11 @@ def main():
            args.src, args.trg, args.outdir, origoutdir,
            tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
   # Found data
-  # TODO: sentence alignment issues! This is not packaged up or subselected
-  printout("found.generic",
-           args.rootdir, args.src, args.trg, args.outdir, origoutdir,
-           tokoutdir, morphtokoutdir, morphoutdir, posoutdir,
-           stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
+  # TODO: still something buggy!
+  # printout("found.generic",
+  #          args.rootdir, args.src, args.trg, args.outdir, origoutdir,
+  #          tokoutdir, morphtokoutdir, morphoutdir, posoutdir,
+  #          stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
   # # Tweet data
   # process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
   # printout("fromsource.tweet",
