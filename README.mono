@@ -1,0 +1,32 @@
+The Monolingual corpora are structured with the following fields:
+
+ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
+  DOCUMENT: signifies a document extent. Includes document id as attribute, expressed as concatenation of genre, provenance, language, index id, and date
+    GENRE: two-letter indication of document genre
+    PROVENANCE: three-letter indication of document provenance
+    LANGUAGE: three-letter indication of document language
+    INDEX_ID: six-digit unique identifier of document
+    DATE: eight-digit date of document, expressed as YYYYMMDD. Field is zeroed if year/month/day is unknown
+    SEGMENT: signifies a segment (sentence). Includes document-local segment id, start and end (inclusive, 0-based) char offsets of 'ORIG_RAW_SOURCE'
+      FULL_ID: repeat of document id
+      ORIG_RAW_SOURCE: original form of segment. This canonical form is used as a reference by any annotations
+      MD5_HASH: MD5 digest of the tokenized source. The data may contain duplicate segments, which we did not remove, in order to keep the context intact. This field can be used to efficiently detect duplicates.
+      LRLP_TOKENIZED_SOURCE: Tokenization as provided in the original LRLP.
+      CDEC_TOKENIZED_SOURCE: Tokenization formed by running ORIG_RAW_SOURCE through tokenize-anything script in cdec machine translation software.
+      CDEC_TOKENIZED_LC_SOURCE: Lowercased version of CDEC_TOKENIZED_SOURCE
+      LRLP_MORPH_TOKENIZED_SOURCE: Tokenization based on morphological segmentation, if available.
+      LRLP_MORPH_SOURCE: Morphological analysis of words, if available.
+      LRLP_POSTAG_SOURCE: Either coarse POS tags such as "punct", "word", "twitter", "unknown", "url", "number", "email", or "numstring", or full POS tags.
+      IS_HEADLINE: set to 1 if segment is headline (otherwise not present)
+      AUTHOR: Name of author if available
+      POST_DATE_TIME: If available, posting info of the article
+      ANNOTATIONS: Denotes annotations are available for this segment
+       ANNOTATION: a semantic annotation labeled by task: FE/NE/SSA/NPC
+         HEAD: Extent of the head of the annotation
+         ENTITY_TYPE: (for NE/FE) LOC/NONE/ORG/PER/TTL
+         ANNOTATION_KIND: (for FE) HEAD or MENTION
+         MENTION_TYPE: (for FE) NAM/NOM/None/PRO/TTL
+         PHRASE_ID: (for FE) phrase this annotation refers to (the phrase is usually another annotation and this is the head)
+         ENTITY_ID: id of the entity this mention refers to
+         ROLE: (for SSA) act/state
+
