@@ -68,21 +68,25 @@ def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
 def spans_from_xml(spans, xml, tokenize):
   ''' utility function; given list of start, end tuples and
   xml node return list of list of words '''
+  # we expect this to be called twice, and get the segment id the second time. kludgy!!
   toks = []
+  docid = xml.find(".//DOC").get('id')
   if tokenize:
     for tok in xml.findall(".//TOKEN"):
       toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
-                   tok))
+                   tok, ""))
   else:
     for tok in xml.findall(".//SEG"):
       toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
-                   tok.find("ORIGINAL_TEXT")))
+                   tok.find("ORIGINAL_TEXT"), tok.get('id')))
+  segid = ""
   for start, end in spans:
     span = []
     firsts = 0
     laste = 0
     # TODO: make more efficient; consume tokens!
-    for s, e, tok in toks:
+    for s, e, tok, id in toks:
+      segid = id
       # Not yet in range (move on)
       if e < start:
         continue
@@ -102,15 +106,11 @@ def spans_from_xml(spans, xml, tokenize):
                          " (%d, %d) vs (%d, %d)\n" % (start, end, s, e))
         sys.exit(1)
     if firsts != start or laste+1 != end:
-      id = xml.find(".//DOC").get('id')
       sys.stderr.write("Warning: in %s should be (%d %d) but actually" \
-                       " (%d %d)\n" % (id, start, end, firsts, laste))
+                       " (%d %d)\n" % (docid, start, end, firsts, laste))
       continue
-    yield span
+    yield span, docid, segid, start, end
 
-
-
-# TODO: WHY SO MANY (0,0)
 
 def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
   ''' Build sentence pairs given xml files and character alignment info '''
@@ -127,7 +127,11 @@ def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
   for file, spans, data in zip((srcfile, trgfile), (srcspans, trgspans), (sdata, tdata)):
     root = ET.parse(file)
     # cf. get_segments
-    for span in spans_from_xml(spans, root, True):
+    for span, docid, _, start, end in spans_from_xml(spans, root, True):
+      data["DOCID"].append(docid)
+      # segid is bad here
+      data["START"].append(str(start))
+      data["END"].append(str(end))
       data["TOK"].append(' '.join([x.text for x in span])+'\n')
       data["POS"].append(' '.join([x.get("pos") for x in span])+'\n')
       mt_tmp = []
@@ -140,8 +144,10 @@ def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
       data["MORPHTOK"].append(' '.join(mtt_tmp)+'\n')
     # TODO: is this needed?
     root = ET.parse(file)
-    for span in spans_from_xml(spans, root, False):
+    for span, _, segid, start, end in spans_from_xml(spans, root, False):
+      # only segid is good here
       data["ORIG"].append(' '.join([x.text for x in span])+'\n')
+      data["SEGID"].append(segid)
     lengths = [len(i) for i in data.values()]
     for length in lengths[1:]:
       if length != lengths[0]:
