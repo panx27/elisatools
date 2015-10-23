@@ -18,9 +18,22 @@ def main():
   # unpack_lrlp.sh
   steps.append(Step('unpack_lrlp.sh', call=check_output,
                     help="untars lrlp into position for further processing"))
+
   # gather_ephemera.py
   steps.append(Step('gather_ephemera.py', 
                     help="relocates assorted bits from lrlp"))
+
+  # extract_lexicon.py
+  steps.append(Step('extract_lexicon.py',
+                    help="get flat form of bilingual lexicon"))
+  # normalize_lexicon.py
+  steps.append(Step('normalize_lexicon.py',
+                    help="heuristically convert lexicon into something more machine readable"))
+
+  # relocate lexicon
+  steps.append(Step('cp', progpath='/bin',
+                    help="move the lexicon stuff into ephemera"))
+
   # get_tweet_by_id.rb
   steps.append(Step('get_tweet_by_id.rb',
                     help="download tweets. must have twitter gem installed " \
@@ -29,9 +42,7 @@ def main():
   steps.append(Step('ltf2rsd.perl',
                     help="get flat form of tweet translations",
                     abortOnFail=False))
-  # extract_lexicon.py
-  steps.append(Step('extract_lexicon.py',
-                    help="get flat form of bilingual lexicon"))
+  
   # extract_psm_annotation.py
   steps.append(Step('extract_psm_annotation.py',
                     help="get annotations from psm files into psm.ann",
@@ -127,12 +138,23 @@ def main():
     stepsbyname["ltf2rsd.perl"].stderr = l2rerr
 
     # LEXICON
-    lexiconindir = os.path.join(expdir, 'data', 'lexicon', '*.xml')
+    lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
     lexiconoutdir = os.path.join(rootdir, language, 'lexicon')
+    lexiconoutfile = os.path.join(lexiconoutdir, 'lexicon')
+    lexiconnormoutfile = os.path.join(lexiconoutdir, 'lexicon.norm')
+
     lexiconerr = os.path.join(rootdir, language, 'extract_lexicon.err')
+    lexiconnormerr = os.path.join(rootdir, language, 'normalize_lexicon.err')
     stepsbyname["extract_lexicon.py"].argstring = "-i %s -o %s" % \
-                                                  (lexiconindir, lexiconoutdir)
+                                                  (lexiconinfile, lexiconoutfile)
     stepsbyname["extract_lexicon.py"].stderr = lexiconerr
+
+    stepsbyname["normalize_lexicon.py"].argstring = "-i %s -o %s" % \
+                                                  (lexiconoutfile, lexiconnormoutfile)
+    stepsbyname["normalize_lexicon.py"].stderr = lexiconnormerr
+
+
+    stepsbyname["cp"].argstring = "-r %s %s" % (lexiconoutdir, ephemdir)
 
     # PSM
     psmindir = os.path.join(expdir, 'data', 'monolingual_text',

@@ -11,56 +11,64 @@ import os
 import datetime
 import shutil
 
+class SkipEntry(Exception):
+  pass
+
 def main():
   import codecs
   parser = argparse.ArgumentParser(description="Extract lexicon file from xml")
-  parser.add_argument("--infile", "-i", nargs='+', type=argparse.FileType('r'),
-                      default=[sys.stdin,], help="input lexicon file")
-  parser.add_argument("--outdir", "-o", help="output directory")
+  parser.add_argument("--infiles", "-i", nargs='+', type=argparse.FileType('r'),
+                      help="input lexicon files")
+  parser.add_argument("--outfile", "-o", help="output file")
 
   try:
     args = parser.parse_args()
   except IOError, msg:
     parser.error(str(msg))
 
-  if not os.path.exists(args.outdir):
-    os.makedirs(args.outdir)
-  outfile=os.path.join(args.outdir, "lexicon")
-  counter = 1
-  while os.path.exists(outfile):
-    outfile = os.path.join(args.outdir, "lexicon.%d" % counter)
-    counter += 1
+  outdir = os.path.dirname(args.outfile)
+  if not os.path.exists(outdir):
+    os.makedirs(outdir)
+  outfile=args.outfile
 
   of = codecs.open(outfile, 'w', 'utf-8')
-  for infile in args.infile:
+  source_fh = open(os.path.join(outdir, "source"), 'a')
+  for infile in args.infiles:
     xobj = ET.parse(infile)
-    for entry in xobj.findall(".//ENTRY"):
-      of.write("%s\t%s\t%s\n" % (entry.find(".//WORD").text,
-                                 entry.find(".//POS").text,
-                                 entry.find(".//GLOSS").text))
+    try:
+      for entry in xobj.findall(".//ENTRY"):
+        words = entry.findall(".//WORD")
+        if len(words) > 1:
+          raise SkipEntry(ET.dump(entry))
+        word = words[0]
+        poses = entry.findall(".//POS")
+        glosses = entry.findall(".//GLOSS")
+        if len(poses) != len(glosses):
+          raise SkipEntry(ET.dump(entry))
+        for pos, gloss in zip(poses, glosses):
+          if gloss.text is None or pos.text is None or word.text is None:
+            continue
+          of.write("%s\t%s\t%s\n" % (word.text.strip(),
+                                     pos.text.strip(),
+                                     gloss.text.strip()))
+    except SkipEntry as e:
+      sys.stderr.write(e.value+"\n")
+      sys.exit(1)
 
-    source_fh = open(os.path.join(args.outdir, "source"), 'a')
+
     source_fh.write("Extracted lexicon from %s to %s on %s\nusing %s; command" \
                     " issued from %s\n" % (infile.name, outfile,
                                            datetime.datetime.now(),
                                            ' '.join(sys.argv), os.getcwd()))
 
-  # lexicon/ may contain multiple files rather than .xml
-  # e.g. hau/data/lexicon/hau_wordform_morph_analysis.tab
-  # copy those files to output directory or 'ohter resources'
-  xml = [i.name for i in args.infile]
-  # lexicon_dir = re.match('(.+)\/.+\.xml', args.infile[0].name).group(1)
-  lexicon_dir = os.path.split(args.infile[0].name)[0]
-  for i in os.listdir(lexicon_dir):
-    if '%s/%s' % (lexicon_dir, i) not in xml:
-      name = '%s/%s' % (lexicon_dir, i)
+  # copy all files from lexicon directory to processed directory
+  lexicon_dirs = set([os.path.dirname(x.name) for x in args.infiles])
+  for lexicon_dir in lexicon_dirs:
+    for i in os.listdir(lexicon_dir):
+      name = os.path.join(lexicon_dir, i)
       outname = '%s_%s' % (outfile, i)
       shutil.copy(name, outname)
-      source_fh.write("Extracted extra lexicon from %s to %s on %s\nusing %s;"
-                      "command issued from %s\n" % (name, outname,
-                                                    datetime.datetime.now(),
-                                                    ' '.join(sys.argv),
-                                                    os.getcwd()))
+      source_fh.write("Extracted extra lexicon from %s to %s\n" % (name, outname))
 
 if __name__ == '__main__':
   main()
