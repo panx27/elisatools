@@ -30,6 +30,7 @@ ELISA_BILINGUAL_LRLP_CORPUS: root node of the file. Includes source language cod
            PHRASE_ID: (for FE) phrase this annotation refers to (the phrase is usually another annotation and this is the head)
            ENTITY_ID: id of the entity this mention refers to
            ROLE: (for SSA) act/state
+           NPC_TYPE: type of np chunking
       SEGMENT_TARGET: signifies the target component of the segment. Includes document-local segment id, start and end (inclusive, 0-based) char offsets of 'ORIG_RAW_SOURCE'
         FULL_ID_TARGET: target-side document id (usually similar to source-side id)
         ORIG_RAW_TARGET: original form of target segment. This canonical form is used as a reference by any annotations

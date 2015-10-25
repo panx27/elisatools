@@ -29,4 +29,4 @@ ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
          PHRASE_ID: (for FE) phrase this annotation refers to (the phrase is usually another annotation and this is the head)
          ENTITY_ID: id of the entity this mention refers to
          ROLE: (for SSA) act/state
-
+	 NPC_TYPE: type of np chunking

@@ -20,7 +20,7 @@ def main():
                     help="untars lrlp into position for further processing"))
 
   # gather_ephemera.py
-  steps.append(Step('gather_ephemera.py', 
+  steps.append(Step('gather_ephemera.py',
                     help="relocates assorted bits from lrlp"))
 
   # extract_lexicon.py
@@ -42,7 +42,7 @@ def main():
   steps.append(Step('ltf2rsd.perl',
                     help="get flat form of tweet translations",
                     abortOnFail=False))
-  
+
   # extract_psm_annotation.py
   steps.append(Step('extract_psm_annotation.py',
                     help="get annotations from psm files into psm.ann",

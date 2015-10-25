@@ -6,12 +6,20 @@ from collections import defaultdict as dd
 import lxml.etree as ET
 import gzip
 import re
+import os
 import os.path
 import hashlib
 from itertools import izip
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
-# TODO: option to build gzip file
+def get_parallel_docs(paradir):
+  paradocs = set()
+  for root, dirs, files in os.walk(paradir):
+    for file in files:
+      if file.endswith('.manifest'):
+        for line in open('%s/%s' % (root, file)):
+          paradocs.add(line.split('\t')[1])
+  return paradocs
 
 def main():
   parser = argparse.ArgumentParser(description="Create xml from extracted" \
@@ -28,6 +36,7 @@ def main():
                       default=None, help="psm annotation file")
   parser.add_argument("--annfile", "-a", nargs='?', type=argparse.FileType('r'),
                       default=None, help="entity annotation file")
+  parser.add_argument("--paradir", "-pa", default=".", help="parallel flat dir")
 
   try:
     args = parser.parse_args()
@@ -38,6 +47,8 @@ def main():
   writer = codecs.getwriter('utf-8')
   outfile = args.outfile
   # outfile = writer(args.outfile)
+
+  paradocs = get_parallel_docs(args.paradir)
 
   # For every document, for every position, a list of (pointers to) annotations
   # then for every segment, retrieve the sublist and create the set of
@@ -143,6 +154,10 @@ def main():
       fullid = man[1]
       fullidsplit = fullid.split('_')
       fullidfields = ['GENRE', 'PROVENANCE', 'LANGUAGE', 'INDEX_ID', 'DATE']
+
+      if fullid in paradocs: # Parallel data is not repeated in the mono data
+        sys.stderr.write("Document %s exists in parallel data\n" % fullid)
+        continue
 
       # Faking the document-level
       if lastfullid != fullid:
@@ -258,7 +273,7 @@ def main():
             if annitem[6] == "argument":
               subsubs.append(("PREDICATE", annitem[8]))
           elif annitem[0]=='NPC':
-            pass
+            subsubs.append(("NPC_TYPE", annitem[6]))
           else:
             sys.stderr.write("Not sure what to do with item that starts " \
                              +annitem[0]+"\n")

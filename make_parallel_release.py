@@ -28,7 +28,7 @@ def main():
                       help="psm annotation file")
   parser.add_argument("--annfile", "-a", type=argparse.FileType('r'),
                       help="entity annotation file")
-  parser.add_argument("--evaluation", "-e", action='store_true', 
+  parser.add_argument("--evaluation", "-e", action='store_true',
                       default=False, help="prodece source side only")
 
   try:
@@ -300,7 +300,7 @@ def main():
             if annitem[6] == "argument":
               subsubs.append(("PREDICATE", annitem[8]))
           elif annitem[0]=='NPC':
-            pass
+            subsubs.append(("NPC_TYPE", annitem[6]))
           else:
             sys.stderr.write("Not sure what to do with item that starts " \
                              +annitem[0]+"\n")
