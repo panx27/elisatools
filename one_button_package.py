@@ -93,31 +93,31 @@ def main():
                                            ephemerapack)
   stepsbyname["tar-ephemera"].stderr = os.path.join(rootdir, 'tar_ephemera.err')
 
-  # # PARALLEL RELEASES
-  # for i in ('train', 'dev', 'test', 'eval'):
-  #   paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
-  #   parallelxml = os.path.join(rootdir,
-  #                              'elisa.%s-eng.%s.y%dr%d.v%d.xml.gz' % \
-  #                            (language, i, args.year, args.part, args.version))
-  #   if i != "eval":
-  #     finalitems.append(parallelxml)
-  #   parallelerr = os.path.join(rootdir, 'make_parallel_release.err')
+  # PARALLEL RELEASES
+  for i in ('train', 'dev', 'test', 'eval'):
+    paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
+    parallelxml = os.path.join(rootdir,
+                               'elisa.%s-eng.%s.y%dr%d.v%d.xml.gz' % \
+                             (language, i, args.year, args.part, args.version))
+    if i != "eval":
+      finalitems.append(parallelxml)
+    parallelerr = os.path.join(rootdir, 'make_parallel_release.err')
 
-  #   pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
-  #                     (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
-  #   extra = "-e" if i == "eval" else ""
-  #   stepsbyname["parallel-%s" % i] \
-  #     .argstring = "-r %s -l %s -c %s -a %s -p %s %s | gzip > %s" % \
-  #                  (paralleloutdir, language, pmanarg,
-  #                   entityoutpath, psmoutpath, extra, parallelxml)
-  #   stepsbyname["parallel-%s" % i].stderr = parallelerr
+    pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
+                      (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
+    extra = "-e" if i == "eval" else ""
+    stepsbyname["parallel-%s" % i] \
+      .argstring = "-r %s -l %s -c %s -a %s -p %s %s | gzip > %s" % \
+                   (paralleloutdir, language, pmanarg,
+                    entityoutpath, psmoutpath, extra, parallelxml)
+    stepsbyname["parallel-%s" % i].stderr = parallelerr
 
-  # # FINAL PACKAGE
-  # finalpack = os.path.join(rootdir, 'elisa.%s.package.y%dr%d.v%d.tgz' % \
-  #                          (language, args.year, args.part, args.version))
-  # finalpackprefix = os.path.basename(finalpack)[:-4]
-  # stepsbyname["tar-all"].argstring = "-p %s -i %s -o %s" % \
-  #                                    (finalpackprefix, ' '.join(finalitems), finalpack)
+  # FINAL PACKAGE
+  finalpack = os.path.join(rootdir, 'elisa.%s.package.y%dr%d.v%d.tgz' % \
+                           (language, args.year, args.part, args.version))
+  finalpackprefix = os.path.basename(finalpack)[:-4]
+  stepsbyname["tar-all"].argstring = "-p %s -i %s -o %s" % \
+                                     (finalpackprefix, ' '.join(finalitems), finalpack)
 
   for step in steps[start:stop]:
     step.run()
