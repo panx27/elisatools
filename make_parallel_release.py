@@ -99,6 +99,9 @@ def main():
           anndiscardcount+=1
           continue
         anntemp[toks[1]].append(toks)
+      except ValueError:
+        anndiscardcount+=1
+        continue
       except:
         print ln
         raise

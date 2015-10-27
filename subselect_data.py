@@ -78,10 +78,11 @@ def main():
   adjsizes = {}
   sizesum = 0.0
   for preflist in [docprefixes, nodocprefixes]:
-    for prefix in preflist:
+    for prefix in list(preflist):
       # don't deal with it more if there's nothing in the manifest
       manfile = os.path.join(extractpath, "%s.eng.manifest" % prefix)
       if (not os.path.exists(manfile)) or os.path.getsize(manfile) == 0:
+        print "removing "+prefix
         preflist.remove(prefix)
   for prefix in docprefixes+nodocprefixes:      
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)

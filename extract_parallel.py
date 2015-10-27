@@ -59,10 +59,14 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
 
     ### Write manifest
     if xml:
-      for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]), (zip(sdata["DOCID"], sdata["SEGID"], sdata["START"], sdata["END"]),
-                                                                     zip(tdata["DOCID"], tdata["SEGID"], tdata["START"], tdata["END"]))):
-        for tup in tupgen:
-          fh.write("\t".join((fname,)+tup)+"\n")
+      try:
+        for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]), (zip(sdata["DOCID"], sdata["SEGID"], sdata["START"], sdata["END"]),
+                                                                       zip(tdata["DOCID"], tdata["SEGID"], tdata["START"], tdata["END"]))):
+          for tup in tupgen:
+            fh.write("\t".join((fname,)+tup)+"\n")
+      except:
+        sys.stderr.write(fname)
+        raise
     else:
       for fh, field in zip((src_man_fh, trg_man_fh), (sdata["DOCID"], tdata["DOCID"])):
         fh.write(fname+"\t"+field)

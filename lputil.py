@@ -341,10 +341,16 @@ def get_tokens(xml):
 
 def morph_tok(node):
   ''' Get morph and morph tok from node if present, otherwise fall back to text '''
-  if node.get("morph") == "none" or node.get("morph") == "unanalyzable":
+  if node.get("morph") is None:
+    yield "none", node.text
+  elif node.get("morph") == "none" or node.get("morph") == "unanalyzable":
     yield node.get("morph"), node.text
   else:
-    morph = node.get("morph").split(' ')
+    try:
+      morph = node.get("morph").split(' ')
+    except AttributeError:
+      sys.stderr.write(ET.dump(node)+"\n")
+      raise
     for morphtok in morph:
       try:
         yield morphtok.split('=')[1], morphtok.split(':')[0]
@@ -357,22 +363,28 @@ def get_segments(xml):
   all_morphtoktext = list()
   all_morphtext = list()
   all_postext = list()
-  for x in xml.findall(".//SEG"):
-    tokens = x.findall(".//TOKEN")
-    toktext = []
-    morphtoktext = []
-    morphtext = []
-    postext = []
-    for y in tokens:
-      toktext.append(y.text)
-      postext.append(y.get("pos"))
-      for mt, mtt in morph_tok(y):
-        morphtext.append(mt)
-        morphtoktext.append(mtt)
-    all_toktext.append(' '.join(toktext)+"\n")
-    all_morphtoktext.append(' '.join(morphtoktext)+"\n")
-    all_morphtext.append(' '.join(morphtext)+"\n")
-    all_postext.append(' '.join(postext)+"\n")
+  try:
+    for x in xml.findall(".//SEG"):
+      tokens = x.findall(".//TOKEN")
+      toktext = []
+      morphtoktext = []
+      morphtext = []
+      postext = []
+      for y in tokens:
+        if y.text is None:
+          continue
+        toktext.append(y.text)
+        postext.append(y.get("pos") or "none")
+        for mt, mtt in morph_tok(y):
+          morphtext.append(mt)
+          morphtoktext.append(mtt)
+      all_toktext.append(' '.join(toktext)+"\n")
+      all_morphtoktext.append(' '.join(morphtoktext)+"\n")
+      all_morphtext.append(' '.join(morphtext)+"\n")
+      all_postext.append(' '.join(postext)+"\n")
+  except TypeError:
+    sys.stderr.write(x.get('id')+"\n")
+    raise
   return all_toktext, all_morphtoktext, all_morphtext, all_postext
 
 def get_info(node):

@@ -28,6 +28,7 @@ def main():
   writer = codecs.getwriter('utf8')
   infile = reader(args.infile)
   outfile = writer(args.outfile)
+  stderr = writer(sys.stderr)
 
 
   bad = 0
@@ -39,7 +40,7 @@ def main():
     try:
       src, pos, trgs = line.lstrip().rstrip().split("\t")
     except:
-      sys.stderr.write("Bad line: "+line)
+      stderr.write("Bad line: "+line)
       bad+=1
       continue
     src = src.lower()
@@ -68,7 +69,7 @@ def main():
       # OTHER HEURISTICS...
       outfile.write("%s\t%s\t%s\n" % (src, pos, trg))
       wrote +=1
-  sys.stderr.write("%d bad %d source mword %d target mword %d wrote\n" % (bad, smword, tmword, wrote))
+  stderr.write("%d bad %d source mword %d target mword %d wrote\n" % (bad, smword, tmword, wrote))
 if __name__ == '__main__':
   main()
 

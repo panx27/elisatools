@@ -17,6 +17,7 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 import datetime
 import subprocess
 import shlex
+from lputil import morph_tok
 
 def main():
   parser = argparse.ArgumentParser(description="Extract and print monolingual" \
@@ -102,21 +103,13 @@ def main():
           morphtext = []
           postext = []
           for y in tokens:
+            if y.text is None:
+              continue
             toktext.append(y.text)
-            postext.append(y.get("pos"))
-            if y.get("morph") == "none" or y.get("morph") == "unanalyzable":
-              morphtoktext.append(y.text)
-              morphtext.append(y.get("morph"))
-            else:
-              morph = y.get("morph").split(' ')
-
-              for morphtok in morph:
-                try:
-                  morphtoktext.append(morphtok.split(':')[0])
-                  morphtext.append(morphtok.split('=')[1])
-                except IndexError:
-                  print docid, morphtok
-                  exit(1)
+            postext.append(y.get("pos") or "none")
+            for mt, mtt in morph_tok(y):
+              morphtext.append(mt)
+              morphtoktext.append(mtt)
           tok_fh.write(' '.join(toktext)+"\n")
           morphtok_fh.write(' '.join(morphtoktext)+"\n")
           morph_fh.write(' '.join(morphtext)+"\n")

@@ -77,10 +77,13 @@ def main():
   manarg = ' '.join([re.sub('.manifest', '', f) for f in os.listdir \
                      (monooutdir)if re.match('(.+)\.manifest', f)])
   monoerr = os.path.join(rootdir, 'make_mono_release.err')
-  stepsbyname["make_mono_release.py"].\
-    argstring = "-r %s -l %s -c %s -a %s -p %s -pa %s | gzip > %s" % \
-                (monooutdir, language, manarg, entityoutpath, psmoutpath,
-                 paradir, monoxml)
+  stepsbyname["make_mono_release.py"].argstring = "-r %s -l %s -c %s" % (monooutdir, language, manarg)
+  if os.path.exists(entityoutpath):
+    stepsbyname["make_mono_release.py"].argstring+= (" -a "+entityoutpath)
+  if os.path.exists(psmoutpath):
+    stepsbyname["make_mono_release.py"].argstring+= (" -p "+psmoutpath)
+  stepsbyname["make_mono_release.py"].argstring+= (" -pa %s | gzip > %s" % \
+                                                         (paradir, monoxml))
   stepsbyname["make_mono_release.py"].stderr = monoerr
 
   # EPHEMERA PACKAGE
@@ -107,9 +110,16 @@ def main():
                       (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
     extra = "-e" if i == "eval" else ""
     stepsbyname["parallel-%s" % i] \
-      .argstring = "-r %s -l %s -c %s -a %s -p %s %s | gzip > %s" % \
-                   (paralleloutdir, language, pmanarg,
-                    entityoutpath, psmoutpath, extra, parallelxml)
+      .argstring = "-r %s -l %s -c %s"% (paralleloutdir, language, pmanarg)
+    if os.path.exists(entityoutpath):
+      stepsbyname["parallel-%s" % i] \
+      .argstring+= (" -a "+entityoutpath)
+    if os.path.exists(psmoutpath):
+      stepsbyname["parallel-%s" % i] \
+      .argstring+= (" -p "+psmoutpath)
+    stepsbyname["parallel-%s" % i] \
+      .argstring+= (" %s | gzip > %s" % \
+                          (extra, parallelxml))
     stepsbyname["parallel-%s" % i].stderr = parallelerr
 
   # FINAL PACKAGE
