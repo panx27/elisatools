@@ -21,10 +21,14 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
   ''' Find files and print them out '''
   src_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, src)), 'w')
   trg_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, trg)), 'w')
-  src_orig_fh=open(os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % (prefix,origoutdir,src)), 'w')
-  trg_orig_fh=open(os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % (prefix,origoutdir,trg)), 'w')
-  src_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % (prefix,tokoutdir,src)), 'w')
-  trg_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % (prefix,tokoutdir,trg)), 'w')
+  src_orig_fh=open(os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % \
+                                (prefix,origoutdir,src)), 'w')
+  trg_orig_fh=open(os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % \
+                                (prefix,origoutdir,trg)), 'w')
+  src_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % \
+                               (prefix,tokoutdir,src)), 'w')
+  trg_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % \
+                               (prefix,tokoutdir,trg)), 'w')
   src_morphtok_fh=open(os.path.join(outdir, morphtokoutdir, "%s.%s.%s.flat" % \
                                     (prefix,morphtokoutdir,src)),'w')
   trg_morphtok_fh=open(os.path.join(outdir, morphtokoutdir, "%s.%s.%s.flat" % \
@@ -33,12 +37,15 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
                                  (prefix,morphoutdir,src)),'w')
   trg_morph_fh=open(os.path.join(outdir, morphoutdir, "%s.%s.%s.flat" % \
                                  (prefix,morphoutdir,trg)),'w')
-  src_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % (prefix,posoutdir,src)),'w')
-  trg_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % (prefix,posoutdir,trg)),'w')
+  src_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % \
+                               (prefix,posoutdir,src)),'w')
+  trg_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % \
+                               (prefix,posoutdir,trg)),'w')
 
   xml = True
   if prefix == 'fromsource.tweet':
-    xml = False # Tweets do not have .ltf format files
+    xml = False # Tweets data only have .rsd rather than .ltf
+
   for m in stp(path, src=src, trg=trg, xml=xml):
     sdata, tdata = el(*m, xml=xml)
     if sdata is None or tdata is None:
@@ -60,19 +67,25 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
     ### Write manifest
     if xml:
       try:
-        for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]), (zip(sdata["DOCID"], sdata["SEGID"], sdata["START"], sdata["END"]),
-                                                                       zip(tdata["DOCID"], tdata["SEGID"], tdata["START"], tdata["END"]))):
+        for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]),
+                                     (zip(sdata["DOCID"], sdata["SEGID"],
+                                          sdata["START"], sdata["END"]),
+                                      zip(tdata["DOCID"], tdata["SEGID"],
+                                          tdata["START"], tdata["END"]))):
           for tup in tupgen:
             fh.write("\t".join((fname,)+tup)+"\n")
       except:
         sys.stderr.write(fname)
         raise
     else:
-      for fh, field in zip((src_man_fh, trg_man_fh), (sdata["DOCID"], tdata["DOCID"])):
-        fh.write(fname+"\t"+field)
+      for fh, field in zip((src_man_fh, trg_man_fh),
+                           (sdata["DOCID"],tdata["DOCID"])):
+        fh.write('%s\t%s\n' % (field[0].strip(),
+                             re.search('.+/(\S*?)\.', field[0].strip()).group(1)))
 
-    if not xml:
+    if not xml: # .rsd does not have tokenized, morph tokenized, pos tag info
       continue
+
     ### Write tokenized, morph tokenized, pos tag
     for fhset, data in zip(((src_tok_fh, src_morphtok_fh, src_morph_fh, src_pos_fh),
                             (trg_tok_fh, trg_morphtok_fh, trg_morph_fh, trg_pos_fh)),
@@ -91,18 +104,21 @@ def process_tweet(datadir, src, trg, extwtdir):
   os.makedirs('%s/%s/rsd' % (dir_, src))
   os.makedirs('%s/%s/rsd' % (dir_, trg))
 
+  # Copy translated .rsd files
   for i in os.listdir('%s/from_%s/%s/rsd' % (datadir, src, trg)):
     if i.startswith('SN_TWT_'):
       shutil.copy('%s/from_%s/%s/rsd/%s' % (datadir, src, trg, i),
                   '%s/%s/rsd/%s' % (dir_, trg, i))
+  # Copy tweet files
   for i in os.listdir(extwtdir):
     '''
      .raw means character offsets are not well align, it may cause
-     diferrent number of lines warning
+     diferrent number of lines warning and entity annotations cannot be aligned
     '''
-    raw2rsd = re.sub('.raw', '.rsd.txt', i)
+    if not i.endswith('.rsd.txt'):
+      continue
     shutil.copy('%s/%s' % (extwtdir, i),
-                  '%s/%s/rsd/%s' % (dir_, src, raw2rsd))
+                  '%s/%s/rsd/%s' % (dir_, src, i))
 
 def main():
   parser = argparse.ArgumentParser(description="extract parallel data from " \
@@ -187,12 +203,12 @@ def main():
            args.rootdir, args.src, args.trg, args.outdir, origoutdir,
            tokoutdir, morphtokoutdir, morphoutdir, posoutdir,
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
-  # # Tweet data
-  # process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
-  # printout("fromsource.tweet",
-  #          os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
-  #          args.src, args.trg, args.outdir, origoutdir,
-  #          tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
+  # Tweet data
+  process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
+  printout("fromsource.tweet",
+           os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
+           args.src, args.trg, args.outdir, origoutdir,
+           tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
 
 if __name__ == '__main__':
   main()
