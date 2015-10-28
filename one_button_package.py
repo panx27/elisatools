@@ -65,6 +65,9 @@ def main():
   stop = args.stop + 1
 
   finalitems = []
+  # READMES
+  finalitems.append(os.path.join(scriptdir, "README.mono"))
+  finalitems.append(os.path.join(scriptdir, "README.parallel"))
   # MONO RELEASE
   psmoutpath = os.path.join(rootdir, 'psm.ann')
   entityoutpath = os.path.join(rootdir, 'entity.ann')

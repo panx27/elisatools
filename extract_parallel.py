@@ -73,7 +73,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
                                       zip(tdata["DOCID"], tdata["SEGID"],
                                           tdata["START"], tdata["END"]))):
           for tup in tupgen:
-            fh.write("\t".join((fname,)+tup)+"\n")
+            fh.write("\t".join(map(str, (fname,)+tup))+"\n")
       except:
         sys.stderr.write(fname)
         raise
@@ -142,7 +142,7 @@ def main():
                       help="subdirectory for morphological files")
   parser.add_argument("--possubdir", default="pos",
                       help="subdirectory for pos tag files")
-  parser.add_argument("--extwtdir", "-et",
+  parser.add_argument("--extwtdir", "-et", default=None,
                       help="directory of extracted tweet rsd files")
   try:
     args = parser.parse_args()
@@ -204,11 +204,12 @@ def main():
            tokoutdir, morphtokoutdir, morphoutdir, posoutdir,
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
   # Tweet data
-  process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
-  printout("fromsource.tweet",
-           os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
-           args.src, args.trg, args.outdir, origoutdir,
-           tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
+  if args.extwtdir is not None and os.path.exists(args.extwtdir):
+    process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
+    printout("fromsource.tweet",
+             os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
+             args.src, args.trg, args.outdir, origoutdir,
+             tokoutdir, morphtokoutdir, morphoutdir, posoutdir)
 
 if __name__ == '__main__':
   main()

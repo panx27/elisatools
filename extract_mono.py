@@ -88,32 +88,36 @@ def main():
         continue
       # print info.filename
       with archive.open(info, 'rU') as ifh:
-        xobj = ET.parse(ifh)
-        docid = xobj.findall(".//DOC")[0].get('id')
-        origlines = [ x.text+"\n" for x in xobj.findall(".//ORIGINAL_TEXT") ]
-        seginfo = [ [ x.get(y) for y in ('id', 'start_char', 'end_char') ]
-                    for x in xobj.findall(".//SEG") ]
-        orig_fh.writelines(origlines)
-        for tup in seginfo:
-          man_fh.write("\t".join([info.filename,docid]+tup)+"\n")
-        for x in xobj.findall(".//SEG"):
-          tokens = x.findall(".//TOKEN")
-          toktext = []
-          morphtoktext = []
-          morphtext = []
-          postext = []
-          for y in tokens:
-            if y.text is None:
-              continue
-            toktext.append(y.text)
-            postext.append(y.get("pos") or "none")
-            for mt, mtt in morph_tok(y):
-              morphtext.append(mt)
-              morphtoktext.append(mtt)
-          tok_fh.write(' '.join(toktext)+"\n")
-          morphtok_fh.write(' '.join(morphtoktext)+"\n")
-          morph_fh.write(' '.join(morphtext)+"\n")
-          pos_fh.write(' '.join(postext)+"\n")
+        try:
+          xobj = ET.parse(ifh)
+          docid = xobj.findall(".//DOC")[0].get('id')
+          origlines = [ x.text+"\n" for x in xobj.findall(".//ORIGINAL_TEXT") ]
+          seginfo = [ [ x.get(y) for y in ('id', 'start_char', 'end_char') ]
+                      for x in xobj.findall(".//SEG") ]
+          orig_fh.writelines(origlines)
+          for tup in seginfo:
+            man_fh.write("\t".join(map(str, [info.filename,docid]+tup))+"\n")
+          for x in xobj.findall(".//SEG"):
+            tokens = x.findall(".//TOKEN")
+            toktext = []
+            morphtoktext = []
+            morphtext = []
+            postext = []
+            for y in tokens:
+              if y.text is None:
+                continue
+              toktext.append(y.text)
+              postext.append(y.get("pos") or "none")
+              for mt, mtt in morph_tok(y):
+                morphtext.append(mt)
+                morphtoktext.append(mtt)
+            tok_fh.write(' '.join(toktext)+"\n")
+            morphtok_fh.write(' '.join(morphtoktext)+"\n")
+            morph_fh.write(' '.join(morphtext)+"\n")
+            pos_fh.write(' '.join(postext)+"\n")
+        except ET.ParseError:
+          sys.stderr.write("Parse error on "+ifh.name+"\n")
+          continue
     cdec_cmd = "%s -i %s -o %s -t %s" % (args.cdectokenizer,
                                          orig_fh.name,
                                          os.path.join(cdectokoutdir,
