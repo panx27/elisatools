@@ -346,6 +346,7 @@ def main():
     outfile.write("</DOCUMENT>\n")
     ### ------------------ End of Regular Parallel ------------------
 
+    src_lastfullid = None
     ### ---------------------- Tweets Parallel ----------------------
     if corpus == 'fromsource.tweet':
       iteration = izip(src_manifest, trg_manifest, src_origfile, trg_origfile)
