@@ -98,6 +98,10 @@ def main():
               suffixnum = int(re.match('\S+\-(\d{2})', docid).group(1))
               beg = int(xextent.get("start_char")) - suffixnum # LDC offsets counting bug???
               end = int(xextent.get("end_char")) + 1 - suffixnum
+              # but don't go negative
+              if beg < 0 or end < 0:
+                  beg = int(xextent.get("start_char"))
+                  end = int(xextent.get("end_char")) + 1
               strhead = ''.join(tweet[beg:end])
               tup = [anntask, docid, xextent.get("start_char") or "None",
                      xextent.get("end_char") or "None", annid or "None",

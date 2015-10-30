@@ -11,6 +11,32 @@ import os.path
 import gzip
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
+# this code is used below but not in this form
+#http://stackoverflow.com/questions/7171140/using-python-iterparse-for-large-xml-files
+# def fast_iter(context, func, *args, **kwargs):
+#   """
+#   http://lxml.de/parsing.html#modifying-the-tree
+#   Based on Liza Daly's fast_iter
+#   http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
+#   See also http://effbot.org/zone/element-iterparse.htm
+#   """
+#   for event, elem in context:
+#     func(elem, *args, **kwargs)
+#     # It's safe to call clear() here because no descendants will be
+#     # accessed
+#     elem.clear()
+#     # Also eliminate now-empty references from the root node to elem
+#     for ancestor in elem.xpath('ancestor-or-self::*'):
+#       while ancestor.getprevious() is not None:
+#         del ancestor.getparent()[0]
+#   del context
+
+
+# def process_element(elem):
+#   print elem.xpath( 'description/text( )' )
+
+# context = etree.iterparse( MYFILE, tag='item' )
+# fast_iter(context,process_element)
 
 def main():
   parser = argparse.ArgumentParser(description="Given a compressed elisa xml file and list of attributes, print them out, tab separated",
@@ -35,15 +61,30 @@ def main():
   outfile = gzip.open(args.outfile.name, 'w') if args.outfile.name.endswith(".gz") else args.outfile
   outfile = writer(outfile)
 
-  for _, element in ET.iterparse(infile, events=("end",), tag=args.segment):
-    outfields = []
-    for field in args.fields:
-      subfields = field.split(".")
-      matches = [element,] if subfields[0] == args.segment else element.findall(".//"+subfields[0])
-      for match in matches:
-        outfields.append(match.get(subfields[1]) if len(subfields) > 1 else match.text)
-    element.clear()
-    outfile.write("\t".join(outfields)+"\n")
+  ctxt = ET.iterparse(infile, events=("end", "start"))
+  # don't delete when in the middle of an element you want to investigate
+  lock = False
+  for event, element in ctxt:
+    if event == "start" and element.tag == args.segment:
+      lock = True
+    if event == "end" and element.tag == args.segment:
+      outfields = []
+      for field in args.fields:
+        subfields = field.split(".")
+        matches = [element,] if subfields[0] == args.segment else element.findall(".//"+subfields[0])
+        for match in matches:
+          outfields.append(match.get(subfields[1]) if len(subfields) > 1 else match.text or "")
+        del matches
+      outfile.write("\t".join(outfields)+"\n")
+      lock = False
+    # recover memory
+    if event == "end" and not lock:
+      element.clear()      
+      for ancestor in element.xpath('ancestor-or-self::*'):
+        while ancestor.getprevious() is not None:
+          del ancestor.getparent()[0]
+  del ctxt
+
 
 if __name__ == '__main__':
   main()
