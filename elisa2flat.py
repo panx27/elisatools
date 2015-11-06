@@ -42,7 +42,7 @@ def main():
   parser = argparse.ArgumentParser(description="Given a compressed elisa xml file and list of attributes, print them out, tab separated",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('rb'), default=sys.stdin, help="input file")
-  parser.add_argument("--fields", "-f", nargs='+', help="list of fields to extract text from. if attribute is desired, use field.attribute")
+  parser.add_argument("--fields", "-f", nargs='+', help="list of fields to extract text from. if attribute is desired, use field.attribute. Separate fallback fields with :")
   parser.add_argument("--segment", "-s", default="PARALLEL", help="segment name. PARALLEL for x-eng, SEGMENT for monolingual. More than one match per segment will be concatenated")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
 
@@ -69,12 +69,23 @@ def main():
       lock = True
     if event == "end" and element.tag == args.segment:
       outfields = []
-      for field in args.fields:
-        subfields = field.split(".")
-        matches = [element,] if subfields[0] == args.segment else element.findall(".//"+subfields[0])
-        for match in matches:
-          outfields.append(match.get(subfields[1]) if len(subfields) > 1 else match.text or "")
-        del matches
+      for fieldopts in args.fields:
+        wrotesomething = False
+        fieldopts = fieldopts.split(":")
+        while len(fieldopts) > 0:
+          field = fieldopts.pop(0)
+          subfields = field.split(".")
+          matches = [element,] if subfields[0] == args.segment else element.findall(".//"+subfields[0])
+          for match in matches:
+            value = match.get(subfields[1]) if len(subfields) > 1 else match.text
+            if value is not None:
+              outfields.append(value)
+              wrotesomething = True
+          del matches
+          if wrotesomething:
+            break
+        if not wrotesomething:
+          outfields.append("")
       outfile.write("\t".join(outfields)+"\n")
       lock = False
     # recover memory
