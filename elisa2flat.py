@@ -78,6 +78,8 @@ def main():
           matches = [element,] if subfields[0] == args.segment else element.findall(".//"+subfields[0])
           for match in matches:
             value = match.get(subfields[1]) if len(subfields) > 1 else match.text
+            value = value.replace('\n', ' ')
+            value = value.replace('\t', ' ')
             if value is not None:
               outfields.append(value)
               wrotesomething = True
@@ -92,8 +94,8 @@ def main():
     if event == "end" and not lock:
       element.clear()      
       for ancestor in element.xpath('ancestor-or-self::*'):
-        while ancestor.getprevious() is not None:
-          del ancestor.getparent()[0]
+        while ancestor.getprevious() is not None and ancestor.getparent() is not None and ancestor.getparent()[0] is not None:
+            del ancestor.getparent()[0]
   del ctxt
 
 
