@@ -21,7 +21,7 @@ ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
       AUTHOR: Name of author if available
       POST_DATE_TIME: If available, posting info of the article
       ANNOTATIONS: Denotes annotations are available for this segment
-       ANNOTATION: a semantic annotation labeled by task: FE/NE/SSA/NPC
+       ANNOTATION: a semantic annotation labeled by task: FE (full named entity annotation)/NE (simple named entity annotation)/SSA (simple semantic annotation)/NPC (noun phrase chunking)
          HEAD: Extent of the head of the annotation
          ENTITY_TYPE: (for NE/FE) LOC/NONE/ORG/PER/TTL
          ANNOTATION_KIND: (for FE) HEAD or MENTION

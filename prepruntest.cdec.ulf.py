@@ -23,7 +23,7 @@ def main():
   parser.add_argument("--tunekey", default="dev", help="name for tuning")
   parser.add_argument("--iter", "-i", type=int, help="iteration of tuning to use")
   parser.add_argument("--outdir", "-o", help="where to write files and run tests. Should also be mt dir")
-  parser.add_argument("--pipeline", default="/home/rcf-40/jonmay/projects/sbmt/pipeline.150707", help="mt pipeline")
+  parser.add_argument("--pipeline", default="/home/rcf-40/jonmay/projects/sbmt/pipeline.151130", help="mt pipeline")
 
 
   try:
