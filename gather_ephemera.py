@@ -16,6 +16,7 @@ manifest = {"docs":"docs",
             "tools":"tools",
             "README.txt":"README.txt",
             os.path.join("data", "audio"):"audio",
+            os.path.join("data", "annotation", "morph_alignment"):"morph_alignment",
             }
 
 

@@ -80,6 +80,7 @@ def main():
                       help='step to stop at (inclusive)')
   parser.add_argument("--liststeps", "-x", nargs=0, action=make_action(steps),
                       help='print step list and exit')
+  parser.add_argument("--ruby", default="/opt/local/bin/ruby2.2", help='path to ruby (2.1 or higher)')
 
   try:
     args = parser.parse_args()
@@ -114,12 +115,14 @@ def main():
     tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing')
     stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
     tweetdir = os.path.join(rootdir, language, 'tweet')
-    stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir
+    stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
     tweetintab = os.path.join(expdir, 'docs', 'twitter_info.tab')
     stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
-
+    stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
+    
+    
     # EPHEMERA
     ephemdir = os.path.join(rootdir, language, 'ephemera')
     stepsbyname['gather_ephemera.py'].argstring = "-s %s -t %s" %\
@@ -132,7 +135,7 @@ def main():
     l2rindir = os.path.join(expdir, 'data', 'translation', 'from_'+language,
                             'eng') # Only converts from_SRC_tweet subdir
     stepsbyname["ltf2rsd.perl"].argstring = l2rindir
-    l2rprogpath = os.path.join(expdir, 'tools', 'ltf2rsd')
+    l2rprogpath = os.path.join(expdir, 'tools', 'ltf2txt')
     stepsbyname["ltf2rsd.perl"].progpath = l2rprogpath
     l2rerr = os.path.join(rootdir, language, 'ltf2rsd.err')
     stepsbyname["ltf2rsd.perl"].stderr = l2rerr

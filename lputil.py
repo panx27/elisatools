@@ -436,8 +436,9 @@ def extract_lines(s, t, xml=True):
 class Step:
   def __init__(self, prog, progpath=scriptdir, argstring="", stdin=None,
                stdout=None, stderr=None, help=None, call=check_call,
-               abortOnFail=True):
+               abortOnFail=True, scriptbin=None):
     self.prog = prog
+    self.scriptbin = scriptbin
     self.help = help
     self.progpath = progpath
     self.argstring = argstring
@@ -462,8 +463,20 @@ class Step:
     retval = ""
     try:
       localstderr =  kwargs["stderr"] if self.stderr is not None else sys.stderr
-      localstderr.write("Calling %s %s\n" % (prog, self.argstring))
-      retval = self.call("%s %s" % (prog, self.argstring), **kwargs)
+      if self.scriptbin is None:
+        callstring = "%s %s" % (prog, self.argstring)
+      else:
+        callstring = "%s %s %s" % (self.scriptbin, prog, self.argstring)
+      basecallstring = callstring
+      if self.stdin is not None:
+        callstring = callstring+" < %s" % self.stdin
+      if self.stdout is not None:
+        callstring = callstring+" > %s" % self.stdout
+      if self.stderr is not None:
+        callstring = callstring+" 2> %s" % self.stderr
+
+      localstderr.write("Calling %s\n" % callstring)
+      retval = self.call(basecallstring, **kwargs)
       sys.stderr.write("%s: Done\n" % prog)
     except CalledProcessError as exc:
       sys.stderr.write("%s: FAIL: %d %s\n" % (prog, exc.returncode, exc.output))
