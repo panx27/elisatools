@@ -273,7 +273,8 @@ def main():
           # Collect the annotations
           anncoll = set()
           startchar = int(src_man[3])
-          endchar = min(len(anns[src_fullid]), int(src_man[4]))
+          # endchar = min(len(anns[src_fullid]), int(src_man[4]))
+          endchar = int(src_man[4])
           for i in xrange(startchar, endchar):
             slot = anns[src_fullid][i]
             anncoll.update(map(tuple, slot))
