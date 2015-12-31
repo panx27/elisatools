@@ -95,14 +95,13 @@ def main():
           if docid.startswith('SN_TWT_'): # No string head for TWT
               strhead = xextent.text
               tweet = list(reader(open('%s/%s.rsd.txt' % (twtdir, docid))).read())
-              suffixnum = int(re.match('\S+\-(\d{2})', docid).group(1))
-              beg = int(xextent.get("start_char")) - suffixnum # LDC offsets counting bug???
-              end = int(xextent.get("end_char")) + 1 - suffixnum
+              beg = int(xextent.get("start_char"))
+              end = int(xextent.get("end_char"))
               # but don't go negative
-              if beg < 0 or end < 0:
-                  beg = int(xextent.get("start_char"))
-                  end = int(xextent.get("end_char")) + 1
-              strhead = ''.join(tweet[beg:end])
+              if beg < 0 or end > len(tweet):
+                  sys.stderr.write(annfile+" Bad offsets: can't do %d, %d on %s\n" % (beg, end, docid))
+                  continue
+              strhead = ''.join(tweet[beg:end+1])
               tup = [anntask, docid, xextent.get("start_char") or "None",
                      xextent.get("end_char") or "None", annid or "None",
                      strhead or "None"]

@@ -38,22 +38,22 @@ def main():
     try:
       for entry in xobj.findall(".//ENTRY"):
         words = entry.findall(".//WORD")
-        if len(words) > 1:
-          raise SkipEntry(ET.dump(entry))
-        word = words[0]
         poses = entry.findall(".//POS")
         glosses = entry.findall(".//GLOSS")
         if len(poses) != len(glosses):
-          raise SkipEntry(ET.dump(entry))
-        for pos, gloss in zip(poses, glosses):
-          if gloss.text is None or pos.text is None or word.text is None:
-            continue
-          of.write("%s\t%s\t%s\n" % (word.text.strip(),
-                                     pos.text.strip(),
-                                     gloss.text.strip()))
+          if len(poses) == 1:
+            poses = [poses[0]]*len(glosses)
+          else:
+            raise SkipEntry(ET.dump(entry))
+        for word in words:
+          for pos, gloss in zip(poses, glosses):
+            if gloss.text is None or pos.text is None or word.text is None:
+              continue
+            of.write("%s\t%s\t%s\n" % (word.text.strip(),
+                                       pos.text.strip(),
+                                       gloss.text.strip()))
     except SkipEntry as e:
-      sys.stderr.write(e.value+"\n")
-      sys.exit(1)
+      raise
 
 
     source_fh.write("Extracted lexicon from %s to %s on %s\nusing %s; command" \

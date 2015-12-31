@@ -135,8 +135,8 @@ def main():
     l2rindir = os.path.join(expdir, 'data', 'translation', 'from_'+language,
                             'eng') # Only converts from_SRC_tweet subdir
     stepsbyname["ltf2rsd.perl"].argstring = l2rindir
-    l2rprogpath = os.path.join(expdir, 'tools', 'ltf2txt')
-    stepsbyname["ltf2rsd.perl"].progpath = l2rprogpath
+    # l2rprogpath = os.path.join(expdir, 'tools', 'ltf2txt')
+    # stepsbyname["ltf2rsd.perl"].progpath = l2rprogpath
     l2rerr = os.path.join(rootdir, language, 'ltf2rsd.err')
     stepsbyname["ltf2rsd.perl"].stderr = l2rerr
 
