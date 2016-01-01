@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip, cycle
+from itertools import cycle
 from collections import defaultdict as dd
 import re
 import os.path
@@ -24,7 +25,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   reader = codecs.getreader('utf8')
@@ -48,7 +49,7 @@ def main():
     data[cat] = {"LEFT":size, "SET":[]}
   data[args.remainder] = {"LEFT":float("inf"), "SET":[]}
 
-  for cat in cycle(data.keys()):
+  for cat in cycle(list(data.keys())):
     if len(files) == 0:
       break
     if data[cat]["LEFT"] >= counts[files[0]]:
@@ -56,7 +57,7 @@ def main():
       data[cat]["SET"].append(doc)
       data[cat]["LEFT"]-=counts[doc]
 
-  for cat in data.keys():
+  for cat in list(data.keys()):
     sys.stderr.write("%s %f\n" % (cat, data[cat]["LEFT"]))
     for doc in data[cat]["SET"]:
       outfile.write("%s\t%s\n" % (doc, cat)) 

@@ -1,8 +1,8 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from lxml import etree as ET
 #from xml.etree import ElementTree as ET
 from collections import defaultdict as dd
@@ -50,7 +50,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   reader = codecs.getreader('utf8')

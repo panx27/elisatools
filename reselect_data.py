@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import re
 import os.path
@@ -18,10 +19,10 @@ def runselection(prefix, idfile, catfile, remainder, filetypes, srclang, indir, 
         for flang in [srclang, 'eng']:
           flatfile = os.path.join(indir, filetype, "%s.%s.%s.flat" % (prefix, filetype, flang))
           cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -P %s -r %s" % (scriptdir, flatfile, idfile, catfile, outdir, filetype, remainder)
-          print "Running "+cmd
+          print("Running "+cmd)
           cmd_output=check_output(cmd, stderr=STDOUT, shell=True)
   except CalledProcessError as exc:
-    print "Status : FAIL", exc.returncode, exc.output
+    print("Status : FAIL", exc.returncode, exc.output)
     sys.exit(1)
 
 
@@ -37,7 +38,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
 #  reader = codecs.getreader('utf8')
@@ -64,7 +65,7 @@ def main():
       # don't deal with it more if there's nothing in the manifest
       manfile = os.path.join(extractpath, "%s.eng.manifest" % prefix)
       if (not os.path.exists(manfile)) or os.path.getsize(manfile) == 0:
-        print "removing "+prefix
+        print("removing "+prefix)
         preflist.remove(prefix)
   # doc-based processing
   for prefix in docprefixes:
@@ -73,13 +74,13 @@ def main():
     try:
       check_output("cut -f2 %s > %s" % (manfile, idfile), stderr=STDOUT, shell=True)
     except CalledProcessError as exc:
-      print "Status : FAIL", exc.returncode, exc.output
+      print("Status : FAIL", exc.returncode, exc.output)
     catfile = os.path.join(args.previous, "%s.cats" % prefix)  
     runselection(prefix, idfile, catfile, args.remainder, filetypes, args.language, extractpath, outpath)
     for i in (args.language, 'eng'):
       manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
       cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -r %s" % (scriptdir, manifest, idfile, catfile, outpath, args.remainder)
-      print "Running "+cmd
+      print("Running "+cmd)
       check_output(cmd, stderr=STDOUT, shell=True)
 
   # nodoc-based processing
@@ -87,16 +88,16 @@ def main():
   for prefix in nodocprefixes:
     idfile = os.path.join(outpath, "%s.fakeids" % prefix)
     try:
-      mansize = int(check_output("wc -l %s" % os.path.join(extractpath, "%s.eng.manifest" % prefix), shell=True).strip().split(' ')[0])
+      mansize = int(check_output("wc -l %s" % os.path.join(extractpath, "%s.eng.manifest" % prefix), shell=True).decode('utf-8').strip().split(' ')[0])
       check_output("seq %d > %s" % (mansize, idfile), stderr=STDOUT, shell=True)
     except CalledProcessError as exc:
-      print "Status : FAIL", exc.returncode, exc.output
+      print("Status : FAIL", exc.returncode, exc.output)
     catfile = os.path.join(args.previous, "%s.cats" % prefix)
     runselection(prefix, idfile, catfile, args.remainder, filetypes, args.language, extractpath, outpath)
     for i in (args.language, 'eng'):
       manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
       cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -r %s" % (scriptdir, manifest, idfile, catfile, outpath, args.remainder)
-      print "Running "+cmd
+      print("Running "+cmd)
       check_output(cmd, stderr=STDOUT, shell=True)
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 # utilities for dealing with LRLPs
 import argparse
 import codecs
@@ -22,7 +23,7 @@ def main():
                                    "able to insertion into future xml",
                                    formatter_class=\
                                    argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--infile", "-i", nargs='+', type=argparse.FileType('r'),
+  parser.add_argument("--infile", "-i", nargs='+', type=argparse.FileType('rb'),
                       default=[sys.stdin,], help="input zip file(s)" \
                       " (each contains a multi file)")
   parser.add_argument("--outfile", "-o", type=argparse.FileType('w'),
@@ -30,11 +31,10 @@ def main():
                       help="where to write extracted semantic info")
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
-  writer = codecs.getwriter('utf8')
-  outfile = writer(args.outfile)
+  outfile = args.outfile
 
   nonehash = {"value":"None"}
 
@@ -68,7 +68,7 @@ def main():
                           anode.get('value'),
                           dnode.get('value')))
         except:
-          print info.filename
+          print(info.filename)
           raise
           sys.exit(1)
 

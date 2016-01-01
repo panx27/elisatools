@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
@@ -8,8 +9,8 @@ import gzip
 import re
 import os.path
 import hashlib
-from itertools import izip
-from itertools import izip_longest
+
+from itertools import zip_longest
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 # TODO: option to build gzip file
@@ -34,11 +35,9 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf-8')
-  writer = codecs.getwriter('utf-8')
   outfile = args.outfile
   # outfile = writer(args.outfile)
 
@@ -60,7 +59,7 @@ def main():
 
   if args.psmfile is not None:
     psmdiscardcount = 0
-    for ln, line in enumerate(reader(args.psmfile)):
+    for ln, line in enumerate(args.psmfile):
       try:
         toks = line.strip().split('\t')
         if len(toks) < 4:
@@ -73,7 +72,7 @@ def main():
         doc = toks[1]
         psmtemp[doc].append(toks)
       except:
-        print ln
+        print(ln)
         raise
     sys.stderr.write("Discarded %d psm entries\n" % psmdiscardcount)
 
@@ -89,7 +88,7 @@ def main():
   anntemp = dd(list)
   if args.annfile is not None:
     anndiscardcount = 0
-    for ln, line in enumerate(reader(args.annfile)):
+    for ln, line in enumerate(args.annfile):
       try:
         toks = line.strip().split('\t')
         if len(toks) < 6:
@@ -104,7 +103,7 @@ def main():
         anndiscardcount+=1
         continue
       except:
-        print ln
+        print(ln)
         raise
     sys.stderr.write("Discarded %d ann entries\n" % anndiscardcount)
   # Will fill on demand
@@ -121,43 +120,43 @@ def main():
   count = 0
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')
-    src_manifest = reader(open(os.path.join(args.rootdir, "%s.%s.manifest" % \
-                                            (corpus, args.lang))))
-    trg_manifest = reader(open(os.path.join(args.rootdir, "%s.eng.manifest" % \
-                                            (corpus))))
-    src_origfile = reader(open(os.path.join(args.rootdir, "original",
-                                            "%s.original.%s.flat" % \
-                                            (corpus, args.lang))))
-    trg_origfile = reader(open(os.path.join(args.rootdir, "original",
-                                            "%s.original.eng.flat" % (corpus))))
-    src_tokfile = reader(open(os.path.join(args.rootdir, "tokenized",
-                                           "%s.tokenized.%s.flat" % \
-                                           (corpus, args.lang))))
-    trg_tokfile = reader(open(os.path.join(args.rootdir, "tokenized",
-                                           "%s.tokenized.eng.flat" % (corpus))))
+    src_manifest = open(os.path.join(args.rootdir, "%s.%s.manifest" % \
+                                     (corpus, args.lang)))
+    trg_manifest = open(os.path.join(args.rootdir, "%s.eng.manifest" % \
+                                     (corpus)))
+    src_origfile = open(os.path.join(args.rootdir, "original",
+                                     "%s.original.%s.flat" % \
+                                     (corpus, args.lang)))
+    trg_origfile = open(os.path.join(args.rootdir, "original",
+                                     "%s.original.eng.flat" % (corpus)))
+    src_tokfile =  open(os.path.join(args.rootdir, "tokenized",
+                                    "%s.tokenized.%s.flat" % \
+                                    (corpus, args.lang)))
+    trg_tokfile =  open(os.path.join(args.rootdir, "tokenized",
+                                           "%s.tokenized.eng.flat" % (corpus)))
     ### TODO: Add cede, isi tokenization
 
-    src_morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
-                                                "%s.morph-tokenized.%s.flat" % \
-                                                (corpus,args.lang))))
-    trg_morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
-                                               "%s.morph-tokenized.eng.flat" % \
-                                                (corpus))))
-    src_morphfile = reader(open(os.path.join(args.rootdir, "morph",
-                                             "%s.morph.%s.flat" % \
-                                             (corpus, args.lang))))
-    trg_morphfile = reader(open(os.path.join(args.rootdir, "morph",
-                                             "%s.morph.eng.flat" % (corpus))))
-    src_posfile = reader(open(os.path.join(args.rootdir, "pos",
-                                           "%s.pos.%s.flat" % \
-                                           (corpus, args.lang))))
-    trg_posfile = reader(open(os.path.join(args.rootdir, "pos",
-                                           "%s.pos.eng.flat" % (corpus))))
+    src_morphtokfile = open(os.path.join(args.rootdir, "morph-tokenized",
+                                         "%s.morph-tokenized.%s.flat" % \
+                                         (corpus,args.lang)))
+    trg_morphtokfile = open(os.path.join(args.rootdir, "morph-tokenized",
+                                        "%s.morph-tokenized.eng.flat" % \
+                                         (corpus)))
+    src_morphfile =    open(os.path.join(args.rootdir, "morph",
+                                      "%s.morph.%s.flat" % \
+                                      (corpus, args.lang)))
+    trg_morphfile =    open(os.path.join(args.rootdir, "morph",
+                                      "%s.morph.eng.flat" % (corpus)))
+    src_posfile =      open(os.path.join(args.rootdir, "pos",
+                                    "%s.pos.%s.flat" % \
+                                    (corpus, args.lang)))
+    trg_posfile =      open(os.path.join(args.rootdir, "pos",
+                                           "%s.pos.eng.flat" % (corpus)))
     src_lastfullid = None
 
     ### ---------------------- Regular Parallel ----------------------
     if corpus != 'fromsource.tweet':
-      iteration = izip(src_manifest, trg_manifest, src_origfile, trg_origfile,
+      iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile,
                   src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
                   src_morphfile, trg_morphfile, src_posfile, trg_posfile)
       for src_manline, trg_manline, \
@@ -233,7 +232,7 @@ def main():
           for tup in data:
             start = int(tup[2])
             end = start+int(tup[3])
-            for i in xrange(start, end):
+            for i in range(start, end):
               psms[src_fullid][i].append(tup)
 
         if src_fullid in psms:
@@ -242,10 +241,10 @@ def main():
           startchar = int(src_man[3])
           endchar = int(src_man[4])
           if endchar > len(psms[src_fullid]):
-            endchar = None
-          for i in xrange(startchar, endchar):
+            endchar = len(psms[src_fullid])
+          for i in range(startchar, endchar):
             slot = psms[src_fullid][i]
-            psmcoll.update(map(tuple, slot))
+            psmcoll.update(list(map(tuple, slot)))
           for psmitem in psmcoll:
             if psmitem[0]=='headline':
               subelements.append(("IS_HEADLINE","1"))
@@ -266,7 +265,7 @@ def main():
           for tup in data:
             start = int(tup[2])
             end = int(tup[3])
-            for i in xrange(start, end):
+            for i in range(start, end):
               anns[src_fullid][i].append(tup)
 
         if src_fullid in anns:
@@ -275,9 +274,9 @@ def main():
           startchar = int(src_man[3])
           # endchar = min(len(anns[src_fullid]), int(src_man[4]))
           endchar = int(src_man[4])
-          for i in xrange(startchar, endchar):
+          for i in range(startchar, endchar):
             slot = anns[src_fullid][i]
-            anncoll.update(map(tuple, slot))
+            anncoll.update(list(map(tuple, slot)))
           if len(anncoll) > 0:
             ae = ET.SubElement(src_seg, "ANNOTATIONS")
           for annitem in anncoll: # TODO: sort by start_char?
@@ -342,7 +341,7 @@ def main():
           ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
 
         xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
-                             xml_declaration=False)
+                             xml_declaration=False).decode('utf-8')
         outfile.write(xmlstr)
         count += 1
       outfile.write("</DOCUMENT>\n")
@@ -351,7 +350,7 @@ def main():
     src_lastfullid = None
     ### ---------------------- Tweets Parallel ----------------------
     if corpus == 'fromsource.tweet':
-      iteration = izip(src_manifest, trg_manifest, src_origfile, trg_origfile)
+      iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile)
       for src_manline, trg_manline, \
           src_origline, trg_origline \
           in iteration:
@@ -404,7 +403,7 @@ def main():
           for tup in data:
             start = int(tup[2])
             end = start+int(tup[3])
-            for i in xrange(start, end):
+            for i in range(start, end):
               psms[src_fullid][i].append(tup)
 
         if src_fullid in psms:
@@ -414,9 +413,9 @@ def main():
           endchar = int(src_man[4])
           if endchar > len(psms[src_fullid]):
             endchar = None
-          for i in xrange(startchar, endchar):
+          for i in range(startchar, endchar):
             slot = psms[src_fullid][i]
-            psmcoll.update(map(tuple, slot))
+            psmcoll.update(list(map(tuple, slot)))
           for psmitem in psmcoll:
             if psmitem[0]=='headline':
               subelements.append(("IS_HEADLINE","1"))
@@ -437,7 +436,7 @@ def main():
           for tup in data:
             start = int(tup[2])
             end = int(tup[3])
-            for i in xrange(start, end):
+            for i in range(start, end):
               anns[src_fullid][i].append(tup)
 
         if src_fullid in anns:
@@ -447,9 +446,9 @@ def main():
           # endchar = min(len(anns[src_fullid]), int(src_man[4]))
           startchar = 0
           endchar = len(anns[src_fullid])
-          for i in xrange(startchar, endchar):
+          for i in range(startchar, endchar):
             slot = anns[src_fullid][i]
-            anncoll.update(map(tuple, slot))
+            anncoll.update(list(map(tuple, slot)))
           if len(anncoll) > 0:
             ae = ET.SubElement(src_seg, "ANNOTATIONS")
           for annitem in anncoll: # TODO: sort by start_char?
@@ -510,12 +509,11 @@ def main():
           ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
 
         xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
-                             xml_declaration=False)
+                             xml_declaration=False).decode('utf-8')
         outfile.write(xmlstr)
         count += 1
       outfile.write("</DOCUMENT>\n")
       ### ------------------ End of Tweets Parallel ------------------
-
   outfile.write("</ELISA_BILINGUAL_LRLP_CORPUS>\n")
 
   # Cannot retrieve all psm and ann

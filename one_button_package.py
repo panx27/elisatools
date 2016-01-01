@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import re
 import os.path
@@ -56,7 +57,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   rootdir = args.root
@@ -107,7 +108,7 @@ def main():
                              (language, i, args.year, args.part, args.version))
     if i != "eval":
       finalitems.append(parallelxml)
-    parallelerr = os.path.join(rootdir, 'make_parallel_release.err')
+    parallelerr = os.path.join(rootdir, 'make_parallel_release_%s.err' % i)
 
     pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
                       (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
@@ -135,7 +136,7 @@ def main():
   for step in steps[start:stop]:
     step.run()
 
-  print "Done"
+  print("Done")
 
 if __name__ == '__main__':
   main()

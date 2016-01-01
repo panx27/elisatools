@@ -5,7 +5,7 @@
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import re
 import os.path
@@ -28,7 +28,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   writer = codecs.getwriter('utf8')
@@ -75,7 +75,7 @@ lc-tok-refs:
     decodecmd = "qsubrun -W depend=afterok:%s,afterok:%s -- %s %s %s %d" % (sourcetokid, targettokid, decode, args.key, args.tunekey, args.iter)
     sys.stderr.write("Calling "+decodecmd+" from "+args.outdir+"\n")
     decodeid = check_output(decodecmd, shell=True, cwd=args.outdir).strip()
-    print "Launched "+decodeid
+    print("Launched "+decodeid)
   except CalledProcessError as exc:
     sys.stderr.write("%s: FAIL: %d %s\n" % (exc.returncode, exc.output))
 

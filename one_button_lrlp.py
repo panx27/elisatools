@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import re
 import os.path
@@ -84,7 +85,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   if args.expdir is not None and args.start <= 0:
@@ -104,11 +105,10 @@ def main():
     (language, rootdir, args.tarball)
 
   if start == 0:
-    expdir = steps[0].run().strip()
+    expdir = steps[0].run().strip().decode("utf-8")
     start += 1
   else:
     expdir = args.expdir
-
   # Patchups for the rest
   if stop > 0:
     # TWEET
@@ -195,7 +195,7 @@ def main():
       step.run()
 
 
-  print "Done.\nExpdir is %s" % expdir
+  print("Done.\nExpdir is %s" % expdir)
 
 if __name__ == '__main__':
   main()

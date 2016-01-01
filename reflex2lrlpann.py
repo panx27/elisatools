@@ -2,7 +2,7 @@
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import lxml.etree as ET
 import re
@@ -28,7 +28,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   reader = codecs.getreader('utf8')
@@ -42,7 +42,7 @@ def main():
   localcount = 0
   remotecount = 0
   bothcount = 0
-  for inlaf in filter(lambda x: x.endswith(".laf.xml"), os.listdir(indir)):
+  for inlaf in [x for x in os.listdir(indir) if x.endswith(".laf.xml")]:
     base = inlaf.replace(".laf.xml", "")
     outlaf = os.path.join(outdir, inlaf)
     inlaf = os.path.join(indir, inlaf)

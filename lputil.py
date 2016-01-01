@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 # utilities for dealing with LRLPs
 import argparse
 import sys
@@ -55,7 +56,7 @@ def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
     t = f.read()
   with open(alignfile) as f:
     for line in f.readlines():
-      ss, sl, ts, tl = map(int, line.strip().split('\t'))
+      ss, sl, ts, tl = list(map(int, line.strip().split('\t')))
       slines.append(s[ss:ss+sl]+"\n")
       tlines.append(t[ts:ts+tl]+"\n")
       sids.append(srcfile+"\n")
@@ -120,7 +121,7 @@ def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
   tdata = dd(list)
   with open(alignfile) as f:
     for line in f.readlines():
-      ss, sl, ts, tl = map(int, line.strip().split('\t'))
+      ss, sl, ts, tl = list(map(int, line.strip().split('\t')))
       srcspans.append((ss, ss+sl))
       trgspans.append((ts, ts+tl))
   import xml.etree.ElementTree as ET
@@ -148,7 +149,7 @@ def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
       # only segid is good here
       data["ORIG"].append(' '.join([x.text for x in span])+'\n')
       data["SEGID"].append(segid)
-    lengths = [len(i) for i in data.values()]
+    lengths = [len(i) for i in list(data.values())]
     for length in lengths[1:]:
       if length != lengths[0]:
         sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
@@ -423,7 +424,7 @@ def extract_lines(s, t, xml=True):
       with codecs.open(x, 'r', 'utf-8') as f:
         l["ORIG"] = f.readlines()
       l["DOCID"] = [x+"\n"]*len(l["ORIG"])
-    lengths = [len(i) for i in l.values()]
+    lengths = [len(i) for i in list(l.values())]
     for length in lengths[1:]:
       if length != lengths[0]:
         sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
@@ -517,7 +518,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   sfile = args.prefix+"."+args.src

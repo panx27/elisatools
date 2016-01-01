@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip, cycle
+from itertools import cycle
 from collections import defaultdict as dd
 import re
 import os.path
@@ -24,7 +25,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   reader = codecs.getreader('utf8')
@@ -38,12 +39,12 @@ def main():
   docs = dd(set)
   for line in termfile:
     terms.add(line.strip().lower())
-  for doc, seg in izip(idfile, infile):
+  for doc, seg in zip(idfile, infile):
     doc = doc.strip()
     seg = seg.strip()
     docs[doc].update([x.lower() for x in seg.split()])
   scores = []
-  for doc, words in docs.iteritems():
+  for doc, words in docs.items():
     heappush(scores, (-getoverlap(terms, words), doc))
   while len(scores) > 0:
     score, doc = heappop(scores)

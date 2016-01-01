@@ -1,8 +1,6 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
 # utilities for dealing with LRLPs
 import argparse
 import codecs
@@ -42,13 +40,10 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf8')
-  writer = codecs.getwriter('utf8')
-  outfile = writer(open(args.outfile, 'w'))
-  #outfile = open(args.outfile, 'w')
+  outfile = open(args.outfile, 'w')
   twtdir = args.extwtdir
   anndir = os.path.join(args.rootdir, 'data', 'annotation')
   if not os.path.exists(anndir):
@@ -94,14 +89,14 @@ def main():
           xextent = xann.find('EXTENT')
           if docid.startswith('SN_TWT_'): # No string head for TWT
               strhead = xextent.text
-              tweet = list(reader(open('%s/%s.rsd.txt' % (twtdir, docid))).read())
+              tweet = open('%s/%s.rsd.txt' % (twtdir, docid)).read()
               beg = int(xextent.get("start_char"))
               end = int(xextent.get("end_char"))
               # but don't go negative
               if beg < 0 or end > len(tweet):
                   sys.stderr.write(annfile+" Bad offsets: can't do %d, %d on %s\n" % (beg, end, docid))
                   continue
-              strhead = ''.join(tweet[beg:end+1])
+              strhead = tweet[beg:end+1]
               tup = [anntask, docid, xextent.get("start_char") or "None",
                      xextent.get("end_char") or "None", annid or "None",
                      strhead or "None"]
@@ -137,8 +132,8 @@ def main():
                                  +anntask+"\n")
                 continue
             except:
-              print annfile
-              print ET.tostring(xann)
+              print(annfile)
+              print(ET.tostring(xann))
               raise
           try:
               outfile.write("\t".join(tup)+"\n")

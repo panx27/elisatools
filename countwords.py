@@ -1,8 +1,8 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import re
 import os.path
@@ -20,7 +20,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   reader = codecs.getreader('utf8')
@@ -30,11 +30,11 @@ def main():
   outfile = writer(args.outfile)
 
   docs = dd(int)
-  for doc, seg in izip(idfile, infile):
+  for doc, seg in zip(idfile, infile):
     doc = doc.strip()
     seg = seg.strip()
     docs[doc]+=len(seg.split())
-  for doc, count in docs.iteritems():
+  for doc, count in docs.items():
     outfile.write("%s\t%d\n" % (doc, count))
 
 

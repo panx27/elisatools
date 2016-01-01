@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import re
 import os.path
@@ -21,14 +22,12 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf8')
-  writer = codecs.getwriter('utf8')
-  infile = reader(args.infile)
-  outfile = writer(args.outfile)
-  stderr = writer(sys.stderr)
+  infile = args.infile
+  outfile = args.outfile
+  stderr = sys.stderr
 
 
   bad = 0

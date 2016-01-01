@@ -1,8 +1,6 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
 # utilities for dealing with LRLPs
 import argparse
 import codecs
@@ -23,7 +21,7 @@ def main():
   parser = argparse.ArgumentParser(description="Extract and print monolingual" \
                                    " data, tokenized, morph, pos tag and " \
                                    "original, with manifests")
-  parser.add_argument("--infile", "-i", nargs='+', type=argparse.FileType('r'),
+  parser.add_argument("--infile", "-i", nargs='+', type=argparse.FileType('rb'),
                       default=[sys.stdin,],
                       help="input zip file(s) (each contains a multi file)")
   parser.add_argument("--outdir", "-o",
@@ -47,10 +45,9 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
-  writer = codecs.getwriter('utf8')
 
   tokoutdir=os.path.join(args.outdir, args.toksubdir)
   origoutdir=os.path.join(args.outdir, args.origsubdir)
@@ -73,13 +70,13 @@ def main():
   for infile in args.infile:
     inbase = '.'.join(os.path.basename(infile.name).split('.')[:-2])
     archive = zf(infile)
-    man_fh = writer(open(os.path.join(args.outdir, "%s.manifest" % inbase),'w'))
-    orig_fh = writer(open(os.path.join(origoutdir, "%s.flat" % inbase), 'w'))
-    tok_fh = writer(open(os.path.join(tokoutdir, "%s.flat" % inbase), 'w'))
-    morphtok_fh = writer(open(os.path.join(morphtokoutdir,
-                                           "%s.flat" % inbase), 'w'))
-    morph_fh = writer(open(os.path.join(morphoutdir, "%s.flat" % inbase), 'w'))
-    pos_fh = writer(open(os.path.join(posoutdir, "%s.flat" % inbase), 'w'))
+    man_fh = open(os.path.join(args.outdir, "%s.manifest" % inbase),'w')
+    orig_fh = open(os.path.join(origoutdir, "%s.flat" % inbase), 'w')
+    tok_fh = open(os.path.join(tokoutdir, "%s.flat" % inbase), 'w')
+    morphtok_fh = open(os.path.join(morphtokoutdir,
+                                           "%s.flat" % inbase), 'w')
+    morph_fh = open(os.path.join(morphoutdir, "%s.flat" % inbase), 'w')
+    pos_fh = open(os.path.join(posoutdir, "%s.flat" % inbase), 'w')
     for info in archive.infolist():
       if info.file_size < 20:
         continue

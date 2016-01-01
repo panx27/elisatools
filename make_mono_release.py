@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import sys
 import codecs
@@ -9,7 +9,7 @@ import re
 import os
 import os.path
 import hashlib
-from itertools import izip
+
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 def get_parallel_docs(paradir):
@@ -40,11 +40,9 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf-8')
-  writer = codecs.getwriter('utf-8')
   outfile = args.outfile
   # outfile = writer(args.outfile)
 
@@ -68,7 +66,7 @@ def main():
 
   if args.psmfile is not None:
     psmdiscardcount = 0
-    for ln, line in enumerate(reader(args.psmfile)):
+    for ln, line in enumerate(args.psmfile):
       try:
         toks = line.strip().split('\t')
         if len(toks) < 4:
@@ -81,7 +79,7 @@ def main():
         doc = toks[1]
         psmtemp[doc].append(toks)
       except:
-        print ln
+        print(ln)
         raise
     sys.stderr.write("Discarded %d psm entries\n" % psmdiscardcount)
 
@@ -97,7 +95,7 @@ def main():
   anntemp = dd(list)
   if args.annfile is not None:
     anndiscardcount = 0
-    for ln, line in enumerate(reader(args.annfile)):
+    for ln, line in enumerate(args.annfile):
       try:
         toks = line.strip().split('\t')
         if len(toks) < 6:
@@ -112,7 +110,7 @@ def main():
         anndiscardcount+=1
         continue
       except:
-        print ln
+        print(ln)
         raise
     sys.stderr.write("Discarded %d ann entries\n" % anndiscardcount)
   # Will fill on demand
@@ -126,25 +124,25 @@ def main():
   outfile.write('<ELISA_LRLP_CORPUS language="%s">\n' % args.lang)
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')
-    manifest = reader(open(os.path.join(args.rootdir, "%s.manifest" % corpus)))
-    origfile = reader(open(os.path.join(args.rootdir,
-                                        "original", "%s.flat" % corpus)))
-    tokfile = reader(open(os.path.join(args.rootdir,
-                                       "tokenized", "%s.flat" % corpus)))
-    cdectokfile = reader(open(os.path.join(args.rootdir,"cdec-tokenized",
-                                           "%s.flat" % corpus)))
-    cdectoklcfile = reader(open(os.path.join(args.rootdir, "cdec-tokenized",
-                                             "%s.flat.lc" % corpus)))
-    morphtokfile = reader(open(os.path.join(args.rootdir, "morph-tokenized",
-                                            "%s.flat" % corpus)))
-    morphfile = reader(open(os.path.join(args.rootdir, "morph",
-                                         "%s.flat" % corpus)))
-    posfile = reader(open(os.path.join(args.rootdir, "pos",
-                                         "%s.flat" % corpus)))
+    manifest =      open(os.path.join(args.rootdir, "%s.manifest" % corpus))
+    origfile =      open(os.path.join(args.rootdir,
+                                 "original", "%s.flat" % corpus))
+    tokfile =       open(os.path.join(args.rootdir,
+                                "tokenized", "%s.flat" % corpus))
+    cdectokfile =   open(os.path.join(args.rootdir,"cdec-tokenized",
+                                    "%s.flat" % corpus))
+    cdectoklcfile = open(os.path.join(args.rootdir, "cdec-tokenized",
+                                      "%s.flat.lc" % corpus))
+    morphtokfile =  open(os.path.join(args.rootdir, "morph-tokenized",
+                                     "%s.flat" % corpus))
+    morphfile =     open(os.path.join(args.rootdir, "morph",
+                                  "%s.flat" % corpus))
+    posfile =       open(os.path.join(args.rootdir, "pos",
+                                         "%s.flat" % corpus))
     lastfullid = None
 
     for manline, origline, tokline, cdectokline, cdectoklcline, morphtokline, \
-    morphline, posline in izip(manifest, origfile, tokfile, cdectokfile,
+    morphline, posline in zip(manifest, origfile, tokfile, cdectokfile,
                               cdectoklcfile, morphtokfile, morphfile, posfile):
       origline = origline.strip()
       tokline = tokline.strip()
@@ -159,7 +157,7 @@ def main():
       fullidfields = ['GENRE', 'PROVENANCE', 'LANGUAGE', 'INDEX_ID', 'DATE']
 
       if fullid in paradocs: # Parallel data is not repeated in the mono data
-        sys.stderr.write("Document %s exists in parallel data\n" % fullid)
+        #sys.stderr.write("Document %s exists in parallel data\n" % fullid)
         continue
 
       # Faking the document-level
@@ -200,7 +198,7 @@ def main():
         for tup in data:
           start = int(tup[2])
           end = start+int(tup[3])
-          for i in xrange(start, end):
+          for i in range(start, end):
             psms[fullid][i].append(tup)
 
       if fullid in psms:
@@ -210,9 +208,9 @@ def main():
         endchar = int(man[4])
         if endchar > len(psms[fullid]):
           endchar = None
-        for i in xrange(startchar, endchar):
+        for i in range(startchar, endchar):
           slot = psms[fullid][i]
-          psmcoll.update(map(tuple, slot))
+          psmcoll.update(list(map(tuple, slot)))
         for psmitem in psmcoll:
           if psmitem[0]=='headline':
             subelements.append(("IS_HEADLINE","1"))
@@ -233,7 +231,7 @@ def main():
         for tup in data:
           start = int(tup[2])
           end = int(tup[3])
-          for i in xrange(start, end):
+          for i in range(start, end):
             anns[fullid][i].append(tup)
 
       if fullid in anns:
@@ -241,9 +239,9 @@ def main():
         anncoll = set()
         startchar = int(man[3])
         endchar = min(len(anns[fullid]), int(man[4]))
-        for i in xrange(startchar, endchar):
+        for i in range(startchar, endchar):
           slot = anns[fullid][i]
-          anncoll.update(map(tuple, slot))
+          anncoll.update(list(map(tuple, slot)))
         if len(anncoll) > 0:
           ae = ET.SubElement(xroot, "ANNOTATIONS")
         for annitem in anncoll: # TODO: sort by start_char?
@@ -292,16 +290,16 @@ def main():
       # Entity/semantic annotations in their own block if fullid in anns
 
       xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
-                           xml_declaration=False)
+                           xml_declaration=False).decode('utf-8')
       outfile.write(xmlstr)
     outfile.write("</DOCUMENT>\n")
   outfile.write("</ELISA_LRLP_CORPUS>\n")
 
   # TODO /corpus/document
   # TODO: verify empty psm
-  for key in psmtemp.keys():
+  for key in list(psmtemp.keys()):
     sys.stderr.write("Unvisited psm: %s\n" % key)
-  for key in anntemp.keys():
+  for key in list(anntemp.keys()):
     sys.stderr.write("Unvisited ann: %s\n" % key)
 
 if __name__ == '__main__':

@@ -1,8 +1,7 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
+
 import argparse
 import codecs
 from collections import defaultdict as dd
@@ -68,10 +67,10 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
     if xml:
       try:
         for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]),
-                                     (zip(sdata["DOCID"], sdata["SEGID"],
-                                          sdata["START"], sdata["END"]),
-                                      zip(tdata["DOCID"], tdata["SEGID"],
-                                          tdata["START"], tdata["END"]))):
+                                     (list(zip(sdata["DOCID"], sdata["SEGID"],
+                                          sdata["START"], sdata["END"])),
+                                      list(zip(tdata["DOCID"], tdata["SEGID"],
+                                          tdata["START"], tdata["END"])))):
           for tup in tupgen:
             fh.write("\t".join(map(str, (fname,)+tup))+"\n")
       except:
@@ -146,7 +145,7 @@ def main():
                       help="directory of extracted tweet rsd files")
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   origoutdir=args.origsubdir

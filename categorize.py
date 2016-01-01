@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip, cycle
+from itertools import cycle
 from collections import defaultdict as dd
 import re
 import os.path
@@ -21,14 +22,12 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf8')
-  writer = codecs.getwriter('utf8')
-  catfile = reader(args.catfile)
-  infile = reader(args.infile)
-  idfile = reader(args.idfile)
+  catfile = args.catfile
+  infile =  args.infile
+  idfile =  args.idfile
 
   basefile = os.path.basename(args.infile.name)
   cats = {}
@@ -39,15 +38,15 @@ def main():
     innercatfile = os.path.join(prefix, basefile)
     if innercatfile not in fhs:      
       mkdir_p(prefix)
-      fhs[innercatfile]=writer(open(innercatfile, 'w'))
+      fhs[innercatfile]=open(innercatfile, 'w')
     cats[doc]=fhs[innercatfile]
   remcatpref = os.path.join(args.prefix, args.remainder, args.postfix)
   remaindercatfile = os.path.join(remcatpref, basefile)
   if remaindercatfile not in fhs:
     mkdir_p(remcatpref)
-    fhs[remaindercatfile]=writer(open(remaindercatfile, 'w'))
+    fhs[remaindercatfile]=open(remaindercatfile, 'w')
     
-  for doc, data in izip(idfile, infile):
+  for doc, data in zip(idfile, infile):
     doc = doc.strip()
     fh = cats[doc] if doc in cats else fhs[remaindercatfile]
     fh.write(data)

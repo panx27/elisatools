@@ -1,8 +1,9 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
-from itertools import izip
+
 from collections import defaultdict as dd
 import re
 import os.path
@@ -30,13 +31,13 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   if os.path.exists(args.target):
     shutil.rmtree(args.target)
   mkdir_p(args.target)
-  for indirstub, outdirstub in manifest.iteritems():
+  for indirstub, outdirstub in manifest.items():
     indir = os.path.join(args.source, indirstub)
     if os.path.exists(indir):
       outdir = os.path.join(args.target, outdirstub)

@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import sys
 import codecs
@@ -54,7 +55,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   reader = codecs.getreader('utf8')
@@ -145,7 +146,7 @@ def main():
   if counter < milestone:
     sys.stderr.write("Warning: Input too small to meet all milestones; stopped at %d\n" + counter)
   for manfile, sedfile in mansed:
-    itemlist = map(int, open(manfile).readlines())
+    itemlist = list(map(int, open(manfile).readlines()))
     ofh = open(sedfile, 'w')
     ofh.write("#n\n")
     for s, e in list2range(itemlist):

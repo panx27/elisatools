@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
+
 # utilities for dealing with LRLPs
 import argparse
 import sys
@@ -17,7 +18,7 @@ def main():
 
   try:
     args = parser.parse_args()
-  except IOError, msg:
+  except IOError as msg:
     parser.error(str(msg))
 
   sfile = args.prefix+"."+args.src
