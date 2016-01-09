@@ -53,13 +53,10 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf8')
-  writer = codecs.getwriter('utf8')
   infile = args.infile
   infile = gzip.open(infile.name, 'r') if infile.name.endswith(".gz") else infile
-  #infile = reader(infile)
   outfile = gzip.open(args.outfile.name, 'w') if args.outfile.name.endswith(".gz") else args.outfile
-  outfile = writer(outfile)
+
 
   ctxt = ET.iterparse(infile, events=("end", "start"))
   # don't delete when in the middle of an element you want to investigate
