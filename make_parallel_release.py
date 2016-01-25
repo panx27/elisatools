@@ -220,9 +220,15 @@ def main():
         src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
         subelements.append(("MD5_HASH_SOURCE", src_md5))
         subelements.append(("LRLP_TOKENIZED_SOURCE", src_tokline))
-        subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
-        subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
         subelements.append(("LRLP_POSTAG_SOURCE", src_posline))
+        # don't add morph info if there's nothing interesting
+        morphset = set(src_morphtokline.split())
+        if len(morphset) == 1 and list(morphset)[0] == "none":
+          pass
+        else:
+          subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
+          subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
+
 
         # On-demand fill of psms and anns hashes that assumesit will be
         # used contiguously
@@ -335,10 +341,16 @@ def main():
           trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
           ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
           ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
-          ET.SubElement(trg_seg,
-                        "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
-          ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
           ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
+          # don't add morph info if there's nothing interesting
+          morphset = set(trg_morphtokline.split())
+          if len(morphset) == 1 and list(morphset)[0] == "none":
+            pass
+          else:
+            ET.SubElement(trg_seg,
+                          "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
+            ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
+
 
         xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
                              xml_declaration=False).decode('utf-8')

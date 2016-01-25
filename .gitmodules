@@ -1,0 +1,3 @@
+[submodule "agile_tokenizer"]
+	path = agile_tokenizer
+	url = https://github.com/isi-nlp/agile_tokenizer

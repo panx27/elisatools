@@ -186,9 +186,15 @@ def main():
       subelements.append(("LRLP_TOKENIZED_SOURCE", tokline))
       subelements.append(("CDEC_TOKENIZED_SOURCE", cdectokline))
       subelements.append(("CDEC_TOKENIZED_LC_SOURCE", cdectoklcline))
-      subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", morphtokline))
-      subelements.append(("LRLP_MORPH_SOURCE", morphline))
       subelements.append(("LRLP_POSTAG_SOURCE", posline))
+      # don't add morph info if there's nothing interesting
+      morphset = set(morphline.split())
+      if len(morphset) == 1 and list(morphset)[0] == "none":
+        pass
+      else:
+        subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", morphtokline))
+        subelements.append(("LRLP_MORPH_SOURCE", morphline))
+
 
       # On-demand fill of psms and anns hashes that assumesit will be
       # used contiguously
