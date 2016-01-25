@@ -162,6 +162,9 @@ def main():
                       help="subdirectory for pos tag files")
   parser.add_argument("--extwtdir", "-et", default=None,
                       help="directory of extracted tweet rsd files")
+  parser.add_argument("--agiletokpath", default=os.path.join(scriptdir, 'agile_tokenizer', 'gale-eng-tok.sh'), 
+                      help="path to agile tokenizer binary")
+
   try:
     args = parser.parse_args()
   except IOError as msg:
@@ -173,6 +176,7 @@ def main():
   agiletokoutdir=args.agiletoksubdir
   morphoutdir=args.morphsubdir
   posoutdir=args.possubdir
+  agiletokpath = args.agiletokpath
   dirs = [origoutdir,
           tokoutdir,
           morphtokoutdir,
