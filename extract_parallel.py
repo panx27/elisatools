@@ -17,14 +17,15 @@ from subprocess import check_call, CalledProcessError
 
 
 def printout(prefix, path, src, trg, outdir, origoutdir,
-             tokoutdir, morphtokoutdir, agiletokoutdir, morphoutdir, posoutdir,
-             agiletokpath,
+             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
+             cdectokpath, agiletokpath,
              stp=lputil.selected_translation_pairs, el=lputil.extract_lines):
   ''' Find files and print them out '''
   src_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, src)), 'w')
   trg_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, trg)), 'w')
-  src_orig_fh=open(os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % \
-                                (prefix,origoutdir,src)), 'w')
+  src_orig_fname=os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % \
+                                (prefix,origoutdir,src))
+  src_orig_fh=open(src_orig_fname, 'w')
   trg_orig_fname=os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % \
                               (prefix,origoutdir,trg))
   trg_orig_fh=open(trg_orig_fname, 'w')
@@ -45,9 +46,14 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
                                (prefix,posoutdir,src)),'w')
   trg_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % \
                                (prefix,posoutdir,trg)),'w')
-
+  src_cdectok_fname=os.path.join(outdir, cdectokoutdir, "%s.%s.%s.flat" % \
+                                    (prefix,cdectokoutdir,src))
   trg_agiletok_fname=os.path.join(outdir, agiletokoutdir, "%s.%s.%s.flat" % \
                                     (prefix,agiletokoutdir,trg))
+  src_cdectoklc_fname=os.path.join(outdir, cdectoklcoutdir, "%s.%s.%s.flat" % \
+                                    (prefix,cdectoklcoutdir,src))
+  trg_agiletoklc_fname=os.path.join(outdir, agiletoklcoutdir, "%s.%s.%s.flat" % \
+                                    (prefix,agiletoklcoutdir,trg))
 
   xml = True
   if prefix == 'fromsource.tweet':
@@ -101,13 +107,23 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
       for fh, field in zip(fhset, ("TOK", "MORPHTOK", "MORPH", "POS")):
         fh.write(''.join(data[field]))
   # run agile tokenizer on target orig
+  # TODO: lowercase
   trg_orig_fh.close()
-  agiletok_cmd = "%s < %s > %s" % (agiletokpath, trg_orig_fname, trg_agiletok_fname)
+  agiletok_cmd = "%s -i %s -o %s -t %s " % (agiletokpath, trg_orig_fname, trg_agiletoklc_fname, trg_agiletok_fname)
   try:
     check_call(agiletok_cmd, shell=True)
   except CalledProcessError as e:
     sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
     sys.exit(1)
+  # run cdec tokenizer on source orig
+  src_orig_fh.close()
+  cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, src_orig_fname, src_cdectoklc_fname, src_cdectok_fname)
+  try:
+    check_call(cdectok_cmd, shell=True)
+  except CalledProcessError as e:
+    sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
+    sys.exit(1)
+    
 
 
 '''
@@ -152,7 +168,9 @@ def main():
                       help="subdirectory for untokenized files")
   parser.add_argument("--toksubdir", default="tokenized",
                       help="subdirectory for tokenized files")
-  parser.add_argument("--agiletoksubdir", default="agiletokenized",
+  parser.add_argument("--cdectoksubdir", default="cdec-tokenized",
+                      help="subdirectory for cdec-tokenized files")
+  parser.add_argument("--agiletoksubdir", default="agile-tokenized",
                       help="subdirectory for agile-tokenized files (target side only)")
   parser.add_argument("--morphtoksubdir", default="morph-tokenized",
                       help="subdirectory for tokenized files based on " \
@@ -163,8 +181,10 @@ def main():
                       help="subdirectory for pos tag files")
   parser.add_argument("--extwtdir", "-et", default=None,
                       help="directory of extracted tweet rsd files")
-  parser.add_argument("--agiletokpath", default=os.path.join(scriptdir, 'agile_tokenizer', 'gale-eng-tok.sh'), 
+  parser.add_argument("--agiletokpath", default=os.path.join(scriptdir, 'agiletok.sh'),
                       help="path to agile tokenizer binary")
+  parser.add_argument("--cdectokpath", default=os.path.join(scriptdir, 'cdectok.sh'),
+                      help="path to cdec tokenizer binary")
 
   try:
     args = parser.parse_args()
@@ -174,14 +194,21 @@ def main():
   origoutdir=args.origsubdir
   tokoutdir=args.toksubdir
   morphtokoutdir=args.morphtoksubdir
+  cdectokoutdir=args.cdectoksubdir
   agiletokoutdir=args.agiletoksubdir
+  cdectoklcoutdir=args.cdectoksubdir+".lc"
+  agiletoklcoutdir=args.agiletoksubdir+".lc"
   morphoutdir=args.morphsubdir
   posoutdir=args.possubdir
   agiletokpath = args.agiletokpath
+  cdectokpath = args.cdectokpath
   dirs = [origoutdir,
           tokoutdir,
           morphtokoutdir,
+          cdectokoutdir,
           agiletokoutdir,
+          cdectoklcoutdir,
+          agiletoklcoutdir,
           morphoutdir,
           posoutdir]
   for dir in dirs:
@@ -212,12 +239,12 @@ def main():
   for corpustuple in corpustuples:
     printout(corpustuple[0], corpustuple[1],
              args.src, args.trg, args.outdir, origoutdir,
-             tokoutdir, morphtokoutdir, agiletokoutdir, morphoutdir, posoutdir, agiletokpath)
+             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir, agiletokpath, cdectokpath)
 
   # Found data
   printout("found.generic",
            args.rootdir, args.src, args.trg, args.outdir, origoutdir,
-           tokoutdir, morphtokoutdir, agiletokoutdir, morphoutdir, posoutdir, agiletokpath,
+           tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir, agiletokpath, cdectokpath,
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
 
   # Tweet data
@@ -226,7 +253,7 @@ def main():
     printout("fromsource.tweet",
              os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
              args.src, args.trg, args.outdir, origoutdir,
-             tokoutdir, morphtokoutdir, agiletokoutdir, morphoutdir, posoutdir, agiletokpath)
+             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir, agiletokpath, cdectokpath)
 
 if __name__ == '__main__':
   main()

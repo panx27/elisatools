@@ -28,6 +28,9 @@ def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes
       if os.path.exists(os.path.join(indir, filetype)):
         for flang in [srclang, 'eng']:
           flatfile = os.path.join(indir, filetype, "%s.%s.%s.flat" % (prefix, filetype, flang))
+          if not(os.path.exists(flatfile)):
+            print("***Warning: %s does not exist so not selecting" % flatfile)
+            continue
           cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -P %s" % (scriptdir, flatfile, idfile, catfile, outdir, filetype)
           print("Running "+cmd)
           cmd_output=check_output(cmd, stderr=STDOUT, shell=True)
@@ -68,7 +71,7 @@ def main():
   nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook"]
 
   # TODO: find these
-  filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc"]
+  filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc", "agile-tokenized", "cdec-tokenized", "agile-tokenized.lc", "cdec-tokenized.lc"]
 
   extractpath = os.path.join(indir, 'extracted')
   origpath = os.path.join(extractpath, 'original')
@@ -88,7 +91,7 @@ def main():
         preflist.remove(prefix)
   for prefix in docprefixes+nodocprefixes:      
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
-    prefsize = int(check_output("wc -w %s" % engfile, shell=True).strip().split(' ')[0])
+    prefsize = int(check_output("wc -w %s" % engfile, shell=True).decode('utf8').strip().split(' ')[0])
     fullsizes[prefix] = prefsize
     sizesum +=prefsize
   # adjust size split by proportion, with minimum
@@ -119,7 +122,7 @@ def main():
   for prefix in nodocprefixes:
     idfile = os.path.join(outpath, "%s.fakeids" % prefix)
     try:
-      mansize = int(check_output("wc -l %s" % os.path.join(extractpath, "%s.eng.manifest" % prefix), shell=True).strip().split(' ')[0])
+      mansize = int(check_output("wc -l %s" % os.path.join(extractpath, "%s.eng.manifest" % prefix), shell=True).decode('utf8').strip().split(' ')[0])
       check_output("seq %d > %s" % (mansize, idfile), stderr=STDOUT, shell=True)
     except CalledProcessError as exc:
       print("Status : FAIL", exc.returncode, exc.output)

@@ -28,12 +28,10 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf8')
-  writer = codecs.getwriter('utf8')
-  infile = reader(args.infile)
-  idfile = reader(args.idfile)
-  termfile = reader(args.termfile)
-  outfile = writer(args.outfile)
+  infile = args.infile
+  idfile = args.idfile
+  termfile = args.termfile
+  outfile =  args.outfile
 
   terms = set()
   docs = dd(set)

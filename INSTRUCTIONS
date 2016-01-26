@@ -12,9 +12,15 @@ e.g.
 python panxbranchtools/subselect_data.py -i tmp4/uzb/parallel -l uzb -s 10000 10000 20000 -c eval test dev -t incidentvocab
 
 2b) if a new version of an existing LP, do reselect data to re-build the old splits
-reselect_data.py -i <path/to/parallel> -l <lang> -p <path/to/old/catss &> path/to/lproot/reselect.log
+reselect_data.py -i <path/to/parallel> -l <lang> -p <path/to/old/cats &> path/to/lproot/reselect.log
 e.g.
 panxbranchtools/reselect_data.py -i tmp8v3/hau/parallel/ -l hau -p tmp8/hau/parallel/splits &> tmp8v3/hau/reselect.log
+
+3) package up the elisa release:
+
+one_button_package.py -l <lang> -v <version> -y <year> -p <part>  -r <path/to/build>
+
+e.g. panxbranchtools/one_button_package.py -l tur -v 23 -r tmp_160125/tur/
 
 
 if no tweets:
