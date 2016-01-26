@@ -1,4 +1,4 @@
-How to build a LP
+How to build a LP (assuming all parts are there)
 
 1) create the base lrlp:
 one_button_lrlp.py -t <path/to/LDC/lrlp> -l <lang> -r <location>
@@ -16,3 +16,13 @@ reselect_data.py -i <path/to/parallel> -l <lang> -p <path/to/old/catss &> path/t
 e.g.
 panxbranchtools/reselect_data.py -i tmp8v3/hau/parallel/ -l hau -p tmp8/hau/parallel/splits &> tmp8v3/hau/reselect.log
 
+
+if no tweets:
+
+1a) create the base lrlp before the tweet stuff:
+one_button_lrlp.py -t <path/to/LDC/lrlp> -l <lang> -r <location> -p 4
+
+1b) create the base lrlp after the tweet stuff:
+one_button_lrlp.py -t <path/to/LDC/lrlp> -l <lang> -r <location> -s 7 -e <path/to/expanded/lrlp>
+
+then continue as above

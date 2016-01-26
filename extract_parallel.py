@@ -70,14 +70,6 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
     ### Write original
     src_orig_fh.write(''.join(sdata["ORIG"]))
     trg_orig_fh.write(''.join(tdata["ORIG"]))
-    trg_orig_fh.close()
-    # run agile tokenizer on target orig
-    agiletok_cmd = "%s < %s > %s" % (agiletokpath, trg_orig_fname, trg_agiletok_fname)
-    try:
-      check_call(agiletok_cmd, shell=True)
-    except CalledProcessError as e:
-      sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
-      sys.exit(1)
 
     ### Write manifest
     if xml:
@@ -108,6 +100,15 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
                            (sdata, tdata)):
       for fh, field in zip(fhset, ("TOK", "MORPHTOK", "MORPH", "POS")):
         fh.write(''.join(data[field]))
+  # run agile tokenizer on target orig
+  trg_orig_fh.close()
+  agiletok_cmd = "%s < %s > %s" % (agiletokpath, trg_orig_fname, trg_agiletok_fname)
+  try:
+    check_call(agiletok_cmd, shell=True)
+  except CalledProcessError as e:
+    sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
+    sys.exit(1)
+
 
 '''
  Merge trg tweets and extracted src tweets (.rsd)
@@ -216,7 +217,7 @@ def main():
   # Found data
   printout("found.generic",
            args.rootdir, args.src, args.trg, args.outdir, origoutdir,
-           tokoutdir, morphtokoutdir, agiletokoutdir, morphoutdir, posoutdir, agiletokpath
+           tokoutdir, morphtokoutdir, agiletokoutdir, morphoutdir, posoutdir, agiletokpath,
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
 
   # Tweet data
