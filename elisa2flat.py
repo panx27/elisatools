@@ -85,7 +85,7 @@ def main():
             break
         if not wrotesomething:
           outfields.append("")
-      outfile.write("\t".join(outfields)+"\n")
+      outfile.write(("\t".join(outfields)+"\n").encode('utf8'))
       lock = False
     # recover memory
     if event == "end" and not lock:
