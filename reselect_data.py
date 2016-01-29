@@ -9,15 +9,20 @@ import re
 import os.path
 from lputil import mkdir_p
 from subprocess import check_output, STDOUT, CalledProcessError
+from shutil import copy
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 def runselection(prefix, idfile, catfile, remainder, filetypes, srclang, indir, outdir):
   ''' apply a previous data selection to a set of files '''
   try:
+    copy(catfile, outdir)
     for filetype in filetypes:
       if os.path.exists(os.path.join(indir, filetype)):
         for flang in [srclang, 'eng']:
           flatfile = os.path.join(indir, filetype, "%s.%s.%s.flat" % (prefix, filetype, flang))
+          if not(os.path.exists(flatfile)):
+            print("***Warning: %s does not exist so not selecting" % flatfile)
+            continue
           cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -P %s -r %s" % (scriptdir, flatfile, idfile, catfile, outdir, filetype, remainder)
           print("Running "+cmd)
           cmd_output=check_output(cmd, stderr=STDOUT, shell=True)
@@ -53,7 +58,7 @@ def main():
   nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook"]
 
   # TODO: find these
-  filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc"]
+  filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc", "agile-tokenized", "cdec-tokenized", "agile-tokenized.lc", "cdec-tokenized.lc"]
 
   extractpath = os.path.join(indir, 'extracted')
   origpath = os.path.join(extractpath, 'original')

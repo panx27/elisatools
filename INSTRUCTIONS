@@ -1,0 +1,34 @@
+How to build a LP (assuming all parts are there)
+
+1) create the base lrlp:
+one_button_lrlp.py -t <path/to/LDC/lrlp> -l <lang> -r <location>
+
+e.g.
+panxbranchtoolsv3/one_button_lrlp.py -t release/LDC2015E70_BOLT_LRL_Hausa_Representative_Language_Pack_V1.2.tgz -l hau -r tmp8v3
+
+2a) if a new LP, do subselect data to make train/dev/test splits
+subselect_data.py -i <path/to/parallel> -l <lang> -s <eval-size> <test-size> <dev-size> -c <eval-name> <test-name> <dev-name> -t <incidentvocab-file>
+e.g.
+python panxbranchtools/subselect_data.py -i tmp4/uzb/parallel -l uzb -s 10000 10000 20000 -c eval test dev -t incidentvocab
+
+2b) if a new version of an existing LP, do reselect data to re-build the old splits
+reselect_data.py -i <path/to/parallel> -l <lang> -p <path/to/old/cats &> path/to/lproot/reselect.log
+e.g.
+panxbranchtools/reselect_data.py -i tmp8v3/hau/parallel/ -l hau -p tmp8/hau/parallel/splits &> tmp8v3/hau/reselect.log
+
+3) package up the elisa release:
+
+one_button_package.py -l <lang> -v <version> -y <year> -p <part>  -r <path/to/build>
+
+e.g. panxbranchtools/one_button_package.py -l tur -v 23 -r tmp_160125/tur/
+
+
+if no tweets:
+
+1a) create the base lrlp before the tweet stuff:
+one_button_lrlp.py -t <path/to/LDC/lrlp> -l <lang> -r <location> -p 4
+
+1b) create the base lrlp after the tweet stuff:
+one_button_lrlp.py -t <path/to/LDC/lrlp> -l <lang> -r <location> -s 7 -e <path/to/expanded/lrlp>
+
+then continue as above

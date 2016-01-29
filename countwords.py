@@ -23,11 +23,9 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf8')
-  writer = codecs.getwriter('utf8')
-  infile = reader(args.infile)
-  idfile = reader(args.idfile)
-  outfile = writer(args.outfile)
+  infile = args.infile
+  idfile = args.idfile
+  outfile= args.outfile
 
   docs = dd(int)
   for doc, seg in zip(idfile, infile):

@@ -134,7 +134,6 @@ def main():
                                     (corpus, args.lang)))
     trg_tokfile =  open(os.path.join(args.rootdir, "tokenized",
                                            "%s.tokenized.eng.flat" % (corpus)))
-    ### TODO: Add cede, isi tokenization
 
     src_morphtokfile = open(os.path.join(args.rootdir, "morph-tokenized",
                                          "%s.morph-tokenized.%s.flat" % \
@@ -152,19 +151,32 @@ def main():
                                     (corpus, args.lang)))
     trg_posfile =      open(os.path.join(args.rootdir, "pos",
                                            "%s.pos.eng.flat" % (corpus)))
+    trg_agiletokfile = open(os.path.join(args.rootdir, "agile-tokenized",
+                                           "%s.agile-tokenized.eng.flat" % (corpus)))
+    src_cdectokfile = open(os.path.join(args.rootdir, "cdec-tokenized",
+                                           "%s.cdec-tokenized.%s.flat" % (corpus, args.lang)))
+    trg_agiletoklcfile = open(os.path.join(args.rootdir, "agile-tokenized.lc",
+                                           "%s.agile-tokenized.lc.eng.flat" % (corpus)))
+    src_cdectoklcfile = open(os.path.join(args.rootdir, "cdec-tokenized.lc",
+                                           "%s.cdec-tokenized.lc.%s.flat" % (corpus, args.lang)))
+
     src_lastfullid = None
 
     ### ---------------------- Regular Parallel ----------------------
     if corpus != 'fromsource.tweet':
       iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile,
                   src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
-                  src_morphfile, trg_morphfile, src_posfile, trg_posfile)
+                      src_morphfile, trg_morphfile, src_posfile, trg_posfile,
+                      src_cdectokfile, trg_agiletokfile,
+                      src_cdectoklcfile, trg_agiletoklcfile)
       for src_manline, trg_manline, \
           src_origline, trg_origline, \
           src_tokline, trg_tokline, \
           src_morphtokline, trg_morphtokline, \
           src_morphline, trg_morphline, \
-          src_posline, trg_posline \
+          src_posline, trg_posline, \
+          src_cdectokline, trg_agiletokline, \
+          src_cdectoklcline, trg_agiletoklcline \
           in iteration:
 
         src_origline = src_origline.strip()
@@ -186,6 +198,10 @@ def main():
         trg_morphtokline = trg_morphtokline.strip()
         trg_morphline = trg_morphline.strip()
         trg_posline = trg_posline.strip()
+        src_cdectokline = src_cdectokline.strip()
+        src_cdectoklcline = src_cdectoklcline.strip()
+        trg_agiletokline = trg_agiletokline.strip()
+        trg_agiletoklcline = trg_agiletoklcline.strip()
         trg_man = trg_manline.strip().split('\t')
         trg_fullid = trg_man[1]
 
@@ -220,9 +236,17 @@ def main():
         src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
         subelements.append(("MD5_HASH_SOURCE", src_md5))
         subelements.append(("LRLP_TOKENIZED_SOURCE", src_tokline))
-        subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
-        subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
         subelements.append(("LRLP_POSTAG_SOURCE", src_posline))
+        subelements.append(("CDEC_TOKENIZED_SOURCE", src_cdectokline))
+        subelements.append(("CDEC_TOKENIZED_LC_SOURCE", src_cdectoklcline))
+        # don't add morph info if there's nothing interesting
+        morphset = set(src_morphline.split())
+        if len(morphset) == 1 and list(morphset)[0] == "none":
+          pass
+        else:
+          subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
+          subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
+
 
         # On-demand fill of psms and anns hashes that assumesit will be
         # used contiguously
@@ -335,10 +359,18 @@ def main():
           trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
           ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
           ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
-          ET.SubElement(trg_seg,
-                        "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
-          ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
           ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
+          ET.SubElement(trg_seg, "AGILE_TOKENIZED_TARGET").text = trg_agiletokline
+          ET.SubElement(trg_seg, "AGILE_TOKENIZED_LC_TARGET").text = trg_agiletoklcline
+          # don't add morph info if there's nothing interesting
+          morphset = set(trg_morphline.split())
+          if len(morphset) == 1 and list(morphset)[0] == "none":
+            pass
+          else:
+            ET.SubElement(trg_seg,
+                          "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
+            ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
+
 
         xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
                              xml_declaration=False).decode('utf-8')

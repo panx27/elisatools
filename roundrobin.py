@@ -28,11 +28,9 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
-  reader = codecs.getreader('utf8')
-  writer = codecs.getwriter('utf8')
-  wcfile = reader(args.wcfile)
-  filelist = reader(args.filelist)
-  outfile = writer(args.outfile)
+  wcfile =   args.wcfile
+  filelist = args.filelist
+  outfile =  args.outfile
 
   counts = {}
   for line in wcfile:

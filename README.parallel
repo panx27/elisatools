@@ -15,6 +15,8 @@ ELISA_BILINGUAL_LRLP_CORPUS: root node of the file. Includes source language cod
         ORIG_RAW_SOURCE: original form of source segment. This canonical form is used as a reference by any annotations
         MD5_HASH_SOURCE: MD5 digest of the tokenized source. The data may contain duplicate segments, which we did not remove, in order to keep the context intact. This field can be used to efficiently detect duplicates.
         LRLP_TOKENIZED_SOURCE: Tokenization as provided in the original LRLP.
+        CDEC_TOKENIZED_SOURCE: Tokenization formed by running ORIG_RAW_SOURCE through tokenize-anything script in cdec machine translation software.
+        CDEC_TOKENIZED_LC_SOURCE: Lowercased version of CDEC_TOKENIZED_SOURCE
         LRLP_MORPH_TOKENIZED_SOURCE: Tokenization based on morphological segmentation, if available.
         LRLP_MORPH_SOURCE: POS tags of morphemes, if available, otherwise 'none'
         LRLP_POSTAG_SOURCE: Either coarse POS tags such as "punct", "word", "twitter", "unknown", "url", "number", "email", or "numstring", or full POS tags.
@@ -36,6 +38,8 @@ ELISA_BILINGUAL_LRLP_CORPUS: root node of the file. Includes source language cod
         ORIG_RAW_TARGET: original form of target segment. This canonical form is used as a reference by any annotations
         MD5_HASH_TARGET: MD5 digest of the tokenized target. The data may contain duplicate segments, which we did not remove, in order to keep the context intact. This field can be used to efficiently detect duplicates.
         LRLP_TOKENIZED_TARGET: Tokenization as provided in the original LRLP.
+        AGILE_TOKENIZED_TARGET: Tokenization formed by running ORIG_RAW_TARGET through agile tokenization script
+        AGILE_TOKENIZED_LC_TARGET: Lowercased version of AGILE_TOKENIZED_TARGET
         LRLP_MORPH_TOKENIZED_TARGET: Tokenization based on morphological segmentation, if available. (NOTE: should be removed; this never exists!)
         LRLP_MORPH_TARGET: POS tags of morphemes, if available, otherwise 'none' (NOTE: should be removed: this never exists!)
         LRLP_POSTAG_TARGET: Coarse POS tags such as "punct", "word", "twitter", "unknown", "url", "number", "email", or "numstring"

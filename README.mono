@@ -14,8 +14,8 @@ ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
       LRLP_TOKENIZED_SOURCE: Tokenization as provided in the original LRLP.
       CDEC_TOKENIZED_SOURCE: Tokenization formed by running ORIG_RAW_SOURCE through tokenize-anything script in cdec machine translation software.
       CDEC_TOKENIZED_LC_SOURCE: Lowercased version of CDEC_TOKENIZED_SOURCE
-      LRLP_MORPH_TOKENIZED_SOURCE: Tokenization based on morphological segmentation, if available.
-      LRLP_MORPH_SOURCE: Morphological analysis of words, if available.
+      LRLP_MORPH_TOKENIZED_SOURCE: Tokenization based on morphological segmentation, if available. (may not exist if none available)
+      LRLP_MORPH_SOURCE: Morphological analysis of words, if available. (may not exist if none available)
       LRLP_POSTAG_SOURCE: Either coarse POS tags such as "punct", "word", "twitter", "unknown", "url", "number", "email", or "numstring", or full POS tags.
       IS_HEADLINE: set to 1 if segment is headline (otherwise not present)
       AUTHOR: Name of author if available
