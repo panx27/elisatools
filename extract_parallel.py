@@ -17,9 +17,11 @@ from subprocess import check_call, CalledProcessError
 
 
 def printout(prefix, path, src, trg, outdir, origoutdir,
-             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
+             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
+             agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
              cdectokpath, agiletokpath,
-             stp=lputil.selected_translation_pairs, el=lputil.extract_lines):
+             stp=lputil.selected_translation_pairs, el=lputil.extract_lines,
+             tweet=False):
   ''' Find files and print them out '''
   src_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, src)), 'w')
   trg_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, trg)), 'w')
@@ -55,12 +57,15 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
   trg_agiletoklc_fname=os.path.join(outdir, agiletoklcoutdir, "%s.%s.%s.flat" % \
                                     (prefix,agiletoklcoutdir,trg))
 
-  xml = True
-  if prefix == 'fromsource.tweet':
-    xml = False # Tweets data only have .rsd rather than .ltf
+  for m in stp(path, src=src, trg=trg, xml=True, tweet=tweet):
+    # sdata, tdata = el(*m, xml=xml)
+    if not tweet:
+      sdata = el(m[0], xml=True)
+      tdata = el(m[1], xml=True)
+    else:
+      sdata = el(m[0], xml=False)
+      tdata = el(m[1], xml=True)
 
-  for m in stp(path, src=src, trg=trg, xml=xml):
-    sdata, tdata = el(*m, xml=xml)
     if sdata is None or tdata is None:
       sys.stderr.write("Warning: empty files:\n%s or %s\n" % (m[0], m[1]))
       continue
@@ -78,7 +83,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
     trg_orig_fh.write(''.join(tdata["ORIG"]))
 
     ### Write manifest
-    if xml:
+    if not tweet:
       try:
         for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]),
                                      (list(zip(sdata["DOCID"], sdata["SEGID"],
@@ -91,21 +96,34 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
         sys.stderr.write(fname)
         raise
     else:
-      for fh, field in zip((src_man_fh, trg_man_fh),
-                           (sdata["DOCID"],tdata["DOCID"])):
-        fh.write('%s\t%s\n' % (field[0].strip(),
-                             re.search('.+/(\S*?)\.', field[0].strip()).group(1)))
+      # Source
+      fh = src_man_fh
+      field = sdata["DOCID"]
+      fh.write('%s\t%s\n' % (field[0].strip(),
+                            re.search('.+/(\S*?)\.', field[0].strip()).group(1)))
+      # Target
+      try:
+        fh = trg_man_fh
+        fname = m[1]
+        for tup in list(zip(tdata["DOCID"], tdata["SEGID"],
+                                          tdata["START"], tdata["END"])):
+            fh.write("\t".join(map(str, (fname,)+tup))+"\n")
+      except:
+        sys.stderr.write(fname)
+        raise
 
-    # TODO: target side of tweets are xml so this has to be resolved!
-    if not xml: # .rsd does not have tokenized, morph tokenized, pos tag info
-      continue
-
-    ### Write tokenized, morph tokenized, pos tag
-    for fhset, data in zip(((src_tok_fh, src_morphtok_fh, src_morph_fh, src_pos_fh),
-                            (trg_tok_fh, trg_morphtok_fh, trg_morph_fh, trg_pos_fh)),
-                           (sdata, tdata)):
+    if not tweet:
+      ### Write tokenized, morph tokenized, pos tag
+      for fhset, data in zip(((src_tok_fh, src_morphtok_fh, src_morph_fh, src_pos_fh),
+                              (trg_tok_fh, trg_morphtok_fh, trg_morph_fh, trg_pos_fh)),
+                             (sdata, tdata)):
+        for fh, field in zip(fhset, ("TOK", "MORPHTOK", "MORPH", "POS")):
+          fh.write(''.join(data[field]))
+    else:
+      fhset = (trg_tok_fh, trg_morphtok_fh, trg_morph_fh, trg_pos_fh)
       for fh, field in zip(fhset, ("TOK", "MORPHTOK", "MORPH", "POS")):
-        fh.write(''.join(data[field]))
+        fh.write(''.join(tdata[field]))
+
   # run agile tokenizer on target orig
   # TODO: lowercase
   trg_orig_fh.close()
@@ -123,26 +141,15 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
   except CalledProcessError as e:
     sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
     sys.exit(1)
-    
-
 
 '''
- Merge trg tweets and extracted src tweets (.rsd)
+ Move extracted src tweets (.rsd) to translation directory
 '''
-def process_tweet(datadir, src, trg, extwtdir):
-  dir_ = '%s/from_%s_tweet' % (datadir, src)
-  if os.path.exists(dir_):
-    shutil.rmtree(dir_)
-  os.makedirs(dir_)
-  os.makedirs('%s/%s/rsd' % (dir_, src))
-  os.makedirs('%s/%s/rsd' % (dir_, trg))
-
-  # Copy translated .rsd files
-  for i in os.listdir('%s/from_%s/%s/rsd' % (datadir, src, trg)):
-    if i.startswith('SN_TWT_'):
-      shutil.copy('%s/from_%s/%s/rsd/%s' % (datadir, src, trg, i),
-                  '%s/%s/rsd/%s' % (dir_, trg, i))
-  # Copy tweet files
+def move_extracted_tweet(datadir, src, extwtdir):
+  outdir = '%s/from_%s/%s/rsd' % (datadir, src, src)
+  if os.path.exists(outdir):
+    shutil.rmtree(outdir)
+  os.makedirs(outdir)
   for i in os.listdir(extwtdir):
     '''
      .raw means character offsets are not well align, it may cause
@@ -151,7 +158,7 @@ def process_tweet(datadir, src, trg, extwtdir):
     if not i.endswith('.rsd.txt'):
       continue
     shutil.copy('%s/%s' % (extwtdir, i),
-                  '%s/%s/rsd/%s' % (dir_, src, i))
+                '%s/%s' % (outdir, i))
 
 def main():
   parser = argparse.ArgumentParser(description="extract parallel data from " \
@@ -239,21 +246,28 @@ def main():
   for corpustuple in corpustuples:
     printout(corpustuple[0], corpustuple[1],
              args.src, args.trg, args.outdir, origoutdir,
-             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir, agiletokpath, cdectokpath)
+             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
+             agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
+             agiletokpath, cdectokpath)
 
   # Found data
   printout("found.generic",
            args.rootdir, args.src, args.trg, args.outdir, origoutdir,
-           tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir, agiletokpath, cdectokpath,
+           tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
+           agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
+           agiletokpath, cdectokpath,
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
 
   # Tweet data
   if args.extwtdir is not None and os.path.exists(args.extwtdir):
-    process_tweet(os.path.join(*datadirs), args.src, args.trg, args.extwtdir)
+    move_extracted_tweet(os.path.join(*datadirs), args.src, args.extwtdir)
     printout("fromsource.tweet",
-             os.path.join(*(datadirs+["from_%s_tweet" % args.src,])),
+             os.path.join(*(datadirs+["from_%s" % args.src,])),
              args.src, args.trg, args.outdir, origoutdir,
-             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir, agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir, agiletokpath, cdectokpath)
+             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
+             agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
+             agiletokpath, cdectokpath,
+             tweet=True)
 
 if __name__ == '__main__':
   main()

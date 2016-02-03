@@ -27,6 +27,7 @@ def main():
   # extract_lexicon.py
   steps.append(Step('extract_lexicon.py',
                     help="get flat form of bilingual lexicon"))
+
   # normalize_lexicon.py
   steps.append(Step('normalize_lexicon.py',
                     help="heuristically convert lexicon into something more machine readable"))
@@ -39,22 +40,27 @@ def main():
   steps.append(Step('get_tweet_by_id.rb',
                     help="download tweets. must have twitter gem installed " \
                     "and full internet"))
-  # ltf2rsd.perl
-  steps.append(Step('ltf2rsd.perl',
-                    help="get flat form of tweet translations",
-                    abortOnFail=False))
+
+  # Use .ltf instead of .rsd for tweet translations
+  # # ltf2rsd.perl
+  # steps.append(Step('ltf2rsd.perl',
+  #                   help="get flat form of tweet translations",
+  #                   abortOnFail=False))
 
   # extract_psm_annotation.py
   steps.append(Step('extract_psm_annotation.py',
                     help="get annotations from psm files into psm.ann",
                     abortOnFail=False))
+
   # extract_entity_annotation.py
   steps.append(Step('extract_entity_annotation.py',
                     help="get entity and other annotations into entity.ann",
                     abortOnFail=False))
+
   # extract_parallel.py
   steps.append(Step('extract_parallel.py',
                     help="get flat form parallel data"))
+
   # extract_mono.py
   steps.append(Step('extract_mono.py',
                     help="get flat form mono data"))
@@ -121,8 +127,7 @@ def main():
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
     stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
-    
-    
+
     # EPHEMERA
     ephemdir = os.path.join(rootdir, language, 'ephemera')
     stepsbyname['gather_ephemera.py'].argstring = "-s %s -t %s" %\
@@ -130,15 +135,14 @@ def main():
     ephemerr = os.path.join(rootdir, language, 'gather_ephemera.err')
     stepsbyname['gather_ephemera.py'].stderr = ephemerr
 
-
-    # LTF2RSD
-    l2rindir = os.path.join(expdir, 'data', 'translation', 'from_'+language,
-                            'eng') # Only converts from_SRC_tweet subdir
-    stepsbyname["ltf2rsd.perl"].argstring = l2rindir
-    # l2rprogpath = os.path.join(expdir, 'tools', 'ltf2txt')
-    # stepsbyname["ltf2rsd.perl"].progpath = l2rprogpath
-    l2rerr = os.path.join(rootdir, language, 'ltf2rsd.err')
-    stepsbyname["ltf2rsd.perl"].stderr = l2rerr
+    # # LTF2RSD
+    # l2rindir = os.path.join(expdir, 'data', 'translation', 'from_'+language,
+    #                         'eng') # Only converts from_SRC_tweet subdir
+    # stepsbyname["ltf2rsd.perl"].argstring = l2rindir
+    # # l2rprogpath = os.path.join(expdir, 'tools', 'ltf2txt')
+    # # stepsbyname["ltf2rsd.perl"].progpath = l2rprogpath
+    # l2rerr = os.path.join(rootdir, language, 'ltf2rsd.err')
+    # stepsbyname["ltf2rsd.perl"].stderr = l2rerr
 
     # LEXICON
     lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')

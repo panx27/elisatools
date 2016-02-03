@@ -22,7 +22,7 @@ def mkdir_p(path):
     if exc.errno == errno.EEXIST and os.path.isdir(path):
       pass
     else: raise
-    
+
 def funornone(entity, fun, default="None"):
   ''' Apply fun to entity if it is not NoneType. Otherwise, return default '''
   if entity is None:
@@ -214,7 +214,50 @@ def pair_files(srcdir, trgdir, ext='txt'):
       sys.stderr.write("No match for "+srcdir+"/"+srcfile+"\n")
       # unsrcs.append(srcfile)
       unsrcs.append(srcdir+"/"+srcfile)
-  return (matches, unsrcs, ['%s/%s' % (trgdir, i) for i in trgfiles])
+  return (matches, unsrcs, ['%s/%s' % (trgdir, i) for i in trgfiles \
+                            if not i.startswith('SN_TWT_')])
+
+def pair_tweet_files(srcdir, trgdir, srcext='txt', trgext='xml'):
+  ''' Heuristically pair tweet files from rsd directories (source) and ltf
+  directories (target) together based on observed filename conventions.
+  Warn on unmatched files and mismatched lengths'''
+  if (not os.path.exists(srcdir)) or (not os.path.exists(trgdir)):
+    sys.stderr.write("Warning: couldn't find "+srcdir+" or "+trgdir+"\n")
+    return ([], [], [])
+
+  # SN_TWT_HAU_007297_20141120-00.eng.ltf.xml vs SN_TWT_HAU_007297_20141120-00.rsd.txt
+  pat_from_src = re.compile(r"(.._...)_..._([^_.]+_[^_.]+).*\."+srcext)
+  repl_from_src = r"%s_..._%s.*\."+srcext
+
+  matches = []
+  unsrcs = []
+  trgfiles = os.listdir(trgdir)
+  pat = pat_from_src
+  repltmp = repl_from_src
+  for srcfile in os.listdir(srcdir):
+    # print (srcfile)
+    filematch = None
+    # print ("Trying "+str(pat)+" on "+srcfile)
+    if re.match(pat, srcfile):
+      # print ("Matched")
+      repl = repltmp % re.match(pat, srcfile).groups()
+      for trgfile in trgfiles:
+        repl_trg = repl.replace(srcext, trgext)
+        # print ("Using "+repl_trg+" to match "+srcfile)
+        if re.match(repl_trg, trgfile):
+          # print ("Matched to "+trgfile+"!")
+          filematch = trgfile
+          break # From trg file search
+      if filematch is not None:
+        trgfiles.remove(filematch)
+        matches.append((os.path.join(srcdir, srcfile),
+                        os.path.join(trgdir, filematch)))
+      else:
+        sys.stderr.write("No match for "+srcdir+"/"+srcfile+"\n")
+        # unsrcs.append(srcfile)
+        unsrcs.append(srcdir+"/"+srcfile)
+  return (matches, unsrcs, ['%s/%s' % (trgdir, i) for i in trgfiles \
+                            if i.startswith('SN_TWT_')])
 
 def pair_found_files(srcdir, trgdir, aldir, ext='txt'):
   ''' Heuristically pair files from found directories together
@@ -276,7 +319,7 @@ def pair_found_files(srcdir, trgdir, aldir, ext='txt'):
       unals.append(alfile)
   return (matches, srcfiles, trgfiles, unals)
 
-def all_found_tuples(rootdir, src='uzb', trg='eng', xml=False):
+def all_found_tuples(rootdir, src='uzb', trg='eng', xml=False, tweet=False):
   ''' traverse LRLP directory structure to build src, trg,
   align tuples of associated files '''
   matches = []
@@ -296,13 +339,18 @@ def all_found_tuples(rootdir, src='uzb', trg='eng', xml=False):
     sys.stderr.write("Warning: unmatched align files\n"+'\n'.join(a)+'\n')
   return m
 
-def selected_translation_pairs(path, src='uzb', trg='eng', xml=False):
+def selected_translation_pairs(path, src='uzb', trg='eng', xml=False, tweet=False):
   ''' Generalization of all_translation_pairs: build pairs of associated files
   from specified path '''
   pathext = "ltf" if xml else "rsd"
   fileext = "xml" if xml else "txt"
-  (m, s, t) = pair_files(os.path.join(path, src, pathext),
-                         os.path.join(path, trg, pathext), ext=fileext)
+  if not tweet:
+    (m, s, t) = pair_files(os.path.join(path, src, pathext),
+                           os.path.join(path, trg, pathext), ext=fileext)
+  else:
+    (m, s, t) = pair_tweet_files(os.path.join(path, src, 'rsd'),
+                                 os.path.join(path, trg, 'ltf'),
+                                 srcext='txt', trgext='xml')
   if len(s) > 0:
     sys.stderr.write("Warning: unmatched src files\n"+'\n'.join(s)+'\n')
   if len(t) > 0:
@@ -394,44 +442,82 @@ def get_info(node):
   return [ [sdocid,]+[ x.get(y) for y in ('id', 'start_char', 'end_char') ] for x in node.findall(".//SEG") ]
 
 
-def extract_lines(s, t, xml=True):
-  ''' given two files, open them and get data from them in various forms.
-  Return as two lists of lists of strings. (If not xml, only a single form is possible) '''
+# def extract_lines(s, t, xml=True):
+#   ''' given two files, open them and get data from them in various forms.
+#   Return as two lists of lists of strings. (If not xml, only a single form is possible) '''
+#   from itertools import chain
+#   # if xml, get codes, offsets, native, tokens, segments. If not, return codes and native only
+#   ret = []
+#   for x in (s, t):
+#     l = dd(list)
+#     if xml:
+#       try:
+#         root = ET.parse(x)
+#       except ParseError as detail:
+#         sys.stderr.write("Parse error on "+x+": "+str(detail)+"\n")
+#         return
+#       for (docid, segid, start, end) in get_info(root):
+#         l["DOCID"].append(docid)
+#         l["SEGID"].append(segid)
+#         l["START"].append(start)
+#         l["END"].append(end)
+#       toks, morphtoks, morphs, poss = get_segments(root)
+#       l["TOK"].extend(toks)
+#       l["MORPHTOK"].extend(morphtoks)
+#       l["MORPH"].extend(morphs)
+#       l["POS"].extend(poss)
+#       l["ORIG"].extend([ node.text+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
+#     else:
+#       import codecs
+#       with codecs.open(x, 'r', 'utf-8') as f:
+#         l["ORIG"] = f.readlines()
+#       l["DOCID"] = [x+"\n"]*len(l["ORIG"])
+#     lengths = [len(i) for i in list(l.values())]
+#     for length in lengths[1:]:
+#       if length != lengths[0]:
+#         sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
+#         sys.exit(1)
+#     ret.append(l)
+#   # check that each side is internally consistentthe same length
+#   return ret
+
+def extract_lines(x, xml=True):
+  ''' given a file, open it and get data from theit in various forms.
+  Return as a list of strings. (If not xml, only a single form is possible) '''
   from itertools import chain
   # if xml, get codes, offsets, native, tokens, segments. If not, return codes and native only
   ret = []
-  for x in (s, t):
-    l = dd(list)
-    if xml:
-      try:
-        root = ET.parse(x)
-      except ParseError as detail:
-        sys.stderr.write("Parse error on "+x+": "+str(detail)+"\n")
-        return
-      for (docid, segid, start, end) in get_info(root):
-        l["DOCID"].append(docid)
-        l["SEGID"].append(segid)
-        l["START"].append(start)
-        l["END"].append(end)
-      toks, morphtoks, morphs, poss = get_segments(root)
-      l["TOK"].extend(toks)
-      l["MORPHTOK"].extend(morphtoks)
-      l["MORPH"].extend(morphs)
-      l["POS"].extend(poss)
-      l["ORIG"].extend([ node.text+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
-    else:
-      import codecs
-      with codecs.open(x, 'r', 'utf-8') as f:
-        l["ORIG"] = f.readlines()
-      l["DOCID"] = [x+"\n"]*len(l["ORIG"])
-    lengths = [len(i) for i in list(l.values())]
-    for length in lengths[1:]:
-      if length != lengths[0]:
-        sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
-        sys.exit(1)
-    ret.append(l)
+
+  l = dd(list)
+  if xml:
+    try:
+      root = ET.parse(x)
+    except ParseError as detail:
+      sys.stderr.write("Parse error on "+x+": "+str(detail)+"\n")
+      return
+    for (docid, segid, start, end) in get_info(root):
+      l["DOCID"].append(docid)
+      l["SEGID"].append(segid)
+      l["START"].append(start)
+      l["END"].append(end)
+    toks, morphtoks, morphs, poss = get_segments(root)
+    l["TOK"].extend(toks)
+    l["MORPHTOK"].extend(morphtoks)
+    l["MORPH"].extend(morphs)
+    l["POS"].extend(poss)
+    l["ORIG"].extend([ node.text+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
+  else:
+    import codecs
+    with codecs.open(x, 'r', 'utf-8') as f:
+      l["ORIG"] = f.readlines()
+    l["DOCID"] = [x+"\n"]*len(l["ORIG"])
+  lengths = [len(i) for i in list(l.values())]
+  for length in lengths[1:]:
+    if length != lengths[0]:
+      sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
+      sys.exit(1)
   # check that each side is internally consistentthe same length
-  return ret
+  return l
 
 
 class Step:
