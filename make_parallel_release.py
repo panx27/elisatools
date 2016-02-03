@@ -15,6 +15,12 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 # TODO: option to build gzip file
 
+def strip(x):
+  try:
+    return x.strip()
+  except:
+    return None
+
 def main():
   parser = argparse.ArgumentParser(description="Create xml from extracted" \
                                    " and transformed monolingual data",
@@ -162,70 +168,78 @@ def main():
 
     src_lastfullid = None
 
-    ### ---------------------- Regular Parallel ----------------------
-    if corpus != 'fromsource.tweet':
-      iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile,
-                  src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
-                      src_morphfile, trg_morphfile, src_posfile, trg_posfile,
-                      src_cdectokfile, trg_agiletokfile,
-                      src_cdectoklcfile, trg_agiletoklcfile)
-      for src_manline, trg_manline, \
-          src_origline, trg_origline, \
-          src_tokline, trg_tokline, \
-          src_morphtokline, trg_morphtokline, \
-          src_morphline, trg_morphline, \
-          src_posline, trg_posline, \
-          src_cdectokline, trg_agiletokline, \
-          src_cdectoklcline, trg_agiletoklcline \
-          in iteration:
+    # iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile,
+    #                 src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
+    #                 src_morphfile, trg_morphfile, src_posfile, trg_posfile,
+    #                 src_cdectokfile, trg_agiletokfile,
+    #                 src_cdectoklcfile, trg_agiletoklcfile)
 
-        src_origline = src_origline.strip()
-        src_tokline = src_tokline.strip()
-        src_morphtokline = src_morphtokline.strip()
-        src_morphline = src_morphline.strip()
-        src_posline = src_posline.strip()
-        src_man = src_manline.strip().split('\t')
-        src_fullid = src_man[1]
-        src_fullidsplit = src_fullid.split('_')
-        if corpus == 'fromtarget.elicitation':
-          src_fullidsplit = ['ELICITATION', 'NONE', args.lang.upper(),
-                             'NONE', 'NONE']
-        if corpus == 'fromtarget.phrasebook':
-          src_fullidsplit = ['PHRASEBOOK', 'NONE', args.lang.upper(),
-                             'NONE', 'NONE']
-        trg_origline = trg_origline.strip()
-        trg_tokline = trg_tokline.strip()
-        trg_morphtokline = trg_morphtokline.strip()
-        trg_morphline = trg_morphline.strip()
-        trg_posline = trg_posline.strip()
-        src_cdectokline = src_cdectokline.strip()
-        src_cdectoklcline = src_cdectoklcline.strip()
-        trg_agiletokline = trg_agiletokline.strip()
-        trg_agiletoklcline = trg_agiletoklcline.strip()
-        trg_man = trg_manline.strip().split('\t')
-        trg_fullid = trg_man[1]
+    # zip ---> zip_longest
+    # in case of tweet src doest have ltf
+    iteration = zip_longest(src_manifest, trg_manifest, src_origfile, trg_origfile,
+                            src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
+                            src_morphfile, trg_morphfile, src_posfile, trg_posfile,
+                            src_cdectokfile, trg_agiletokfile,
+                            src_cdectoklcfile, trg_agiletoklcfile)
+    for src_manline, trg_manline, \
+        src_origline, trg_origline, \
+        src_tokline, trg_tokline, \
+        src_morphtokline, trg_morphtokline, \
+        src_morphline, trg_morphline, \
+        src_posline, trg_posline, \
+        src_cdectokline, trg_agiletokline, \
+        src_cdectoklcline, trg_agiletoklcline \
+        in iteration:
 
-        fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
-                        'INDEX_ID', 'DATE']
+      src_origline = strip(src_origline)
+      src_tokline = strip(src_tokline)
+      src_morphtokline = strip(src_morphtokline)
+      src_morphline = strip(src_morphline)
+      src_posline = strip(src_posline)
+      src_man = strip(src_manline).split('\t')
+      src_fullid = src_man[1]
+      src_fullidsplit = src_fullid.split('_')
+      if corpus == 'fromtarget.elicitation':
+        src_fullidsplit = ['ELICITATION', 'NONE', args.lang.upper(),
+                           'NONE', 'NONE']
+      if corpus == 'fromtarget.phrasebook':
+        src_fullidsplit = ['PHRASEBOOK', 'NONE', args.lang.upper(),
+                           'NONE', 'NONE']
+      trg_origline = strip(trg_origline)
+      trg_tokline = strip(trg_tokline)
+      trg_morphtokline = strip(trg_morphtokline)
+      trg_morphline = strip(trg_morphline)
+      trg_posline = strip(trg_posline)
+      src_cdectokline = strip(src_cdectokline)
+      src_cdectoklcline = strip(src_cdectoklcline)
+      trg_agiletokline = strip(trg_agiletokline)
+      trg_agiletoklcline = strip(trg_agiletoklcline)
+      trg_man = strip(trg_manline).split('\t')
+      trg_fullid = trg_man[1]
 
-        # Faking the document-level
-        if src_lastfullid != src_fullid:
-          if src_lastfullid is not None:
-            outfile.write("</DOCUMENT>\n")
-          src_lastfullid = src_fullid
-          # outfile.write('<DOCUMENT id="%s" ' % fullid +
-          #               'genre="%s" provenance="%s" language="%s" ' \
-          #               'index_id="%s" date="%s">\n' % tuple(fullidsplit))
-          outfile.write('<DOCUMENT id="%s">\n' % src_fullid)
-          for label, value in zip(fullidfields, src_fullidsplit):
-            outfile.write("  <%s>%s</%s>\n" % (label, value, label))
-          outfile.write("  <TARGET_LANGUAGE>ENG</TARGET_LANGUAGE>\n")
-          outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
-                        re.match('(\w+)\..+', corpus).group(1))
+      fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
+                      'INDEX_ID', 'DATE']
 
-        xroot = ET.Element('PARALLEL')
-        # xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
-        src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
+      # Faking the document-level
+      if src_lastfullid != src_fullid:
+        if src_lastfullid is not None:
+          outfile.write("</DOCUMENT>\n")
+        src_lastfullid = src_fullid
+        # outfile.write('<DOCUMENT id="%s" ' % fullid +
+        #               'genre="%s" provenance="%s" language="%s" ' \
+        #               'index_id="%s" date="%s">\n' % tuple(fullidsplit))
+        outfile.write('<DOCUMENT id="%s">\n' % src_fullid)
+        for label, value in zip(fullidfields, src_fullidsplit):
+          outfile.write("  <%s>%s</%s>\n" % (label, value, label))
+        outfile.write("  <TARGET_LANGUAGE>ENG</TARGET_LANGUAGE>\n")
+        outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
+                      re.match('(\w+)\..+', corpus).group(1))
+
+      xroot = ET.Element('PARALLEL')
+      # xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
+      src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
+      # Non-tweet (ltf)
+      if corpus != 'fromsource.tweet':
         src_seg.set('id', src_man[2])
         src_seg.set('start_char', src_man[3])
         src_seg.set('end_char', src_man[4])
@@ -246,176 +260,8 @@ def main():
         else:
           subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
           subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
-
-
-        # On-demand fill of psms and anns hashes that assumesit will be
-        # used contiguously
-        if src_fullid in psmtemp:
-          psms.clear()
-          data = psmtemp.pop(src_fullid)
-          for tup in data:
-            start = int(tup[2])
-            end = start+int(tup[3])
-            for i in range(start, end):
-              psms[src_fullid][i].append(tup)
-
-        if src_fullid in psms:
-          # Collect the annotations
-          psmcoll = set()
-          startchar = int(src_man[3])
-          endchar = int(src_man[4])
-          if endchar > len(psms[src_fullid]):
-            endchar = len(psms[src_fullid])
-          for i in range(startchar, endchar):
-            slot = psms[src_fullid][i]
-            psmcoll.update(list(map(tuple, slot)))
-          for psmitem in psmcoll:
-            if psmitem[0]=='headline':
-              subelements.append(("IS_HEADLINE","1"))
-              continue
-            if psmitem[0]=='post':
-              if len(psmitem) >= 5:
-                subelements.append(("AUTHOR", psmitem[4]))
-                if len(psmitem) >= 6:
-                  subelements.append(("POST_DATE_TIME", psmitem[5]))
-            else:
-              sys.stderr.write("Not sure what to do with item that starts " + \
-                               psmitem[0]+"\n")
-              continue
-
-        if src_fullid in anntemp:
-          anns.clear()
-          data = anntemp.pop(src_fullid)
-          for tup in data:
-            start = int(tup[2])
-            end = int(tup[3])
-            for i in range(start, end):
-              anns[src_fullid][i].append(tup)
-
-        if src_fullid in anns:
-          # Collect the annotations
-          anncoll = set()
-          startchar = int(src_man[3])
-          # endchar = min(len(anns[src_fullid]), int(src_man[4]))
-          endchar = int(src_man[4])
-          for i in range(startchar, endchar):
-            slot = anns[src_fullid][i]
-            anncoll.update(list(map(tuple, slot)))
-          if len(anncoll) > 0:
-            ae = ET.SubElement(src_seg, "ANNOTATIONS")
-          for annitem in anncoll: # TODO: sort by start_char?
-            se = ET.SubElement(ae, "ANNOTATION", \
-                               {'task':annitem[0],'annotation_id': annitem[4]})
-            # se = ET.SubElement(ae, "ANNOTATION", \
-            #                    {'task':annitem[0],'annotation_id': annitem[4],
-            #                     'start_char':annitem[2], 'end_char':annitem[3]})
-            # se.text=annitem[5]
-            head = ET.SubElement(se, "HEAD")
-            head.set('start_char', annitem[2])
-            head.set('end_char', annitem[3])
-            head.text = annitem[5]
-            subsubs = []
-            if annitem[0]=='NE':
-              subsubs.append(("ENTITY_TYPE", annitem[6]))
-            elif annitem[0]=='FE':
-              if annitem[6] == 'HEAD':
-                subsubs.append(("ANNOTATION_KIND", annitem[6]))
-                subsubs.append(("MENTION_TYPE", annitem[7]))
-                subsubs.append(("PHRASE_ID", annitem[8])) # Should be PHRASE ID
-              else: # MENTION/ENTITY
-                subsubs.append(("ENTITY_TYPE", annitem[9]))
-                subsubs.append(("ANNOTATION_KIND", annitem[6]))
-                subsubs.append(("MENTION_TYPE", annitem[7]))
-                subsubs.append(("ENTITY_ID", annitem[8]))
-            elif annitem[0]=='SSA':
-              se.set('pred_or_arg', annitem[6])
-              subsubs.append(("ROLE", annitem[7]))
-              if annitem[6] == "argument":
-                subsubs.append(("PREDICATE", annitem[8]))
-            elif annitem[0]=='NPC':
-              subsubs.append(("NPC_TYPE", annitem[6]))
-            else:
-              sys.stderr.write("Not sure what to do with item that starts " \
-                               +annitem[0]+"\n")
-              continue
-            for key, text in subsubs:
-              sse = ET.SubElement(se, key)
-              sse.text = text
-
-        # TODO: more tokenizations, etc.
-        for key, text in subelements:
-          se = ET.SubElement(src_seg, key)
-          se.text = text
-        # Entity/semantic annotations in their own block if fullid in anns
-
-        # Target segements
-        if not args.evaluation:
-          trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
-          trg_seg.set('id', trg_man[2])
-          trg_seg.set('start_char', trg_man[3])
-          trg_seg.set('end_char', trg_man[4])
-          ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
-          ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
-          trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
-          ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
-          ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
-          ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
-          ET.SubElement(trg_seg, "AGILE_TOKENIZED_TARGET").text = trg_agiletokline
-          ET.SubElement(trg_seg, "AGILE_TOKENIZED_LC_TARGET").text = trg_agiletoklcline
-          # don't add morph info if there's nothing interesting
-          morphset = set(trg_morphline.split())
-          if len(morphset) == 1 and list(morphset)[0] == "none":
-            pass
-          else:
-            ET.SubElement(trg_seg,
-                          "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
-            ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
-
-
-        xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
-                             xml_declaration=False).decode('utf-8')
-        outfile.write(xmlstr)
-        count += 1
-      outfile.write("</DOCUMENT>\n")
-    ### ------------------ End of Regular Parallel ------------------
-
-    src_lastfullid = None
-    ### ---------------------- Tweets Parallel ----------------------
-    if corpus == 'fromsource.tweet':
-      iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile)
-      for src_manline, trg_manline, \
-          src_origline, trg_origline \
-          in iteration:
-
-        src_origline = src_origline.strip()
-        src_man = src_manline.strip().split('\t')
-        src_fullid = src_man[1]
-        src_fullidsplit = src_fullid.split('_')
-        trg_origline = trg_origline.strip()
-        trg_man = trg_manline.strip().split('\t')
-        trg_fullid = trg_man[1]
-
-        fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
-                        'INDEX_ID', 'DATE']
-
-        # Faking the document-level
-        if src_lastfullid != src_fullid:
-          if src_lastfullid is not None:
-            outfile.write("</DOCUMENT>\n")
-          src_lastfullid = src_fullid
-          # outfile.write('<DOCUMENT id="%s" ' % fullid +
-          #               'genre="%s" provenance="%s" language="%s" ' \
-          #               'index_id="%s" date="%s">\n' % tuple(fullidsplit))
-          outfile.write('<DOCUMENT id="%s">\n' % src_fullid)
-          for label, value in zip(fullidfields, src_fullidsplit):
-            outfile.write("  <%s>%s</%s>\n" % (label, value, label))
-          outfile.write("  <TARGET_LANGUAGE>ENG</TARGET_LANGUAGE>\n")
-          outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
-                        re.match('(\w+)\..+', corpus).group(1))
-
-        xroot = ET.Element('PARALLEL')
-        # xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
-        src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
+      # Tweet (rsd)
+      else:
         src_seg.set('id', 'segment-0')
         src_seg.set('start_char', '0')
         # THE END OFFSET MIGHT BE WRONG
@@ -426,127 +272,536 @@ def main():
         subelements.append(("ORIG_RAW_SOURCE", src_origline))
         src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
         subelements.append(("MD5_HASH_SOURCE", src_md5))
+        subelements.append(("CDEC_TOKENIZED_SOURCE", src_cdectokline))
+        subelements.append(("CDEC_TOKENIZED_LC_SOURCE", src_cdectoklcline))
 
-        # On-demand fill of psms and anns hashes that assumesit will be
-        # used contiguously
-        if src_fullid in psmtemp:
-          psms.clear()
-          data = psmtemp.pop(src_fullid)
-          for tup in data:
-            start = int(tup[2])
-            end = start+int(tup[3])
-            for i in range(start, end):
-              psms[src_fullid][i].append(tup)
+      # On-demand fill of psms and anns hashes that assumesit will be
+      # used contiguously
+      if src_fullid in psmtemp:
+        psms.clear()
+        data = psmtemp.pop(src_fullid)
+        for tup in data:
+          start = int(tup[2])
+          end = start+int(tup[3])
+          for i in range(start, end):
+            psms[src_fullid][i].append(tup)
 
-        if src_fullid in psms:
-          # Collect the annotations
-          psmcoll = set()
+      if src_fullid in psms:
+        # Collect the annotations
+        psmcoll = set()
+        try:
           startchar = int(src_man[3])
-          endchar = int(src_man[4])
-          if endchar > len(psms[src_fullid]):
-            endchar = None
-          for i in range(startchar, endchar):
-            slot = psms[src_fullid][i]
-            psmcoll.update(list(map(tuple, slot)))
-          for psmitem in psmcoll:
-            if psmitem[0]=='headline':
-              subelements.append(("IS_HEADLINE","1"))
-              continue
-            if psmitem[0]=='post':
-              if len(psmitem) >= 5:
-                subelements.append(("AUTHOR", psmitem[4]))
-                if len(psmitem) >= 6:
-                  subelements.append(("POST_DATE_TIME", psmitem[5]))
-            else:
-              sys.stderr.write("Not sure what to do with item that starts " + \
-                               psmitem[0]+"\n")
-              continue
-
-        if src_fullid in anntemp:
-          anns.clear()
-          data = anntemp.pop(src_fullid)
-          for tup in data:
-            start = int(tup[2])
-            end = int(tup[3])
-            for i in range(start, end):
-              anns[src_fullid][i].append(tup)
-
-        if src_fullid in anns:
-          # Collect the annotations
-          anncoll = set()
-          # startchar = int(src_man[3])
-          # endchar = min(len(anns[src_fullid]), int(src_man[4]))
+        except IndexError:
           startchar = 0
+        try:
+          endchar = int(src_man[4])
+        except IndexError:
           endchar = len(anns[src_fullid])
-          for i in range(startchar, endchar):
-            slot = anns[src_fullid][i]
-            anncoll.update(list(map(tuple, slot)))
-          if len(anncoll) > 0:
-            ae = ET.SubElement(src_seg, "ANNOTATIONS")
-          for annitem in anncoll: # TODO: sort by start_char?
-            se = ET.SubElement(ae, "ANNOTATION", \
-                               {'task':annitem[0],'annotation_id': annitem[4]})
-            # se = ET.SubElement(ae, "ANNOTATION", \
-            #                    {'task':annitem[0],'annotation_id': annitem[4],
-            #                     'start_char':annitem[2], 'end_char':annitem[3]})
-            # se.text=annitem[5]
-            head = ET.SubElement(se, "HEAD")
-            head.set('start_char', annitem[2])
-            head.set('end_char', annitem[3])
-            head.text = annitem[5]
-            subsubs = []
-            if annitem[0]=='NE':
-              subsubs.append(("ENTITY_TYPE", annitem[6]))
-            elif annitem[0]=='FE':
-              if annitem[6] == 'HEAD':
-                subsubs.append(("ANNOTATION_KIND", annitem[6]))
-                subsubs.append(("MENTION_TYPE", annitem[7]))
-                subsubs.append(("PHRASE_ID", annitem[8])) # Should be PHRASE ID
-              else: # MENTION/ENTITY
-                subsubs.append(("ENTITY_TYPE", annitem[9]))
-                subsubs.append(("ANNOTATION_KIND", annitem[6]))
-                subsubs.append(("MENTION_TYPE", annitem[7]))
-                subsubs.append(("ENTITY_ID", annitem[8]))
-            elif annitem[0]=='SSA':
-              se.set('pred_or_arg', annitem[6])
-              subsubs.append(("ROLE", annitem[7]))
-              if annitem[6] == "argument":
-                subsubs.append(("PREDICATE", annitem[8]))
-            elif annitem[0]=='NPC':
-              subsubs.append(("NPC_TYPE", annitem[6]))
-            else:
-              sys.stderr.write("Not sure what to do with item that starts " \
-                               +annitem[0]+"\n")
-              continue
-            for key, text in subsubs:
-              sse = ET.SubElement(se, key)
-              sse.text = text
 
-        # TODO: more tokenizations, etc.
-        for key, text in subelements:
-          se = ET.SubElement(src_seg, key)
-          se.text = text
-        # Entity/semantic annotations in their own block if fullid in anns
+        if endchar > len(psms[src_fullid]):
+          endchar = len(psms[src_fullid])
+        for i in range(startchar, endchar):
+          slot = psms[src_fullid][i]
+          psmcoll.update(list(map(tuple, slot)))
+        for psmitem in psmcoll:
+          if psmitem[0]=='headline':
+            subelements.append(("IS_HEADLINE","1"))
+            continue
+          if psmitem[0]=='post':
+            if len(psmitem) >= 5:
+              subelements.append(("AUTHOR", psmitem[4]))
+              if len(psmitem) >= 6:
+                subelements.append(("POST_DATE_TIME", psmitem[5]))
+          else:
+            sys.stderr.write("Not sure what to do with item that starts " + \
+                             psmitem[0]+"\n")
+            continue
 
-        # Target segements
-        if not args.evaluation:
-          trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
-          trg_seg.set('id', 'segment-0')
-          trg_seg.set('start_char', '0')
-          # THE END OFFSET MIGHT BE WRONG
-          trg_seg.set('end_char', str(len(trg_origline.encode('utf-8'))))
-          ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
-          ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
-          trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
-          ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
+      if src_fullid in anntemp:
+        anns.clear()
+        data = anntemp.pop(src_fullid)
+        for tup in data:
+          start = int(tup[2])
+          end = int(tup[3])
+          for i in range(start, end):
+            anns[src_fullid][i].append(tup)
 
-        xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
-                             xml_declaration=False).decode('utf-8')
-        outfile.write(xmlstr)
-        count += 1
-      outfile.write("</DOCUMENT>\n")
-      ### ------------------ End of Tweets Parallel ------------------
+      if src_fullid in anns:
+        # Collect the annotations
+        anncoll = set()
+        try:
+          startchar = int(src_man[3])
+        except IndexError:
+          startchar = 0
+        try:
+          endchar = int(src_man[4])
+        except IndexError:
+          endchar = len(anns[src_fullid])
+        for i in range(startchar, endchar):
+          slot = anns[src_fullid][i]
+          anncoll.update(list(map(tuple, slot)))
+        if len(anncoll) > 0:
+          ae = ET.SubElement(src_seg, "ANNOTATIONS")
+        for annitem in anncoll: # TODO: sort by start_char?
+          se = ET.SubElement(ae, "ANNOTATION", \
+                             {'task':annitem[0],'annotation_id': annitem[4]})
+          # se = ET.SubElement(ae, "ANNOTATION", \
+          #                    {'task':annitem[0],'annotation_id': annitem[4],
+          #                     'start_char':annitem[2], 'end_char':annitem[3]})
+          # se.text=annitem[5]
+          head = ET.SubElement(se, "HEAD")
+          head.set('start_char', annitem[2])
+          head.set('end_char', annitem[3])
+          head.text = annitem[5]
+          subsubs = []
+          if annitem[0]=='NE':
+            subsubs.append(("ENTITY_TYPE", annitem[6]))
+          elif annitem[0]=='FE':
+            if annitem[6] == 'HEAD':
+              subsubs.append(("ANNOTATION_KIND", annitem[6]))
+              subsubs.append(("MENTION_TYPE", annitem[7]))
+              subsubs.append(("PHRASE_ID", annitem[8])) # Should be PHRASE ID
+            else: # MENTION/ENTITY
+              subsubs.append(("ENTITY_TYPE", annitem[9]))
+              subsubs.append(("ANNOTATION_KIND", annitem[6]))
+              subsubs.append(("MENTION_TYPE", annitem[7]))
+              subsubs.append(("ENTITY_ID", annitem[8]))
+          elif annitem[0]=='SSA':
+            se.set('pred_or_arg', annitem[6])
+            subsubs.append(("ROLE", annitem[7]))
+            if annitem[6] == "argument":
+              subsubs.append(("PREDICATE", annitem[8]))
+          elif annitem[0]=='NPC':
+            subsubs.append(("NPC_TYPE", annitem[6]))
+          else:
+            sys.stderr.write("Not sure what to do with item that starts " \
+                             +annitem[0]+"\n")
+            continue
+          for key, text in subsubs:
+            sse = ET.SubElement(se, key)
+            sse.text = text
+
+      # TODO: more tokenizations, etc.
+      for key, text in subelements:
+        se = ET.SubElement(src_seg, key)
+        se.text = text
+      # Entity/semantic annotations in their own block if fullid in anns
+
+      # Target segements
+      if not args.evaluation:
+        trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
+        trg_seg.set('id', trg_man[2])
+        trg_seg.set('start_char', trg_man[3])
+        trg_seg.set('end_char', trg_man[4])
+        ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
+        ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
+        trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
+        ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
+        ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
+        ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
+        ET.SubElement(trg_seg, "AGILE_TOKENIZED_TARGET").text = trg_agiletokline
+        ET.SubElement(trg_seg, "AGILE_TOKENIZED_LC_TARGET").text = trg_agiletoklcline
+        # don't add morph info if there's nothing interesting
+        morphset = set(trg_morphline.split())
+        if len(morphset) == 1 and list(morphset)[0] == "none":
+          pass
+        else:
+          ET.SubElement(trg_seg,
+                        "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
+          ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
+
+
+      xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
+                           xml_declaration=False).decode('utf-8')
+      outfile.write(xmlstr)
+      count += 1
+    outfile.write("</DOCUMENT>\n")
   outfile.write("</ELISA_BILINGUAL_LRLP_CORPUS>\n")
+    # ### ---------------------- Regular Parallel ----------------------
+    # if corpus != 'fromsource.tweet':
+    #   iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile,
+    #                   src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
+    #                   src_morphfile, trg_morphfile, src_posfile, trg_posfile,
+    #                   src_cdectokfile, trg_agiletokfile,
+    #                   src_cdectoklcfile, trg_agiletoklcfile)
+    #   for src_manline, trg_manline, \
+    #       src_origline, trg_origline, \
+    #       src_tokline, trg_tokline, \
+    #       src_morphtokline, trg_morphtokline, \
+    #       src_morphline, trg_morphline, \
+    #       src_posline, trg_posline, \
+    #       src_cdectokline, trg_agiletokline, \
+    #       src_cdectoklcline, trg_agiletoklcline \
+    #       in iteration:
+
+    #     src_origline = src_origline.strip()
+    #     src_tokline = src_tokline.strip()
+    #     src_morphtokline = src_morphtokline.strip()
+    #     src_morphline = src_morphline.strip()
+    #     src_posline = src_posline.strip()
+    #     src_man = src_manline.strip().split('\t')
+    #     src_fullid = src_man[1]
+    #     src_fullidsplit = src_fullid.split('_')
+    #     if corpus == 'fromtarget.elicitation':
+    #       src_fullidsplit = ['ELICITATION', 'NONE', args.lang.upper(),
+    #                          'NONE', 'NONE']
+    #     if corpus == 'fromtarget.phrasebook':
+    #       src_fullidsplit = ['PHRASEBOOK', 'NONE', args.lang.upper(),
+    #                          'NONE', 'NONE']
+    #     trg_origline = trg_origline.strip()
+    #     trg_tokline = trg_tokline.strip()
+    #     trg_morphtokline = trg_morphtokline.strip()
+    #     trg_morphline = trg_morphline.strip()
+    #     trg_posline = trg_posline.strip()
+    #     src_cdectokline = src_cdectokline.strip()
+    #     src_cdectoklcline = src_cdectoklcline.strip()
+    #     trg_agiletokline = trg_agiletokline.strip()
+    #     trg_agiletoklcline = trg_agiletoklcline.strip()
+    #     trg_man = trg_manline.strip().split('\t')
+    #     trg_fullid = trg_man[1]
+
+    #     fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
+    #                     'INDEX_ID', 'DATE']
+
+    #     # Faking the document-level
+    #     if src_lastfullid != src_fullid:
+    #       if src_lastfullid is not None:
+    #         outfile.write("</DOCUMENT>\n")
+    #       src_lastfullid = src_fullid
+    #       # outfile.write('<DOCUMENT id="%s" ' % fullid +
+    #       #               'genre="%s" provenance="%s" language="%s" ' \
+    #       #               'index_id="%s" date="%s">\n' % tuple(fullidsplit))
+    #       outfile.write('<DOCUMENT id="%s">\n' % src_fullid)
+    #       for label, value in zip(fullidfields, src_fullidsplit):
+    #         outfile.write("  <%s>%s</%s>\n" % (label, value, label))
+    #       outfile.write("  <TARGET_LANGUAGE>ENG</TARGET_LANGUAGE>\n")
+    #       outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
+    #                     re.match('(\w+)\..+', corpus).group(1))
+
+    #     xroot = ET.Element('PARALLEL')
+    #     # xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
+    #     src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
+    #     src_seg.set('id', src_man[2])
+    #     src_seg.set('start_char', src_man[3])
+    #     src_seg.set('end_char', src_man[4])
+
+    #     subelements = []
+    #     subelements.append(("FULL_ID_SOURCE", src_man[1]))
+    #     subelements.append(("ORIG_RAW_SOURCE", src_origline))
+    #     src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
+    #     subelements.append(("MD5_HASH_SOURCE", src_md5))
+    #     subelements.append(("LRLP_TOKENIZED_SOURCE", src_tokline))
+    #     subelements.append(("LRLP_POSTAG_SOURCE", src_posline))
+    #     subelements.append(("CDEC_TOKENIZED_SOURCE", src_cdectokline))
+    #     subelements.append(("CDEC_TOKENIZED_LC_SOURCE", src_cdectoklcline))
+    #     # don't add morph info if there's nothing interesting
+    #     morphset = set(src_morphline.split())
+    #     if len(morphset) == 1 and list(morphset)[0] == "none":
+    #       pass
+    #     else:
+    #       subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
+    #       subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
+
+
+    #     # On-demand fill of psms and anns hashes that assumesit will be
+    #     # used contiguously
+    #     if src_fullid in psmtemp:
+    #       psms.clear()
+    #       data = psmtemp.pop(src_fullid)
+    #       for tup in data:
+    #         start = int(tup[2])
+    #         end = start+int(tup[3])
+    #         for i in range(start, end):
+    #           psms[src_fullid][i].append(tup)
+
+    #     if src_fullid in psms:
+    #       # Collect the annotations
+    #       psmcoll = set()
+    #       startchar = int(src_man[3])
+    #       endchar = int(src_man[4])
+    #       if endchar > len(psms[src_fullid]):
+    #         endchar = len(psms[src_fullid])
+    #       for i in range(startchar, endchar):
+    #         slot = psms[src_fullid][i]
+    #         psmcoll.update(list(map(tuple, slot)))
+    #       for psmitem in psmcoll:
+    #         if psmitem[0]=='headline':
+    #           subelements.append(("IS_HEADLINE","1"))
+    #           continue
+    #         if psmitem[0]=='post':
+    #           if len(psmitem) >= 5:
+    #             subelements.append(("AUTHOR", psmitem[4]))
+    #             if len(psmitem) >= 6:
+    #               subelements.append(("POST_DATE_TIME", psmitem[5]))
+    #         else:
+    #           sys.stderr.write("Not sure what to do with item that starts " + \
+    #                            psmitem[0]+"\n")
+    #           continue
+
+    #     if src_fullid in anntemp:
+    #       anns.clear()
+    #       data = anntemp.pop(src_fullid)
+    #       for tup in data:
+    #         start = int(tup[2])
+    #         end = int(tup[3])
+    #         for i in range(start, end):
+    #           anns[src_fullid][i].append(tup)
+
+    #     if src_fullid in anns:
+    #       # Collect the annotations
+    #       anncoll = set()
+    #       startchar = int(src_man[3])
+    #       # endchar = min(len(anns[src_fullid]), int(src_man[4]))
+    #       endchar = int(src_man[4])
+    #       for i in range(startchar, endchar):
+    #         slot = anns[src_fullid][i]
+    #         anncoll.update(list(map(tuple, slot)))
+    #       if len(anncoll) > 0:
+    #         ae = ET.SubElement(src_seg, "ANNOTATIONS")
+    #       for annitem in anncoll: # TODO: sort by start_char?
+    #         se = ET.SubElement(ae, "ANNOTATION", \
+    #                            {'task':annitem[0],'annotation_id': annitem[4]})
+    #         # se = ET.SubElement(ae, "ANNOTATION", \
+    #         #                    {'task':annitem[0],'annotation_id': annitem[4],
+    #         #                     'start_char':annitem[2], 'end_char':annitem[3]})
+    #         # se.text=annitem[5]
+    #         head = ET.SubElement(se, "HEAD")
+    #         head.set('start_char', annitem[2])
+    #         head.set('end_char', annitem[3])
+    #         head.text = annitem[5]
+    #         subsubs = []
+    #         if annitem[0]=='NE':
+    #           subsubs.append(("ENTITY_TYPE", annitem[6]))
+    #         elif annitem[0]=='FE':
+    #           if annitem[6] == 'HEAD':
+    #             subsubs.append(("ANNOTATION_KIND", annitem[6]))
+    #             subsubs.append(("MENTION_TYPE", annitem[7]))
+    #             subsubs.append(("PHRASE_ID", annitem[8])) # Should be PHRASE ID
+    #           else: # MENTION/ENTITY
+    #             subsubs.append(("ENTITY_TYPE", annitem[9]))
+    #             subsubs.append(("ANNOTATION_KIND", annitem[6]))
+    #             subsubs.append(("MENTION_TYPE", annitem[7]))
+    #             subsubs.append(("ENTITY_ID", annitem[8]))
+    #         elif annitem[0]=='SSA':
+    #           se.set('pred_or_arg', annitem[6])
+    #           subsubs.append(("ROLE", annitem[7]))
+    #           if annitem[6] == "argument":
+    #             subsubs.append(("PREDICATE", annitem[8]))
+    #         elif annitem[0]=='NPC':
+    #           subsubs.append(("NPC_TYPE", annitem[6]))
+    #         else:
+    #           sys.stderr.write("Not sure what to do with item that starts " \
+    #                            +annitem[0]+"\n")
+    #           continue
+    #         for key, text in subsubs:
+    #           sse = ET.SubElement(se, key)
+    #           sse.text = text
+
+    #     # TODO: more tokenizations, etc.
+    #     for key, text in subelements:
+    #       se = ET.SubElement(src_seg, key)
+    #       se.text = text
+    #     # Entity/semantic annotations in their own block if fullid in anns
+
+    #     # Target segements
+    #     if not args.evaluation:
+    #       trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
+    #       trg_seg.set('id', trg_man[2])
+    #       trg_seg.set('start_char', trg_man[3])
+    #       trg_seg.set('end_char', trg_man[4])
+    #       ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
+    #       ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
+    #       trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
+    #       ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
+    #       ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
+    #       ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
+    #       ET.SubElement(trg_seg, "AGILE_TOKENIZED_TARGET").text = trg_agiletokline
+    #       ET.SubElement(trg_seg, "AGILE_TOKENIZED_LC_TARGET").text = trg_agiletoklcline
+    #       # don't add morph info if there's nothing interesting
+    #       morphset = set(trg_morphline.split())
+    #       if len(morphset) == 1 and list(morphset)[0] == "none":
+    #         pass
+    #       else:
+    #         ET.SubElement(trg_seg,
+    #                       "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
+    #         ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
+
+
+    #     xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
+    #                          xml_declaration=False).decode('utf-8')
+    #     outfile.write(xmlstr)
+    #     count += 1
+    #   outfile.write("</DOCUMENT>\n")
+    # ### ------------------ End of Regular Parallel ------------------
+
+    # src_lastfullid = None
+    # ### ---------------------- Tweets Parallel ----------------------
+    # if corpus == 'fromsource.tweet':
+    #   iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile)
+    #   for src_manline, trg_manline, \
+    #       src_origline, trg_origline \
+    #       in iteration:
+
+    #     src_origline = src_origline.strip()
+    #     src_man = src_manline.strip().split('\t')
+    #     src_fullid = src_man[1]
+    #     src_fullidsplit = src_fullid.split('_')
+    #     trg_origline = trg_origline.strip()
+    #     trg_man = trg_manline.strip().split('\t')
+    #     trg_fullid = trg_man[1]
+
+    #     fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
+    #                     'INDEX_ID', 'DATE']
+
+    #     # Faking the document-level
+    #     if src_lastfullid != src_fullid:
+    #       if src_lastfullid is not None:
+    #         outfile.write("</DOCUMENT>\n")
+    #       src_lastfullid = src_fullid
+    #       # outfile.write('<DOCUMENT id="%s" ' % fullid +
+    #       #               'genre="%s" provenance="%s" language="%s" ' \
+    #       #               'index_id="%s" date="%s">\n' % tuple(fullidsplit))
+    #       outfile.write('<DOCUMENT id="%s">\n' % src_fullid)
+    #       for label, value in zip(fullidfields, src_fullidsplit):
+    #         outfile.write("  <%s>%s</%s>\n" % (label, value, label))
+    #       outfile.write("  <TARGET_LANGUAGE>ENG</TARGET_LANGUAGE>\n")
+    #       outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
+    #                     re.match('(\w+)\..+', corpus).group(1))
+
+    #     xroot = ET.Element('PARALLEL')
+    #     # xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
+    #     src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
+    #     src_seg.set('id', 'segment-0')
+    #     src_seg.set('start_char', '0')
+    #     # THE END OFFSET MIGHT BE WRONG
+    #     src_seg.set('end_char', str(len(src_origline.encode('utf-8'))))
+
+    #     subelements = []
+    #     subelements.append(("FULL_ID_SOURCE", src_man[1]))
+    #     subelements.append(("ORIG_RAW_SOURCE", src_origline))
+    #     src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
+    #     subelements.append(("MD5_HASH_SOURCE", src_md5))
+
+    #     # On-demand fill of psms and anns hashes that assumesit will be
+    #     # used contiguously
+    #     if src_fullid in psmtemp:
+    #       psms.clear()
+    #       data = psmtemp.pop(src_fullid)
+    #       for tup in data:
+    #         start = int(tup[2])
+    #         end = start+int(tup[3])
+    #         for i in range(start, end):
+    #           psms[src_fullid][i].append(tup)
+
+    #     if src_fullid in psms:
+    #       # Collect the annotations
+    #       psmcoll = set()
+    #       startchar = int(src_man[3])
+    #       endchar = int(src_man[4])
+    #       if endchar > len(psms[src_fullid]):
+    #         endchar = None
+    #       for i in range(startchar, endchar):
+    #         slot = psms[src_fullid][i]
+    #         psmcoll.update(list(map(tuple, slot)))
+    #       for psmitem in psmcoll:
+    #         if psmitem[0]=='headline':
+    #           subelements.append(("IS_HEADLINE","1"))
+    #           continue
+    #         if psmitem[0]=='post':
+    #           if len(psmitem) >= 5:
+    #             subelements.append(("AUTHOR", psmitem[4]))
+    #             if len(psmitem) >= 6:
+    #               subelements.append(("POST_DATE_TIME", psmitem[5]))
+    #         else:
+    #           sys.stderr.write("Not sure what to do with item that starts " + \
+    #                            psmitem[0]+"\n")
+    #           continue
+
+    #     if src_fullid in anntemp:
+    #       anns.clear()
+    #       data = anntemp.pop(src_fullid)
+    #       for tup in data:
+    #         start = int(tup[2])
+    #         end = int(tup[3])
+    #         for i in range(start, end):
+    #           anns[src_fullid][i].append(tup)
+
+    #     if src_fullid in anns:
+    #       # Collect the annotations
+    #       anncoll = set()
+    #       # startchar = int(src_man[3])
+    #       # endchar = min(len(anns[src_fullid]), int(src_man[4]))
+    #       startchar = 0
+    #       endchar = len(anns[src_fullid])
+    #       for i in range(startchar, endchar):
+    #         slot = anns[src_fullid][i]
+    #         anncoll.update(list(map(tuple, slot)))
+    #       if len(anncoll) > 0:
+    #         ae = ET.SubElement(src_seg, "ANNOTATIONS")
+    #       for annitem in anncoll: # TODO: sort by start_char?
+    #         se = ET.SubElement(ae, "ANNOTATION", \
+    #                            {'task':annitem[0],'annotation_id': annitem[4]})
+    #         # se = ET.SubElement(ae, "ANNOTATION", \
+    #         #                    {'task':annitem[0],'annotation_id': annitem[4],
+    #         #                     'start_char':annitem[2], 'end_char':annitem[3]})
+    #         # se.text=annitem[5]
+    #         head = ET.SubElement(se, "HEAD")
+    #         head.set('start_char', annitem[2])
+    #         head.set('end_char', annitem[3])
+    #         head.text = annitem[5]
+    #         subsubs = []
+    #         if annitem[0]=='NE':
+    #           subsubs.append(("ENTITY_TYPE", annitem[6]))
+    #         elif annitem[0]=='FE':
+    #           if annitem[6] == 'HEAD':
+    #             subsubs.append(("ANNOTATION_KIND", annitem[6]))
+    #             subsubs.append(("MENTION_TYPE", annitem[7]))
+    #             subsubs.append(("PHRASE_ID", annitem[8])) # Should be PHRASE ID
+    #           else: # MENTION/ENTITY
+    #             subsubs.append(("ENTITY_TYPE", annitem[9]))
+    #             subsubs.append(("ANNOTATION_KIND", annitem[6]))
+    #             subsubs.append(("MENTION_TYPE", annitem[7]))
+    #             subsubs.append(("ENTITY_ID", annitem[8]))
+    #         elif annitem[0]=='SSA':
+    #           se.set('pred_or_arg', annitem[6])
+    #           subsubs.append(("ROLE", annitem[7]))
+    #           if annitem[6] == "argument":
+    #             subsubs.append(("PREDICATE", annitem[8]))
+    #         elif annitem[0]=='NPC':
+    #           subsubs.append(("NPC_TYPE", annitem[6]))
+    #         else:
+    #           sys.stderr.write("Not sure what to do with item that starts " \
+    #                            +annitem[0]+"\n")
+    #           continue
+    #         for key, text in subsubs:
+    #           sse = ET.SubElement(se, key)
+    #           sse.text = text
+
+    #     # TODO: more tokenizations, etc.
+    #     for key, text in subelements:
+    #       se = ET.SubElement(src_seg, key)
+    #       se.text = text
+    #     # Entity/semantic annotations in their own block if fullid in anns
+
+    #     # Target segements
+    #     if not args.evaluation:
+    #       trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
+    #       trg_seg.set('id', 'segment-0')
+    #       trg_seg.set('start_char', '0')
+    #       # THE END OFFSET MIGHT BE WRONG
+    #       trg_seg.set('end_char', str(len(trg_origline.encode('utf-8'))))
+    #       ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
+    #       ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
+    #       trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
+    #       ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
+
+    #     xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
+    #                          xml_declaration=False).decode('utf-8')
+    #     outfile.write(xmlstr)
+    #     count += 1
+    #   outfile.write("</DOCUMENT>\n")
+    #   ### ------------------ End of Tweets Parallel ------------------
+
 
   # Cannot retrieve all psm and ann
   # # TODO /corpus/document
