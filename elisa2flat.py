@@ -11,6 +11,22 @@ import os.path
 import gzip
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
+reader = codecs.getreader('utf8')
+writer = codecs.getwriter('utf8')
+
+
+def prepfile(fh, code):
+  ret = gzip.open(fh.name, code) if fh.name.endswith(".gz") else fh
+  if sys.version_info[0] == 2:
+    if code.startswith('r'):
+      ret = reader(fh)
+    elif code.startswith('w'):
+      ret = writer(fh)
+    else:
+      sys.stderr.write("I didn't understand code "+code+"\n")
+      sys.exit(1)
+  return ret
+
 # this code is used below but not in this form
 #http://stackoverflow.com/questions/7171140/using-python-iterparse-for-large-xml-files
 # def fast_iter(context, func, *args, **kwargs):
@@ -44,7 +60,7 @@ def main():
   parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('rb'), default=sys.stdin, help="input file")
   parser.add_argument("--fields", "-f", nargs='+', help="list of fields to extract text from. if attribute is desired, use field.attribute. Separate fallback fields with :")
   parser.add_argument("--segment", "-s", default="PARALLEL", help="segment name. PARALLEL for x-eng, SEGMENT for monolingual. More than one match per segment will be concatenated")
-  parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('wb'), default=sys.stdout, help="output file")
+  parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
 
 
 
@@ -53,9 +69,10 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
+
   infile = args.infile
-  infile = gzip.open(infile.name, 'r') if infile.name.endswith(".gz") else infile
-  outfile = gzip.open(args.outfile.name, 'w') if args.outfile.name.endswith(".gz") else args.outfile
+  infile = gzip.open(infile.name, 'rb') if infile.name.endswith(".gz") else infile
+  outfile = prepfile(args.outfile, 'w')
 
 
   ctxt = ET.iterparse(infile, events=("end", "start"))
@@ -75,8 +92,8 @@ def main():
           matches = [element,] if subfields[0] == args.segment else element.findall(".//"+subfields[0])
           for match in matches:
             value = match.get(subfields[1]) if len(subfields) > 1 else match.text
-            value = value.replace('\n', ' ')
-            value = value.replace('\t', ' ')
+            value = value.replace('\n', ' ') if value is not None else None
+            value = value.replace('\t', ' ') if value is not None else None
             if value is not None:
               outfields.append(value)
               wrotesomething = True
@@ -85,7 +102,8 @@ def main():
             break
         if not wrotesomething:
           outfields.append("")
-      outfile.write(("\t".join(outfields)+"\n").encode('utf8'))
+      ostr = "\t".join(outfields)+"\n"
+      outfile.write(ostr)
       lock = False
     # recover memory
     if event == "end" and not lock:
