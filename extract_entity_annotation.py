@@ -20,9 +20,9 @@ from lputil import funornone
 # http://stackoverflow.com/questions/2865278/in-python-how-to-find-all-the-files
 # -under-a-directory-including-the-files-in-s
 def recursive_file_gen(mydir):
-    for root, dirs, files in os.walk(mydir):
-        for file in files:
-            yield os.path.join(root, file)
+  for root, dirs, files in os.walk(mydir):
+    for file in files:
+      yield os.path.join(root, file)
 
 def main():
   import codecs
@@ -84,8 +84,10 @@ def main():
             if anntask != "FE" and anntask != "SSA":
               sys.stderr.write("Warning: extent-free non-full annotation in " \
                                +annfile+": "+ET.tostring(xann)+"\n")
-              continue
             continue
+          # map aberrant type
+          if anntask == "NPchunk":
+            anntask = "NPC"
           xextent = xann.find('EXTENT')
           if docid.startswith('SN_TWT_'): # No string head for TWT
               strhead = xextent.text
@@ -105,9 +107,17 @@ def main():
                      xextent.get("end_char") or "None", annid or "None",
                      xextent.text or "None"]
           if anntask == "NE": # Simple ne annotation
-            tup.append(xann.get("type"))
-          elif anntask == "NPC": # NP chunking
-            tup.append(xann.get("type"))
+            # old style: in attributes. new style: in tag
+            if "type" in xann.keys():
+              tup.append(xann.get("type"))
+            else:
+              tup.append(funornone(xann.find("TAG"), lambda x: x.text))
+          elif (anntask == "NPC" or anntask=="NPchunk"): # NP chunking
+            # old style: in attributes. new style: in tag
+            if "type" in xann.keys():
+              tup.append(xann.get("type"))
+            else:
+              tup.append(funornone(xann.find("TAG"), lambda x: x.text))
           else: # Everything else has category/tag style
             try:
               tup.append(funornone(xann.find("CATEGORY"), lambda x: x.text))
@@ -136,7 +146,7 @@ def main():
               print(ET.tostring(xann))
               raise
           try:
-              outfile.write("\t".join(tup)+"\n")
+              outfile.write("\t".join(map(str,tup))+"\n")
           except UnicodeDecodeError:
               sys.stderr.write("Warning: Unknown encoding %s:%s-%s\n" % \
                                (tup[4], tup[2], tup[3]))

@@ -58,13 +58,11 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
                                     (prefix,agiletoklcoutdir,trg))
 
   for m in stp(path, src=src, trg=trg, xml=True, tweet=tweet):
-    # sdata, tdata = el(*m, xml=xml)
+
     if not tweet:
-      sdata = el(m[0], xml=True)
-      tdata = el(m[1], xml=True)
+      sdata, tdata = el(*m)
     else:
-      sdata = el(m[0], xml=False)
-      tdata = el(m[1], xml=True)
+      sdata, tdata = el(*m, sxml=False, txml=True)
 
     if sdata is None or tdata is None:
       sys.stderr.write("Warning: empty files:\n%s or %s\n" % (m[0], m[1]))
@@ -73,6 +71,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
     # do gale & church or brown et al or something similar here
     slen = len(sdata["ORIG"])
     tlen = len(tdata["ORIG"])
+    #print(slen,tlen)
     if slen != tlen:
       sys.stderr.write("Warning: different number of lines in files:\n" \
                        "%s %d\n%s %d\n" % (m[0], slen, m[1], tlen))
@@ -93,7 +92,8 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
           for tup in tupgen:
             fh.write("\t".join(map(str, (fname,)+tup))+"\n")
       except:
-        sys.stderr.write(fname)
+        sys.stderr.write(src_man_fh.name)
+        #sys.stderr.write(fname)
         raise
     else:
       # Source

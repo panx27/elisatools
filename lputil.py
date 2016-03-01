@@ -13,6 +13,12 @@ from subprocess import check_output, check_call, CalledProcessError
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
+# http://stackoverflow.com/questions/1158076/implement-touch-using-python
+import os
+def touch(fname, times=None):
+    with open(fname, 'a'):
+        os.utime(fname, times)
+
 # http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
 import os, errno
 def mkdir_p(path):
@@ -35,7 +41,7 @@ def whitelistmatch(wlist, sents):
   return any(any(w in s for s in sents) for w in wlist)
 
 def get_aligned_sentences(srcfile, trgfile, alignfile,
-                          xml=False):
+                          xml=True):
   if xml:
     return get_aligned_sentences_xml(srcfile, trgfile,
                                      alignfile)
@@ -74,12 +80,18 @@ def spans_from_xml(spans, xml, tokenize):
   docid = xml.find(".//DOC").get('id')
   if tokenize:
     for tok in xml.findall(".//TOKEN"):
-      toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
-                   tok, ""))
+      try:
+        toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
+                     tok, ""))
+      except TypeError:
+        continue
   else:
     for tok in xml.findall(".//SEG"):
-      toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
-                   tok.find("ORIGINAL_TEXT"), tok.get('id')))
+      try:
+        toks.append((int(tok.get('start_char')), int(tok.get('end_char')),
+                     tok.find("ORIGINAL_TEXT"), tok.get('id')))
+      except TypeError:
+        continue
   segid = ""
   for start, end in spans:
     span = []
@@ -101,12 +113,12 @@ def spans_from_xml(spans, xml, tokenize):
       # Out of range (quit)
       if s > end:
         break
-      # Border crossing (yell)
-      if s < start and e >= start or s <= end and e > end:
+      # Border crossing (yell and quit)
+      if s < start and e >= start or s < end and e > end:
         sys.stderr.write("Tokens cross alignment boundaries;" \
-                         " (%d, %d) vs (%d, %d)\n" % (start, end, s, e))
+                         " (%d, %d) vs (%d, %d) at %s after getting %s\n" % (start, end, s, e, docid, ' '.join(map(lambda x: x.text, span))))
         sys.exit(1)
-    if firsts != start or laste+1 != end:
+    if firsts != start or (laste+1 != end and laste != end):
       sys.stderr.write("Warning: in %s should be (%d %d) but actually" \
                        " (%d %d)\n" % (docid, start, end, firsts, laste))
       continue
@@ -134,7 +146,7 @@ def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
       data["START"].append(str(start))
       data["END"].append(str(end))
       data["TOK"].append(' '.join([x.text for x in span])+'\n')
-      data["POS"].append(' '.join([x.get("pos") for x in span])+'\n')
+      data["POS"].append(' '.join([x.get("pos") or "None" for x in span])+'\n')
       mt_tmp = []
       mtt_tmp = []
       for x in span:
@@ -185,7 +197,7 @@ def pair_files(srcdir, trgdir, ext='txt'):
 
   # From trg pbook
   # English_Phrasebook.uzb.ltf.xml vs English_Phrasebook.ltf.xml
-  pat_from_trg_pbook = re.compile(r"([^\.].*Phrasebook).*\."+ext)
+  pat_from_trg_pbook = re.compile(r"((?:[^\.].*)?Phrasebook).*\."+ext)
   repl_from_trg_pbook = r"%s.*\."+ext
   pats.append((pat_from_trg_pbook, repl_from_trg_pbook))
   matches = []
@@ -442,83 +454,44 @@ def get_info(node):
   return [ [sdocid,]+[ x.get(y) for y in ('id', 'start_char', 'end_char') ] for x in node.findall(".//SEG") ]
 
 
-# def extract_lines(s, t, xml=True):
-#   ''' given two files, open them and get data from them in various forms.
-#   Return as two lists of lists of strings. (If not xml, only a single form is possible) '''
-#   from itertools import chain
-#   # if xml, get codes, offsets, native, tokens, segments. If not, return codes and native only
-#   ret = []
-#   for x in (s, t):
-#     l = dd(list)
-#     if xml:
-#       try:
-#         root = ET.parse(x)
-#       except ParseError as detail:
-#         sys.stderr.write("Parse error on "+x+": "+str(detail)+"\n")
-#         return
-#       for (docid, segid, start, end) in get_info(root):
-#         l["DOCID"].append(docid)
-#         l["SEGID"].append(segid)
-#         l["START"].append(start)
-#         l["END"].append(end)
-#       toks, morphtoks, morphs, poss = get_segments(root)
-#       l["TOK"].extend(toks)
-#       l["MORPHTOK"].extend(morphtoks)
-#       l["MORPH"].extend(morphs)
-#       l["POS"].extend(poss)
-#       l["ORIG"].extend([ node.text+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
-#     else:
-#       import codecs
-#       with codecs.open(x, 'r', 'utf-8') as f:
-#         l["ORIG"] = f.readlines()
-#       l["DOCID"] = [x+"\n"]*len(l["ORIG"])
-#     lengths = [len(i) for i in list(l.values())]
-#     for length in lengths[1:]:
-#       if length != lengths[0]:
-#         sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
-#         sys.exit(1)
-#     ret.append(l)
-#   # check that each side is internally consistentthe same length
-#   return ret
-
-def extract_lines(x, xml=True):
-  ''' given a file, open it and get data from theit in various forms.
-  Return as a list of strings. (If not xml, only a single form is possible) '''
+def extract_lines(s, t, sxml=True, txml=True):
+  ''' given two files, open them and get data from them in various forms.
+  Return as two lists of lists of strings. (If not xml, only a single form is possible) '''
   from itertools import chain
   # if xml, get codes, offsets, native, tokens, segments. If not, return codes and native only
   ret = []
-
-  l = dd(list)
-  if xml:
-    try:
-      root = ET.parse(x)
-    except ParseError as detail:
-      sys.stderr.write("Parse error on "+x+": "+str(detail)+"\n")
-      return
-    for (docid, segid, start, end) in get_info(root):
-      l["DOCID"].append(docid)
-      l["SEGID"].append(segid)
-      l["START"].append(start)
-      l["END"].append(end)
-    toks, morphtoks, morphs, poss = get_segments(root)
-    l["TOK"].extend(toks)
-    l["MORPHTOK"].extend(morphtoks)
-    l["MORPH"].extend(morphs)
-    l["POS"].extend(poss)
-    l["ORIG"].extend([ node.text+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
-  else:
-    import codecs
-    with codecs.open(x, 'r', 'utf-8') as f:
-      l["ORIG"] = f.readlines()
-    l["DOCID"] = [x+"\n"]*len(l["ORIG"])
-  lengths = [len(i) for i in list(l.values())]
-  for length in lengths[1:]:
-    if length != lengths[0]:
-      sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
-      sys.exit(1)
+  for x, xml in zip((s, t), (sxml, txml)):
+    l = dd(list)
+    if xml:
+      try:
+        root = ET.parse(x)
+      except ParseError as detail:
+        sys.stderr.write("Parse error on "+x+": "+str(detail)+"\n")
+        return
+      for (docid, segid, start, end) in get_info(root):
+        l["DOCID"].append(docid)
+        l["SEGID"].append(segid)
+        l["START"].append(start)
+        l["END"].append(end)
+      toks, morphtoks, morphs, poss = get_segments(root)
+      l["TOK"].extend(toks)
+      l["MORPHTOK"].extend(morphtoks)
+      l["MORPH"].extend(morphs)
+      l["POS"].extend(poss)
+      l["ORIG"].extend([ node.text.strip('\n')+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
+    else:
+      import codecs
+      with codecs.open(x, 'r', 'utf-8') as f:
+        l["ORIG"] = f.readlines()
+      l["DOCID"] = [x+"\n"]*len(l["ORIG"])
+    lengths = [len(i) for i in list(l.values())]
+    for length in lengths[1:]:
+      if length != lengths[0]:
+        sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
+        sys.exit(1)
+    ret.append(l)
   # check that each side is internally consistentthe same length
-  return l
-
+  return ret
 
 class Step:
   def __init__(self, prog, progpath=scriptdir, argstring="", stdin=None,
@@ -644,8 +617,8 @@ def main():
         sl = get_tokens(sroot)
         tl = get_tokens(troot)
       else:
-        sl = [ x.text+"\n" for x in sroot.findall(".//ORIGINAL_TEXT") ]
-        tl = [ x.text+"\n" for x in troot.findall(".//ORIGINAL_TEXT") ]
+        sl = [ x.text.strip('\n')+"\n" for x in sroot.findall(".//ORIGINAL_TEXT") ]
+        tl = [ x.text.strip('\n')+"\n" for x in troot.findall(".//ORIGINAL_TEXT") ]
     else:
       import codecs
       with codecs.open(s, 'r', 'utf-8') as f:

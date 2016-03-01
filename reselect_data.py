@@ -7,7 +7,7 @@ import codecs
 from collections import defaultdict as dd
 import re
 import os.path
-from lputil import mkdir_p
+from lputil import mkdir_p, touch
 from subprocess import check_output, STDOUT, CalledProcessError
 from shutil import copy
 scriptdir = os.path.dirname(os.path.abspath(__file__))
@@ -15,7 +15,6 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 def runselection(prefix, idfile, catfile, remainder, filetypes, srclang, indir, outdir):
   ''' apply a previous data selection to a set of files '''
   try:
-    copy(catfile, outdir)
     for filetype in filetypes:
       if os.path.exists(os.path.join(indir, filetype)):
         for flang in [srclang, 'eng']:
@@ -80,11 +79,16 @@ def main():
       check_output("cut -f2 %s > %s" % (manfile, idfile), stderr=STDOUT, shell=True)
     except CalledProcessError as exc:
       print("Status : FAIL", exc.returncode, exc.output)
-    catfile = os.path.join(args.previous, "%s.cats" % prefix)  
-    runselection(prefix, idfile, catfile, args.remainder, filetypes, args.language, extractpath, outpath)
+    catfile = os.path.join(args.previous, "%s.cats" % prefix)
+    newcatfile = os.path.join(outpath, os.path.basename(catfile))
+    if os.path.exists(catfile):
+      copy(catfile, newcatfile)
+    else:
+      touch(newcatfile)
+    runselection(prefix, idfile, newcatfile, args.remainder, filetypes, args.language, extractpath, outpath)
     for i in (args.language, 'eng'):
       manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
-      cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -r %s" % (scriptdir, manifest, idfile, catfile, outpath, args.remainder)
+      cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -r %s" % (scriptdir, manifest, idfile, newcatfile, outpath, args.remainder)
       print("Running "+cmd)
       check_output(cmd, stderr=STDOUT, shell=True)
 
@@ -98,10 +102,15 @@ def main():
     except CalledProcessError as exc:
       print("Status : FAIL", exc.returncode, exc.output)
     catfile = os.path.join(args.previous, "%s.cats" % prefix)
-    runselection(prefix, idfile, catfile, args.remainder, filetypes, args.language, extractpath, outpath)
+    newcatfile = os.path.join(outpath, os.path.basename(catfile))
+    if os.path.exists(catfile):
+      copy(catfile, newcatfile)
+    else:
+      touch(newcatfile)
+    runselection(prefix, idfile, newcatfile, args.remainder, filetypes, args.language, extractpath, outpath)
     for i in (args.language, 'eng'):
       manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
-      cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -r %s" % (scriptdir, manifest, idfile, catfile, outpath, args.remainder)
+      cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -r %s" % (scriptdir, manifest, idfile, newcatfile, outpath, args.remainder)
       print("Running "+cmd)
       check_output(cmd, stderr=STDOUT, shell=True)
 
