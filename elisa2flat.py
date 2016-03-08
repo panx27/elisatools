@@ -16,7 +16,7 @@ writer = codecs.getwriter('utf8')
 
 
 def prepfile(fh, code):
-  ret = gzip.open(fh.name, code) if fh.name.endswith(".gz") else fh
+  ret = gzip.open(fh.name, code if code.endswith("t") else code+"t") if fh.name.endswith(".gz") else fh
   if sys.version_info[0] == 2:
     if code.startswith('r'):
       ret = reader(fh)
