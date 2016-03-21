@@ -3,7 +3,7 @@ import argparse
 import sys
 import codecs
 
-from lxml import etree as ET
+from lxml import etree as ET # pip install lxml
 #from xml.etree import ElementTree as ET
 from collections import defaultdict as dd
 import re
