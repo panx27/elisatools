@@ -57,8 +57,12 @@ def main():
     segtext = ot.text
     if segtext is None:
       continue
-    # no whitespace on the ends please
+    # no whitespace on the ends please and no newlines
+    segtext = segtext.replace('\n', ' ')
+    segtext = segtext.replace('\t', ' ')
     segtext = segtext.strip()
+    # and only one space between words
+    segtext = ' '.join(segtext.split())
     ot.text = segtext
     # span length
     seg.set("start_char", str(offset))

@@ -28,7 +28,7 @@ def main():
   stepsbyname["tar-ephemera"]=steps[-1]
 
   # make_parallel_release.py
-  for i in ('train', 'dev', 'test', 'eval'):
+  for i in ('train', 'dev', 'test', 'syscomb', 'eval'):
     steps.append(Step('make_parallel_release.py',
                       help="package parallel flat %s data" % i))
     stepsbyname["parallel-%s" % i]=steps[-1]
@@ -101,7 +101,7 @@ def main():
   stepsbyname["tar-ephemera"].stderr = os.path.join(rootdir, 'tar_ephemera.err')
 
   # PARALLEL RELEASES
-  for i in ('train', 'dev', 'test', 'eval'):
+  for i in ('train', 'dev', 'test', 'syscomb', 'eval'):
     paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
     parallelxml = os.path.join(rootdir,
                                'elisa.%s-eng.%s.y%dr%d.v%d.xml.gz' % \
