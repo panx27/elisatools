@@ -116,6 +116,9 @@ def main():
   # Will fill on demand
   anns = dd(lambda: dd(list))
 
+  # for printing out at the end
+  stats = dd(lambda: dd(int))
+  
   # Each segment is a legit xml block. the corpus/language/document are faked
   # TODO: corpus/document
   # TODO: make this more generalizable!
@@ -162,6 +165,7 @@ def main():
 
       # Faking the document-level
       if lastfullid != fullid:
+        stats[corpus]["DOCS"]+=1
         if lastfullid is not None:
           outfile.write("</DOCUMENT>\n")
         lastfullid = fullid
@@ -171,7 +175,8 @@ def main():
         outfile.write('<DOCUMENT id="%s">\n' % fullid)
         for label, value in zip(fullidfields, fullidsplit):
           outfile.write("  <%s>%s</%s>\n" % (label, value, label))
-
+      stats[corpus]["SEGMENTS"]+=1
+      stats[corpus]["WORDS"] += len(origline.split())
       xroot = ET.Element('SEGMENT')
       xroot.set('id', man[2])
       xroot.set('start_char', man[3])
@@ -307,6 +312,13 @@ def main():
     sys.stderr.write("Unvisited psm: %s\n" % key)
   for key in list(anntemp.keys()):
     sys.stderr.write("Unvisited ann: %s\n" % key)
+
+  sys.stderr.write("CORPUS STATISTICS\n")
+  for corpus, cstat in stats.items():
+    sys.stderr.write("%s :" % corpus)
+    for stat, val in cstat.items():
+      sys.stderr.write(" %d %s" % (val, stat))
+    sys.stderr.write("\n")
 
 if __name__ == '__main__':
   main()

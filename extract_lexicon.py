@@ -31,6 +31,9 @@ def main():
     os.makedirs(outdir)
   outfile=args.outfile
 
+  # for printing out at the end
+  stats = 0
+
   of = codecs.open(outfile, 'w', 'utf-8')
   source_fh = open(os.path.join(outdir, "source"), 'a')
   for infile in args.infiles:
@@ -49,6 +52,7 @@ def main():
           for pos, gloss in zip(poses, glosses):
             if gloss.text is None or pos.text is None or word.text is None:
               continue
+            stats+=1
             of.write("%s\t%s\t%s\n" % (word.text.strip(),
                                        pos.text.strip(),
                                        gloss.text.strip()))
@@ -63,6 +67,7 @@ def main():
 
   # copy all files from lexicon directory to processed directory
   lexicon_dirs = set([os.path.dirname(x.name) for x in args.infiles])
+  sys.stderr.write("Extracted %d entries\n" % (stats))
   for lexicon_dir in lexicon_dirs:
     for i in os.listdir(lexicon_dir):
       name = os.path.join(lexicon_dir, i)
