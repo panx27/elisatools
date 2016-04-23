@@ -37,6 +37,8 @@ def main():
   parser.add_argument("--annfile", "-a", nargs='?', type=argparse.FileType('r'),
                       default=None, help="entity annotation file")
   parser.add_argument("--paradir", "-pa", default=".", help="parallel flat dir")
+  parser.add_argument("--statsfile", "-s", type=argparse.FileType('w'),
+                      default=sys.stderr, help="file to write statistics")
 
   try:
     args = parser.parse_args()
@@ -44,6 +46,7 @@ def main():
     parser.error(str(msg))
 
   outfile = args.outfile
+  statsfile = args.statsfile
   # outfile = writer(args.outfile)
 
   paradocs = get_parallel_docs(args.paradir)
@@ -123,8 +126,8 @@ def main():
   # TODO: corpus/document
   # TODO: make this more generalizable!
   outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS SYSTEM "elisa.lrlp.v1.0.dtd">\n')
-  outfile.write('<ELISA_LRLP_CORPUS language="%s">\n' % args.lang)
+  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS SYSTEM "elisa.lrlp.v1.1.dtd">\n')
+  outfile.write('<ELISA_LRLP_CORPUS source_language="%s">\n' % args.lang)
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')
     manifest =      open(os.path.join(args.rootdir, "%s.manifest" % corpus))
@@ -157,7 +160,7 @@ def main():
       man = manline.strip().split('\t')
       fullid = man[1]
       fullidsplit = fullid.split('_')
-      fullidfields = ['GENRE', 'PROVENANCE', 'LANGUAGE', 'INDEX_ID', 'DATE']
+      fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE', 'INDEX_ID', 'DATE']
 
       if fullid in paradocs: # Parallel data is not repeated in the mono data
         #sys.stderr.write("Document %s exists in parallel data\n" % fullid)
@@ -175,18 +178,20 @@ def main():
         outfile.write('<DOCUMENT id="%s">\n' % fullid)
         for label, value in zip(fullidfields, fullidsplit):
           outfile.write("  <%s>%s</%s>\n" % (label, value, label))
+        outfile.write("  <DIRECTION>fromsource</DIRECTION>\n")
       stats[corpus]["SEGMENTS"]+=1
       stats[corpus]["WORDS"] += len(origline.split())
-      xroot = ET.Element('SEGMENT')
-      xroot.set('id', man[2])
+      segroot = ET.Element('SEGMENT')
+      xroot = ET.SubElement(segroot, 'SOURCE')
+      xroot.set('id', "%s.%s.%s.%s" % (man[1],man[2],man[3],man[4]))
       xroot.set('start_char', man[3])
       xroot.set('end_char', man[4])
       subelements = []
       # subelements.extend(zip(fullidfields, fullidsplit))
       # subelements.extend(zip(['SEGMENT_ID', 'START_CHAR', 'END_CHAR'], man[2:]))
-      subelements.append(("FULL_ID", man[1]))
+      subelements.append(("FULL_ID_SOURCE", man[1]))
       subelements.append(("ORIG_RAW_SOURCE", origline))
-      subelements.append(("MD5_HASH",
+      subelements.append(("MD5_HASH_SOURCE",
                           hashlib.md5(origline.encode('utf-8')).hexdigest()))
       subelements.append(("LRLP_TOKENIZED_SOURCE", tokline))
       subelements.append(("CDEC_TOKENIZED_SOURCE", cdectokline))
@@ -300,7 +305,7 @@ def main():
         se.text = text
       # Entity/semantic annotations in their own block if fullid in anns
 
-      xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
+      xmlstr = ET.tostring(segroot, pretty_print=True, encoding='utf-8',
                            xml_declaration=False).decode('utf-8')
       outfile.write(xmlstr)
     outfile.write("</DOCUMENT>\n")
@@ -313,12 +318,18 @@ def main():
   for key in list(anntemp.keys()):
     sys.stderr.write("Unvisited ann: %s\n" % key)
 
-  sys.stderr.write("CORPUS STATISTICS\n")
-  for corpus, cstat in stats.items():
-    sys.stderr.write("%s :" % corpus)
-    for stat, val in cstat.items():
-      sys.stderr.write(" %d %s" % (val, stat))
-    sys.stderr.write("\n")
-
+  statsfile.write("CORPUS STATISTICS\n")
+  total = dd(int)
+  for corpus, cstat in sorted(stats.items()):
+    statsfile.write("%s :" % corpus)
+    for stat, val in sorted(cstat.items()):
+      total[stat]+=val
+      statsfile.write(" %d %s" % (val, stat))
+    statsfile.write("\n")
+  statsfile.write("===============\n")
+  statsfile.write("TOTAL :")
+  for stat, val in sorted(total.items()):
+    statsfile.write(" %d %s" % (val, stat))
+  statsfile.write("\n")
 if __name__ == '__main__':
   main()

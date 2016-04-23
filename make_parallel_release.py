@@ -36,6 +36,8 @@ def main():
                       help="psm annotation file")
   parser.add_argument("--annfile", "-a", type=argparse.FileType('r'),
                       help="entity annotation file")
+  parser.add_argument("--statsfile", "-s", type=argparse.FileType('w'),
+                      default=sys.stderr, help="file to write statistics")
   parser.add_argument("--evaluation", "-e", action='store_true',
                       default=False, help="prodece source side only")
 
@@ -45,6 +47,7 @@ def main():
     parser.error(str(msg))
 
   outfile = args.outfile
+  statsfile = args.statsfile
   # outfile = writer(args.outfile)
 
   # For every document, for every position, a list of (pointers to) annotations
@@ -122,10 +125,9 @@ def main():
   # TODO: corpus/document
   # TODO: make this more generalizable!
   outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-  outfile.write('<!DOCTYPE ELISA_BILINGUAL_LRLP_CORPUS SYSTEM ' \
-                '"elisa.lrlp-eng.v1.0.dtd">\n')
-  outfile.write('<ELISA_BILINGUAL_LRLP_CORPUS source_language="%s" ' \
-                'target_language="eng">\n' % args.lang)
+  outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS SYSTEM ' \
+                '"elisa.lrlp.v1.1.dtd">\n')
+  outfile.write('<ELISA_LRLP_CORPUS source_language="%s">\n' % args.lang)
   count = 0
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')
@@ -229,24 +231,20 @@ def main():
         if src_lastfullid is not None:
           outfile.write("</DOCUMENT>\n")
         src_lastfullid = src_fullid
-        # outfile.write('<DOCUMENT id="%s" ' % fullid +
-        #               'genre="%s" provenance="%s" language="%s" ' \
-        #               'index_id="%s" date="%s">\n' % tuple(fullidsplit))
         outfile.write('<DOCUMENT id="%s">\n' % src_fullid)
         for label, value in zip(fullidfields, src_fullidsplit):
           outfile.write("  <%s>%s</%s>\n" % (label, value, label))
-        outfile.write("  <TARGET_LANGUAGE>ENG</TARGET_LANGUAGE>\n")
         outfile.write("  <DIRECTION>%s</DIRECTION>\n" % \
                       re.match('(\w+)\..+', corpus).group(1))
       stats[corpus]["SEGMENTS"]+=1
       stats[corpus]["SRCWORDS"] += len(src_origline.split())
       stats[corpus]["TRGWORDS"] += len(trg_origline.split())
-      xroot = ET.Element('PARALLEL')
+      xroot = ET.Element('SEGMENT')
       # xroot.set('id', '{number:0{width}d}'.format(width=8, number=count))
-      src_seg = ET.SubElement(xroot, 'SEGMENT_SOURCE')
+      src_seg = ET.SubElement(xroot, 'SOURCE')
       # Non-tweet (ltf)
       if corpus != 'fromsource.tweet':
-        src_seg.set('id', src_man[2])
+        src_seg.set('id', "%s.%s.%s.%s" % (src_man[1], src_man[2], src_man[3], src_man[4]))
         src_seg.set('start_char', src_man[3])
         src_seg.set('end_char', src_man[4])
 
@@ -268,10 +266,10 @@ def main():
           subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
       # Tweet (rsd)
       else:
-        src_seg.set('id', 'segment-0')
+        src_seg.set('id', src_man[1])
         src_seg.set('start_char', '0')
-        # THE END OFFSET MIGHT BE WRONG
-        src_seg.set('end_char', str(len(src_origline.encode('utf-8'))))
+        src_seg.set('end_char', str(len(src_origline.encode('utf-8'))-1))
+
 
         subelements = []
         subelements.append(("FULL_ID_SOURCE", src_man[1]))
@@ -395,8 +393,8 @@ def main():
 
       # Target segements
       if not args.evaluation:
-        trg_seg = ET.SubElement(xroot, 'SEGMENT_TARGET')
-        trg_seg.set('id', trg_man[2])
+        trg_seg = ET.SubElement(xroot, 'TARGET')
+        trg_seg.set('id', "%s.%s.%s.%s" % (trg_man[1], trg_man[2], trg_man[3], trg_man[4]))
         trg_seg.set('start_char', trg_man[3])
         trg_seg.set('end_char', trg_man[4])
         ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
@@ -422,14 +420,20 @@ def main():
       outfile.write(xmlstr)
       count += 1
     outfile.write("</DOCUMENT>\n")
-  outfile.write("</ELISA_BILINGUAL_LRLP_CORPUS>\n")
+  outfile.write("</ELISA_LRLP_CORPUS>\n")
 
-  sys.stderr.write("CORPUS STATISTICS\n")
-  for corpus, cstat in stats.items():
-    sys.stderr.write("%s :" % corpus)
-    for stat, val in cstat.items():
-      sys.stderr.write(" %d %s" % (val, stat))
-    sys.stderr.write("\n")
-
+  statsfile.write("CORPUS STATISTICS\n")
+  total = dd(int)
+  for corpus, cstat in sorted(stats.items()):
+    statsfile.write("%s :" % corpus)
+    for stat, val in sorted(cstat.items()):
+      total[stat]+=val
+      statsfile.write(" %d %s" % (val, stat))
+    statsfile.write("\n")
+  statsfile.write("===============\n")
+  statsfile.write("TOTAL :")
+  for stat, val in sorted(total.items()):
+    statsfile.write(" %d %s" % (val, stat))
+  statsfile.write("\n")
 if __name__ == '__main__':
   main()

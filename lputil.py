@@ -134,8 +134,8 @@ def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
   with open(alignfile) as f:
     for line in f.readlines():
       ss, sl, ts, tl = list(map(int, line.strip().split('\t')))
-      srcspans.append((ss, ss+sl))
-      trgspans.append((ts, ts+tl))
+      srcspans.append((ss, ss+sl-1))
+      trgspans.append((ts, ts+tl-1))
   import xml.etree.ElementTree as ET
   for file, spans, data in zip((srcfile, trgfile), (srcspans, trgspans), (sdata, tdata)):
     root = ET.parse(file)
@@ -160,7 +160,7 @@ def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
     for span, _, segid, start, end in spans_from_xml(spans, root, False):
       # only segid is good here
       data["ORIG"].append(' '.join([x.text for x in span])+'\n')
-      data["SEGID"].append(segid)
+      data["SEGID"].append("%s.%s.%s" % (segid, start, end)) # ensure unique segid
     lengths = [len(i) for i in list(data.values())]
     for length in lengths[1:]:
       if length != lengths[0]:

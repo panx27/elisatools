@@ -19,7 +19,7 @@ from subprocess import check_call, CalledProcessError
 def printout(prefix, path, src, trg, outdir, origoutdir,
              tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-             cdectokpath, agiletokpath,
+             agiletokpath, cdectokpath, 
              stp=lputil.selected_translation_pairs, el=lputil.extract_lines,
              tweet=False):
   ''' Find files and print them out '''
@@ -128,6 +128,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
   # TODO: lowercase
   trg_orig_fh.close()
   agiletok_cmd = "%s -i %s -o %s -t %s " % (agiletokpath, trg_orig_fname, trg_agiletoklc_fname, trg_agiletok_fname)
+  sys.stderr.write(agiletok_cmd+"\n")
   try:
     check_call(agiletok_cmd, shell=True)
   except CalledProcessError as e:
@@ -136,6 +137,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir,
   # run cdec tokenizer on source orig
   src_orig_fh.close()
   cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, src_orig_fname, src_cdectoklc_fname, src_cdectok_fname)
+  sys.stderr.write(cdectok_cmd+"\n")
   try:
     check_call(cdectok_cmd, shell=True)
   except CalledProcessError as e:

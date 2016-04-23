@@ -39,7 +39,8 @@ def main():
   # get_tweet_by_id.rb
   steps.append(Step('get_tweet_by_id.rb',
                     help="download tweets. must have twitter gem installed " \
-                    "and full internet"))
+                    "and full internet",
+                    abortOnFail=False))
 
   # Use .ltf instead of .rsd for tweet translations
   # # ltf2rsd.perl
@@ -60,6 +61,9 @@ def main():
   # extract_parallel.py
   steps.append(Step('extract_parallel.py',
                     help="get flat form parallel data"))
+
+  steps.append(Step('filter_parallel.py',
+                    help="filter parallel data to remove likely mismatches"))
 
   # extract_mono.py
   steps.append(Step('extract_mono.py',
@@ -123,7 +127,8 @@ def main():
     tweetdir = os.path.join(rootdir, language, 'tweet')
     stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
     tweetintab = os.path.join(expdir, 'docs', 'twitter_info.tab')
-    stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
+    if os.path.exists(tweetintab):
+      stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
     stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
@@ -185,6 +190,13 @@ def main():
     stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % \
       (expdir, paralleloutdir, language, tweetdir)
     stepsbyname["extract_parallel.py"].stderr = parallelerr
+
+    filteroutdir = os.path.join(rootdir, language, 'parallel', 'filtered')
+    rejectoutdir = os.path.join(rootdir, language, 'parallel', 'rejected')
+    filtererr = os.path.join(rootdir, language, 'filter_parallel.err')
+    stepsbyname["filter_parallel.py"].argstring="-s 2 -l %s -i %s -f %s -r %s" % \
+      (language, paralleloutdir, filteroutdir, rejectoutdir)
+    stepsbyname["filter_parallel.py"].stderr = filtererr
 
     # MONO
     monoindir = os.path.join(expdir, 'data', 'monolingual_text',

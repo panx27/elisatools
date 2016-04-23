@@ -28,7 +28,7 @@ def main():
   stepsbyname["tar-ephemera"]=steps[-1]
 
   # make_parallel_release.py
-  for i in ('train', 'dev', 'test', 'syscomb', 'eval'):
+  for i in ('train', 'dev', 'test', 'syscomb', 'eval', 'rejected'):
     steps.append(Step('make_parallel_release.py',
                       help="package parallel flat %s data" % i))
     stepsbyname["parallel-%s" % i]=steps[-1]
@@ -67,21 +67,24 @@ def main():
 
   finalitems = []
   # READMES
-  finalitems.append(os.path.join(scriptdir, "README.mono"))
-  finalitems.append(os.path.join(scriptdir, "README.parallel"))
+  finalitems.append(os.path.join(scriptdir, "README.format"))
   # MONO RELEASE
   psmoutpath = os.path.join(rootdir, 'psm.ann')
   entityoutpath = os.path.join(rootdir, 'entity.ann')
   monooutdir = os.path.join(rootdir, 'mono', 'extracted')
   monoxml = os.path.join(rootdir, 'elisa.%s.y%dr%d.v%d.xml.gz' % \
                          (language, args.year, args.part, args.version))
+  monostatsfile = os.path.join(rootdir, 'elisa.%s.y%dr%d.v%d.stats' % \
+                         (language, args.year, args.part, args.version))
+  finalitems.append(monostatsfile)
   paradir = os.path.join(rootdir, 'parallel')
   finalitems.append(monoxml)
 
   manarg = ' '.join([re.sub('.manifest', '', f) for f in os.listdir \
                      (monooutdir)if re.match('(.+)\.manifest', f)])
   monoerr = os.path.join(rootdir, 'make_mono_release.err')
-  stepsbyname["make_mono_release.py"].argstring = "-r %s -l %s -c %s" % (monooutdir, language, manarg)
+  stepsbyname["make_mono_release.py"].argstring = "-r %s -l %s -c %s -s %s" % \
+                                                  (monooutdir, language, manarg, monostatsfile)
   if os.path.exists(entityoutpath):
     stepsbyname["make_mono_release.py"].argstring+= (" -a "+entityoutpath)
   if os.path.exists(psmoutpath):
@@ -101,20 +104,26 @@ def main():
   stepsbyname["tar-ephemera"].stderr = os.path.join(rootdir, 'tar_ephemera.err')
 
   # PARALLEL RELEASES
-  for i in ('train', 'dev', 'test', 'syscomb', 'eval'):
-    paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
+  for i in ('train', 'dev', 'test', 'syscomb', 'eval', 'rejected'):
+    if i == "rejected":
+      paralleloutdir = os.path.join(rootdir, 'parallel', i)
+    else:
+      paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
     parallelxml = os.path.join(rootdir,
                                'elisa.%s-eng.%s.y%dr%d.v%d.xml.gz' % \
                              (language, i, args.year, args.part, args.version))
+    statsfile = os.path.join(rootdir,
+                               'elisa.%s-eng.%s.y%dr%d.v%d.stats' % \
+                             (language, i, args.year, args.part, args.version))
+    finalitems.append(statsfile)
     if i != "eval":
       finalitems.append(parallelxml)
     parallelerr = os.path.join(rootdir, 'make_parallel_release_%s.err' % i)
-
     pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
                       (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
     extra = "-e" if i == "eval" else ""
     stepsbyname["parallel-%s" % i] \
-      .argstring = "-r %s -l %s -c %s"% (paralleloutdir, language, pmanarg)
+      .argstring = "-r %s -l %s -c %s -s %s"% (paralleloutdir, language, pmanarg, statsfile)
     if os.path.exists(entityoutpath):
       stepsbyname["parallel-%s" % i] \
       .argstring+= (" -a "+entityoutpath)
