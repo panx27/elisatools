@@ -11,4 +11,4 @@ $SCRIPTDIR/one_button_lrlp.py -t $TARBALL -l $LANGUAGE -r $DST &> $DST/$LANGUAGE
 $SCRIPTDIR/subselect_data.py -i $DST/$LANGUAGE/parallel -e filtered -l $LANGUAGE -s 10000 10000 10000 20000 -c eval syscomb test dev -t $SCRIPTDIR/incidentvocab &> $DST/$LANGUAGE/subselect_data.err
 $SCRIPTDIR/one_button_package.py -l $LANGUAGE -v $VERSION -r $DST/$LANGUAGE &> $DST/$LANGUAGE/one_button_package.err
 echo "Done with $LANGUAGE version $VERSION in $DST";
-ls $DST/$LANGUAGE
+ls -l $DST/$LANGUAGE

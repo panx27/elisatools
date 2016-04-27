@@ -35,6 +35,7 @@ def main():
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--indir", "-i", help="location of parallel data")
   parser.add_argument("--language", "-l", help="source language three digit code")
+  parser.add_argument("--extractpath", "-e", default="extracted", help="location of extracted data (might want to use 'filtered')")
   parser.add_argument("--remainder", "-r", default="train", help="remainder category. Should match previous remainder category")
   parser.add_argument("--previous", "-p", help="location of previous cat files")
 
@@ -59,7 +60,7 @@ def main():
   # TODO: find these
   filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc", "agile-tokenized", "cdec-tokenized", "agile-tokenized.lc", "cdec-tokenized.lc"]
 
-  extractpath = os.path.join(indir, 'extracted')
+  extractpath = os.path.join(indir, args.extractpath)
   origpath = os.path.join(extractpath, 'original')
   outpath = os.path.join(indir, 'splits')
   mkdir_p(outpath)
