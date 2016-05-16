@@ -59,7 +59,7 @@ def main():
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('rb'), default=sys.stdin, help="input file")
   parser.add_argument("--fields", "-f", nargs='+', help="list of fields to extract text from. if attribute is desired, use field.attribute. Separate fallback fields with :")
-  parser.add_argument("--segment", "-s", default="PARALLEL", help="segment name. PARALLEL for x-eng, SEGMENT for monolingual. More than one match per segment will be concatenated")
+  parser.add_argument("--segment", "-s", default="SEGMENT", help="segment name. pre v4, PARALLEL for x-eng, SEGMENT for monolingual. Otherwise SEGMENT. More than one match per segment will be concatenated")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
 
 

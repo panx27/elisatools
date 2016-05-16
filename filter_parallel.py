@@ -34,13 +34,16 @@ def prepfile(fh, code):
   return ret
 
 
-def filterlines(ifh, seq, keepfh, rejectfh, low, high):
-  ''' pair ifh and seq; if low < seq < high, then write to keepfh, else write to rejectfh '''
-  for val, line in zip(seq, ifh):
-    if val < low or val > high:
-      rejectfh.write(line)
-    else:
-      keepfh.write(line)
+def filterlines(ifh, seqs, lows, highs, keepfh, rejectfh):
+  ''' pair ifh and seqs. if low < seq < high for any, then write to keepfh, else write to rejectfh '''
+  for *vals, line in zip(*seqs, ifh):
+    doreject=True
+    for val, low, high in zip(vals, lows, highs):
+      if val > low and val < high:
+        doreject=False
+        break
+    fh = rejectfh if doreject else keepfh
+    fh.write(line)
 
 def countfiles(dir):
   ''' how many (non-directory) files in this dir? '''
@@ -81,6 +84,7 @@ def main():
   engmanifests = glob.glob(os.path.join(indir, "*.eng.manifest"))
   fmanifests = []
   ratios = dd(list)
+  deltas = dd(list)
   genres = set()
   for eman in engmanifests:
     ebase = os.path.basename(eman)
@@ -102,16 +106,28 @@ def main():
       ewords = eline.strip().split()
       fwords = fline.strip().split()
       ratios[genre].append((len(ewords)+0.0)/(len(fwords)+0.0))
+      deltas[genre].append(abs(len(ewords)-len(fwords)))
   allratios = np.concatenate(list(map(np.array, ratios.values())), 0)
+  alldeltas = np.concatenate(list(map(np.array, deltas.values())), 0)
   ratiomean = np.mean(allratios)
   ratiostd = np.std(allratios)
   lowratio = ratiomean-(args.stds*ratiostd)
   highratio = ratiomean+(args.stds*ratiostd)
-  rejectsize = len(list(filter(lambda x: x<lowratio or x > highratio, allratios)))
+  rejectratiosize = len(list(filter(lambda x: x<lowratio or x > highratio, allratios)))
 
-  sys.stderr.write("Rejecting %d of %d lines (%f %%) with ratio below %f or above %f\n" % (rejectsize, len(allratios), 100.0*rejectsize/len(allratios), lowratio, highratio))
+  deltamean = np.mean(alldeltas)
+  deltastd = np.std(alldeltas)
+  lowdelta = deltamean-(args.stds*deltastd)
+  highdelta = deltamean+(args.stds*deltastd)
+  rejectdeltasize = len(list(filter(lambda x: x<lowdelta or x > highdelta, alldeltas)))
 
-  # iterate through manifests and all files and filter per ratio
+  sys.stderr.write("Rejecting %d of %d lines (%f %%) with ratio below %f or above %f\n" % (rejectratiosize, len(allratios), 100.0*rejectratiosize/len(allratios), lowratio, highratio))
+  sys.stderr.write("Rejecting %d of %d lines (%f %%) with delta below %f or above %f\n" % (rejectdeltasize, len(alldeltas), 100.0*rejectdeltasize/len(alldeltas), lowdelta, highdelta))
+
+  reject_ratio_delta_size = len(list(filter(lambda x: (x[0]<lowratio or x[0]>highratio) and (x[1]<lowdelta or x[1]>highdelta), zip(allratios, alldeltas))))
+  sys.stderr.write("Rejecting %d of %d lines (%f %%) meeting both delta and ratio criteria\n" % (reject_ratio_delta_size, len(alldeltas), 100.0*reject_ratio_delta_size/len(alldeltas)))
+
+  # iterate through manifests and all files and filter per ratio and delta
   for manset in (engmanifests, fmanifests):
     for man in manset:
       sys.stderr.write("filtering %s\n" % man)
@@ -119,12 +135,14 @@ def main():
       genre = '.'.join(base.split('.')[:-2])
       sys.stderr.write("genre %s\n" % genre)
       rats = ratios[genre]
-      rejectsize = len(list(filter(lambda x: x<lowratio or x > highratio, rats)))
-      sys.stderr.write("rejecting %d of %d\n" % (rejectsize, len(rats)))
+      delts = deltas[genre]
+      reject_ratio_delta_size = len(list(filter(lambda x: (x[0]<lowratio or x[0]>highratio) and (x[1]<lowdelta or x[1]>highdelta), zip(rats, delts))))
+      #rejectratiosize = len(list(filter(lambda x: x<lowratio or x > highratio, rats)))
+      sys.stderr.write("rejecting %d of %d\n" % (reject_ratio_delta_size, len(rats)))
       infile = prepfile(open(man, 'r'), 'r')
       filterfile = prepfile(open(os.path.join(filterdir, base), 'w'), 'w')
       remainfile = prepfile(open(os.path.join(remaindir, base), 'w'), 'w')
-      filterlines(infile, ratios[genre], filterfile, remainfile, lowratio, highratio)
+      filterlines(infile, (rats, delts), (lowratio,lowdelta), (highratio,highdelta), filterfile, remainfile)
 
   # for directories in extracted
   #http://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
@@ -146,7 +164,7 @@ def main():
           infile = prepfile(open(infilename, 'r'), 'r')
           filterfile = prepfile(open(os.path.join(filtersubdir, base), 'w'), 'w')
           remainfile = prepfile(open(os.path.join(remainsubdir, base), 'w'), 'w')
-          filterlines(infile, ratios[genre], filterfile, remainfile, lowratio, highratio)
+          filterlines(infile, (ratios[genre], deltas[genre]), (lowratio,lowdelta), (highratio,highdelta), filterfile, remainfile)
         else:
           sys.stderr.write("%s does not exist\n" % infilename)
 

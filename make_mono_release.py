@@ -308,7 +308,8 @@ def main():
       xmlstr = ET.tostring(segroot, pretty_print=True, encoding='utf-8',
                            xml_declaration=False).decode('utf-8')
       outfile.write(xmlstr)
-    outfile.write("</DOCUMENT>\n")
+    if lastfullid is not None:
+      outfile.write("</DOCUMENT>\n")
   outfile.write("</ELISA_LRLP_CORPUS>\n")
 
   # TODO /corpus/document

@@ -419,7 +419,8 @@ def main():
                            xml_declaration=False).decode('utf-8')
       outfile.write(xmlstr)
       count += 1
-    outfile.write("</DOCUMENT>\n")
+    if src_lastfullid is not None:
+      outfile.write("</DOCUMENT>\n")
   outfile.write("</ELISA_LRLP_CORPUS>\n")
 
   statsfile.write("CORPUS STATISTICS\n")

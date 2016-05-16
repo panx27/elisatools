@@ -9,9 +9,43 @@ import os.path
 from collections import defaultdict as dd
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError
+import unicodedata as ud
 from subprocess import check_output, check_call, CalledProcessError
+#from functools import reduce
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
+
+# http://stackoverflow.com/questions/3964681/find-all-files-in-directory-with-extension-txt-in-python
+def dirfind(path, extension):
+  ''' find files that end with the given extension in the given path '''
+  ret = []
+  for root, dirs, files in os.walk(path):
+    for file in files:
+        if file.endswith(extension):
+          ret.append(os.path.join(root, file))
+  return ret
+
+def getgarbagemask(*linesets):
+  ''' True in a position if all lines in that position are not garbage '''
+  ret = []
+  for lines in zip(*linesets):
+    result = False
+    for line in lines:
+      result = result or iscontrol(line.strip())
+    ret.append(not result)
+  return ret
+#    ret.append(not reduce(lambda x, y: x or iscontrol(y.strip()), lines, False)) = hard to understand but elegant!
+
+# used in garbage detection
+def iscontrol(line):
+  ''' does this line contain control characters? '''
+  cats = set(map(ud.category, list(line)))
+  # Cf is valid; others not so much
+  for code in ("Cn", "Co", "Cs", "Cc"):
+    if code in cats:
+      return True
+  return False
+
 
 # http://stackoverflow.com/questions/1158076/implement-touch-using-python
 import os
@@ -42,9 +76,11 @@ def whitelistmatch(wlist, sents):
 
 def get_aligned_sentences(srcfile, trgfile, alignfile,
                           xml=True):
+  # align files ending with 'xml' get different treatment than those ending with 'align'
+  # assumption is one of two formats
   if xml:
     return get_aligned_sentences_xml(srcfile, trgfile,
-                                     alignfile)
+                                     alignfile, alxml=alignfile.endswith('xml'))
   return get_aligned_sentences_flat(srcfile, trgfile, alignfile)
 
 def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
@@ -125,18 +161,50 @@ def spans_from_xml(spans, xml, tokenize):
     yield span, docid, segid, start, end
 
 
-def get_aligned_sentences_xml(srcfile, trgfile, alignfile):
-  ''' Build sentence pairs given xml files and character alignment info '''
+def get_spans_from_flat_al(alignfile):
+  ''' using flat align files, get sentence spans '''
   srcspans = []
   trgspans = []
-  sdata = dd(list)
-  tdata = dd(list)
   with open(alignfile) as f:
     for line in f.readlines():
       ss, sl, ts, tl = list(map(int, line.strip().split('\t')))
       srcspans.append((ss, ss+sl-1))
       trgspans.append((ts, ts+tl-1))
-  import xml.etree.ElementTree as ET
+  return (srcspans, trgspans)
+
+def get_spans_from_xml_al(alignfile, srcfile, trgfile):
+  ''' using xml align files, get sentence spans '''
+  srcspans = []
+  trgspans = []
+  alroot = ET.parse(alignfile)
+  srcroot = ET.parse(srcfile)
+  trgroot = ET.parse(trgfile)
+  for align in alroot.findall(".//alignment"):
+    srcsegs = align.find(".//source").get('segments').split(' ')
+    trgsegs = align.find(".//translation").get('segments').split(' ')
+    try:
+      #sys.stderr.write("Finding %s start and %s end in source file %s\n" % (srcsegs[0], srcsegs[-1], srcfile))
+      ss = int(srcroot.find(".//SEG[@id='%s']" % srcsegs[0]).get('start_char'))
+      se = int(srcroot.find(".//SEG[@id='%s']" % srcsegs[-1]).get('end_char'))
+      #sys.stderr.write("Finding %s start and %s end in target file %s\n" % (trgsegs[0], trgsegs[-1], trgfile))
+      ts = int(trgroot.find(".//SEG[@id='%s']" % trgsegs[0]).get('start_char'))
+      te = int(trgroot.find(".//SEG[@id='%s']" % trgsegs[-1]).get('end_char'))
+    except AttributeError:
+      sys.stderr.write("Bad or missing segments in %s and/or %s\n" % (srcfile, trgfile))
+      continue
+    srcspans.append((ss, se))
+    trgspans.append((ts, te))
+  return (srcspans, trgspans)
+  
+
+def get_aligned_sentences_xml(srcfile, trgfile, alignfile, alxml=False):
+  ''' Build sentence pairs given xml files and alignment info '''
+  sdata = dd(list)
+  tdata = dd(list)
+  if alxml:
+    srcspans, trgspans = get_spans_from_xml_al(alignfile, srcfile, trgfile)
+  else:
+    srcspans, trgspans = get_spans_from_flat_al(alignfile)
   for file, spans, data in zip((srcfile, trgfile), (srcspans, trgspans), (sdata, tdata)):
     root = ET.parse(file)
     # cf. get_segments
@@ -183,11 +251,17 @@ def pair_files(srcdir, trgdir, ext='txt'):
   repl_from_src = r"%s_..._%s.*\."+ext
   pats.append((pat_from_src, repl_from_src))
 
+  # new style lorelei file conventions
+  newpat_from_src = re.compile(r"(.._..._......)_([^_.]+_[^_.]+).*\."+ext)
+  newrepl_from_src = r"%s_%s.*\."+ext
+  pats.append((newpat_from_src, newrepl_from_src))
+
   # From trg news:
   # AFP_ENG_20020426.0319.uzb.ltf.xml vs AFP_ENG_20020426.0319.ltf.xml
   pat_from_trg_news = re.compile(r"([^\._]+)_..._([\d\.]+).*\."+ext)
   repl_from_trg_news = r"%s_..._%s.*\."+ext
   pats.append((pat_from_trg_news, repl_from_trg_news))
+
 
   # From trg elic
   # elicitation_sentences.uzb.ltf.xml vs elicitation_sentences.ltf.xml
@@ -237,39 +311,83 @@ def pair_tweet_files(srcdir, trgdir, srcext='txt', trgext='xml'):
     sys.stderr.write("Warning: couldn't find "+srcdir+" or "+trgdir+"\n")
     return ([], [], [])
 
+  pats = []
   # SN_TWT_HAU_007297_20141120-00.eng.ltf.xml vs SN_TWT_HAU_007297_20141120-00.rsd.txt
   pat_from_src = re.compile(r"(.._...)_..._([^_.]+_[^_.]+).*\."+srcext)
   repl_from_src = r"%s_..._%s.*\."+srcext
-
+  pats.append((pat_from_src, repl_from_src))
+  # new style lorelei file conventions
+  newpat_from_src = re.compile(r"(.._..._......)_([^_.]+_[^_.]+).*\."+srcext)
+  newrepl_from_src = r"%s_%s.*\."+srcext
+  pats.append((newpat_from_src, newrepl_from_src))
+  
   matches = []
   unsrcs = []
   trgfiles = os.listdir(trgdir)
   pat = pat_from_src
   repltmp = repl_from_src
   for srcfile in os.listdir(srcdir):
-    # print (srcfile)
-    filematch = None
-    # print ("Trying "+str(pat)+" on "+srcfile)
-    if re.match(pat, srcfile):
-      # print ("Matched")
-      repl = repltmp % re.match(pat, srcfile).groups()
-      for trgfile in trgfiles:
-        repl_trg = repl.replace(srcext, trgext)
-        # print ("Using "+repl_trg+" to match "+srcfile)
-        if re.match(repl_trg, trgfile):
-          # print ("Matched to "+trgfile+"!")
-          filematch = trgfile
-          break # From trg file search
-      if filematch is not None:
-        trgfiles.remove(filematch)
-        matches.append((os.path.join(srcdir, srcfile),
-                        os.path.join(trgdir, filematch)))
-      else:
-        sys.stderr.write("No match for "+srcdir+"/"+srcfile+"\n")
-        # unsrcs.append(srcfile)
-        unsrcs.append(srcdir+"/"+srcfile)
+    for pat, repltmp in pats:
+      # print (srcfile)
+      filematch = None
+      # print ("Trying "+str(pat)+" on "+srcfile)
+      if re.match(pat, srcfile):
+        # print ("Matched")
+        repl = repltmp % re.match(pat, srcfile).groups()
+        for trgfile in trgfiles:
+          repl_trg = repl.replace(srcext, trgext)
+          # print ("Using "+repl_trg+" to match "+srcfile)
+          if re.match(repl_trg, trgfile):
+            # print ("Matched to "+trgfile+"!")
+            filematch = trgfile
+            break # From trg file search
+        if filematch is not None:
+          trgfiles.remove(filematch)
+          matches.append((os.path.join(srcdir, srcfile),
+                          os.path.join(trgdir, filematch)))
+        else:
+          sys.stderr.write("No match for "+srcdir+"/"+srcfile+"\n")
+          # unsrcs.append(srcfile)
+          unsrcs.append(srcdir+"/"+srcfile)
   return (matches, unsrcs, ['%s/%s' % (trgdir, i) for i in trgfiles \
                             if i.startswith('SN_TWT_')])
+
+def pair_found_files_from_al_xml(srcdir, trgdir, aldir):
+  ''' use xml alignment format to pair segments together; just read the headers '''
+  matches = []
+  unals = []
+  trgfiles = os.listdir(trgdir)
+  srcfiles = os.listdir(srcdir)
+  alfiles = os.listdir(aldir)
+  for alfile in alfiles:
+    
+    alroot = ET.parse(os.path.join(aldir, alfile)).getroot()
+    sid=alroot.get('source_id')
+    tid=alroot.get('translation_id')
+    srcmatch = None
+    trgmatch = None
+    # file naming convention varies!
+    for srcfile in srcfiles:
+      #sys.stderr.write("Searching for %s in %s\n" % (sid, srcfile))
+      if re.search(sid, srcfile):
+        srcmatch = srcfile
+        break
+    if srcmatch is not None:
+      for trgfile in trgfiles:
+        #sys.stderr.write("Searching for %s in %s\n" % (tid, trgfile))
+        if re.search(tid, trgfile):
+          trgmatch = trgfile
+          break
+    if srcmatch is not None and trgmatch is not None:
+      srcfiles.remove(srcmatch)
+      trgfiles.remove(trgmatch)
+      matches.append((os.path.join(srcdir, srcmatch),
+                      os.path.join(trgdir, trgmatch),
+                      os.path.join(aldir, alfile)))
+    else:
+      # print "No match for "+alfile
+      unals.append(alfile)
+  return (matches, srcfiles, trgfiles, unals)
 
 def pair_found_files(srcdir, trgdir, aldir, ext='txt'):
   ''' Heuristically pair files from found directories together
@@ -342,7 +460,11 @@ def all_found_tuples(rootdir, src='uzb', trg='eng', xml=False, tweet=False):
   src_path = os.path.join(tpath, src, pathext)
   trg_path = os.path.join(tpath, trg, pathext)
   al_path = os.path.join(tpath, 'sentence_alignment')
-  (m, s, t, a) = pair_found_files(src_path, trg_path, al_path, ext=fileext)
+  # check to see if alignfiles are xml or not
+  if os.path.exists(al_path) and os.listdir(al_path)[0].endswith("xml"):
+    (m, s, t, a) = pair_found_files_from_al_xml(src_path, trg_path, al_path)
+  else:
+    (m, s, t, a) = pair_found_files(src_path, trg_path, al_path, ext=fileext)
   if len(s) > 0:
     sys.stderr.write("Warning: unmatched src files\n"+'\n'.join(s)+'\n')
   if len(t) > 0:

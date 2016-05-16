@@ -7,7 +7,7 @@ import codecs
 from collections import defaultdict as dd
 import re
 import os.path
-from lputil import Step, make_action
+from lputil import Step, make_action, dirfind
 from subprocess import check_output, check_call, CalledProcessError
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,15 +26,18 @@ def main():
 
   # extract_lexicon.py
   steps.append(Step('extract_lexicon.py',
-                    help="get flat form of bilingual lexicon"))
+                    help="get flat form of bilingual lexicon",
+                    abortOnFail=False))
 
   # normalize_lexicon.py
   steps.append(Step('normalize_lexicon.py',
-                    help="heuristically convert lexicon into something more machine readable"))
+                    help="heuristically convert lexicon into something more machine readable",
+                    abortOnFail=False))
 
   # relocate lexicon
   steps.append(Step('cp', progpath='/bin',
-                    help="move the lexicon stuff into ephemera"))
+                    help="move the lexicon stuff into ephemera",
+                    abortOnFail=False))
 
   # get_tweet_by_id.rb
   steps.append(Step('get_tweet_by_id.rb',
@@ -150,6 +153,7 @@ def main():
     # stepsbyname["ltf2rsd.perl"].stderr = l2rerr
 
     # LEXICON
+    # 
     lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
     lexiconoutdir = os.path.join(rootdir, language, 'lexicon')
     lexiconoutfile = os.path.join(lexiconoutdir, 'lexicon')
@@ -199,12 +203,11 @@ def main():
     stepsbyname["filter_parallel.py"].stderr = filtererr
 
     # MONO
-    monoindir = os.path.join(expdir, 'data', 'monolingual_text',
-                             'zipped', '*.ltf.zip')
+    monoindirs = dirfind(os.path.join(expdir, 'data', 'monolingual_text'), "ltf.zip")
     monooutdir = os.path.join(rootdir, language, 'mono', 'extracted')
     monoerr = os.path.join(rootdir, language, 'extract_mono.err')
     stepsbyname["extract_mono.py"].argstring = "-i %s -o %s" % \
-      (monoindir, monooutdir)
+      (' '.join(monoindirs), monooutdir)
     stepsbyname["extract_mono.py"].stderr = monoerr
 
     for step in steps[start:stop]:

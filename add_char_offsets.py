@@ -101,7 +101,7 @@ def main():
         tokoffset+=1
       #print("End of token at %d" % (tokoffset-1))
       tok.set("end_char", str(tokoffset-1))
-    offset = offset+len(segtext)+2
+    offset = offset+len(segtext)+1
   outfile.write(ET.tostring(root, pretty_print=True, encoding='utf-8').decode('utf-8'))
 if __name__ == '__main__':
   main()

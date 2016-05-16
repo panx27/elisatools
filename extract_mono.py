@@ -15,7 +15,8 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 import datetime
 import subprocess
 import shlex
-from lputil import morph_tok
+from lputil import morph_tok, getgarbagemask
+from itertools import compress
 
 def main():
   parser = argparse.ArgumentParser(description="Extract and print monolingual" \
@@ -37,6 +38,8 @@ def main():
                       help="subdirectory for morphological information")
   parser.add_argument("--origsubdir", default="original",
                       help="subdirectory for untokenized files")
+  parser.add_argument("--garbagesubdir", default="garbage",
+                      help="subdirectory for garbage files (under orig)")
   parser.add_argument("--possubdir", default="pos",
                       help="subdirectory for pos tag files")
   parser.add_argument("--cdectokenizer", default=os.path.join(scriptdir,
@@ -51,6 +54,7 @@ def main():
 
   tokoutdir=os.path.join(args.outdir, args.toksubdir)
   origoutdir=os.path.join(args.outdir, args.origsubdir)
+  garbageoutdir=os.path.join(origoutdir, args.garbagesubdir)
   cdectokoutdir=os.path.join(args.outdir, args.cdectoksubdir)
   morphtokoutdir=os.path.join(args.outdir, args.morphtoksubdir)
   morphoutdir=os.path.join(args.outdir, args.morphsubdir)
@@ -60,6 +64,7 @@ def main():
           tokoutdir,
           cdectokoutdir,
           origoutdir,
+          garbageoutdir,
           morphtokoutdir,
           morphoutdir,
           posoutdir]
@@ -67,11 +72,17 @@ def main():
     if not os.path.exists(dir):
       os.makedirs(dir)
 
+  defaultcount=0
   for infile in args.infile:
     inbase = '.'.join(os.path.basename(infile.name).split('.')[:-2])
+    if len(inbase) == 0:
+      inbase="default.%d" % defaultcount
+      defaultcount+=1
     archive = zf(infile)
     man_fh = open(os.path.join(args.outdir, "%s.manifest" % inbase),'w')
     orig_fh = open(os.path.join(origoutdir, "%s.flat" % inbase), 'w')
+    garbage_fh = open(os.path.join(garbageoutdir, "%s.flat" % inbase), 'w')
+    garbage_man_fh = open(os.path.join(garbageoutdir, "%s.manifest" % inbase),'w')
     tok_fh = open(os.path.join(tokoutdir, "%s.flat" % inbase), 'w')
     morphtok_fh = open(os.path.join(morphtokoutdir,
                                            "%s.flat" % inbase), 'w')
@@ -80,8 +91,8 @@ def main():
     for info in archive.infolist():
       if info.file_size < 20:
         continue
-      # assume ltf structure
-      if os.path.dirname(info.filename) != 'ltf':
+      # assume ltf filename
+      if not info.filename.endswith("ltf.xml"):
         continue
       # print info.filename
       with archive.open(info, 'rU') as ifh:
@@ -89,12 +100,20 @@ def main():
           xobj = ET.parse(ifh)
           docid = xobj.findall(".//DOC")[0].get('id')
           origlines = [ x.text+"\n" for x in xobj.findall(".//ORIGINAL_TEXT") ]
+          garbagemask = getgarbagemask(origlines)
+          goodmask = [not x for x in garbagemask]
           seginfo = [ [ x.get(y) for y in ('id', 'start_char', 'end_char') ]
                       for x in xobj.findall(".//SEG") ]
-          orig_fh.writelines(origlines)
-          for tup in seginfo:
+          for line in compress(origlines, garbagemask):
+            orig_fh.write(line)
+          for line in compress(origlines, goodmask):
+            garbage_fh.write(line)
+
+          for tup in compress(seginfo, garbagemask):
             man_fh.write("\t".join(map(str, [info.filename,docid]+tup))+"\n")
-          for x in xobj.findall(".//SEG"):
+          for tup in compress(seginfo, goodmask):
+            garbage_man_fh.write("\t".join(map(str, [info.filename,docid]+tup))+"\n")
+          for x in compress(xobj.findall(".//SEG"), garbagemask):
             tokens = x.findall(".//TOKEN")
             toktext = []
             morphtoktext = []
