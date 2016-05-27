@@ -629,8 +629,15 @@ class Step:
     self.stderr = stderr
     self.call = call
     self.abortOnFail = abortOnFail
+    self.disabled = False
 
+  def disable(self):
+    self.disabled = True
+    
   def run(self):
+    if self.disabled:
+      sys.stderr.write("SKIPPING DISABLED STEP\n")
+      return 0
     kwargs = {}
     kwargs["shell"] = True
     if self.stdin is not None:

@@ -46,6 +46,7 @@ def main():
   parser.add_argument("--version", "-v", type=int, default=1, help='version name of release')
   parser.add_argument("--year", "-yr", type=int, default=1, help='year of release')
   parser.add_argument("--part", "-pt", type=int, default=1, help='part of release')
+  parser.add_argument("--noeval", action='store_true', default=False, help="don't build an eval set")
   parser.add_argument("--root", "-r",
                       help='path to where the flat extraction is/output belongs')
   parser.add_argument("--start", "-s", type=int, default=0,
@@ -105,6 +106,9 @@ def main():
 
   # PARALLEL RELEASES
   for i in ('train', 'dev', 'test', 'syscomb', 'eval', 'rejected'):
+    if i == "eval" and args.noeval:
+      stepsbyname["parallel-%s" % i].disable()
+      continue
     if i == "rejected":
       paralleloutdir = os.path.join(rootdir, 'parallel', i)
     else:

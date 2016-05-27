@@ -132,6 +132,8 @@ def main():
     tweetintab = os.path.join(expdir, 'docs', 'twitter_info.tab')
     if os.path.exists(tweetintab):
       stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
+    else:
+      stepsbyname["get_tweet_by_id.rb"].disable()
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
     stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby

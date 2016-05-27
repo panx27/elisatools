@@ -27,6 +27,8 @@ def main():
                       help="input zip file(s) (each contains a multi file)")
   parser.add_argument("--outdir", "-o",
                       help="where to write extracted files")
+  parser.add_argument("--nogarbage", action='store_true', default=False,
+                      help="turn off garbage filtering")
   parser.add_argument("--toksubdir", default="tokenized",
                       help="subdirectory for tokenized files")
   parser.add_argument("--cdectoksubdir", default="cdec-tokenized",
@@ -54,7 +56,6 @@ def main():
 
   tokoutdir=os.path.join(args.outdir, args.toksubdir)
   origoutdir=os.path.join(args.outdir, args.origsubdir)
-  garbageoutdir=os.path.join(origoutdir, args.garbagesubdir)
   cdectokoutdir=os.path.join(args.outdir, args.cdectoksubdir)
   morphtokoutdir=os.path.join(args.outdir, args.morphtoksubdir)
   morphoutdir=os.path.join(args.outdir, args.morphsubdir)
@@ -64,10 +65,14 @@ def main():
           tokoutdir,
           cdectokoutdir,
           origoutdir,
-          garbageoutdir,
           morphtokoutdir,
           morphoutdir,
           posoutdir]
+  if args.nogarbage:
+    garbageoutdir = None
+  else:
+    garbageoutdir=os.path.join(origoutdir, args.garbagesubdir)
+    dirs.append(garbageoutdir)
   for dir in dirs:
     if not os.path.exists(dir):
       os.makedirs(dir)
@@ -81,8 +86,12 @@ def main():
     archive = zf(infile)
     man_fh = open(os.path.join(args.outdir, "%s.manifest" % inbase),'w')
     orig_fh = open(os.path.join(origoutdir, "%s.flat" % inbase), 'w')
-    garbage_fh = open(os.path.join(garbageoutdir, "%s.flat" % inbase), 'w')
-    garbage_man_fh = open(os.path.join(garbageoutdir, "%s.manifest" % inbase),'w')
+    if args.nogarbage:
+      garbage_fh = orig_fh
+      garbage_man_fh = man_fh
+    else:
+      garbage_fh = open(os.path.join(garbageoutdir, "%s.flat" % inbase), 'w')
+      garbage_man_fh = open(os.path.join(garbageoutdir, "%s.manifest" % inbase),'w')
     tok_fh = open(os.path.join(tokoutdir, "%s.flat" % inbase), 'w')
     morphtok_fh = open(os.path.join(morphtokoutdir,
                                            "%s.flat" % inbase), 'w')
