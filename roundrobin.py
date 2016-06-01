@@ -20,6 +20,7 @@ def main():
   parser.add_argument("--categories", "-c", nargs='+', help="list of categories. Must match sizes")
   parser.add_argument("--remainder", "-r", default="train", help="remainder category. Should be a new category")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="docid category")
+  parser.add_argument("--devlstfile", "-d", default=None, help="file of desired documents for dev (subject to length constraints, must be a set called 'dev')")
 
 
 
@@ -31,6 +32,10 @@ def main():
   wcfile =   args.wcfile
   filelist = args.filelist
   outfile =  args.outfile
+  if args.devlstfile:
+    devlst = open(args.devlstfile).read().split()
+  else:
+    devlst = list()
 
   counts = {}
   for line in wcfile:
@@ -40,12 +45,26 @@ def main():
   files = []
   for line in filelist:
     files.append(line.strip().split()[0])
+
   if len(args.sizes) != len(args.categories):
     raise Exception("Sizes and categories must be same dimension")
   data = {}
   for cat, size in zip(args.categories, args.sizes):
     data[cat] = {"LEFT":size, "SET":[]}
   data[args.remainder] = {"LEFT":float("inf"), "SET":[]}
+
+  # select specified dev docids
+  added_devlst = list()
+  if 'dev' in args.categories and devlst:
+    for doc in devlst:
+      if doc in files:
+        if data['dev']["LEFT"] >= counts[doc]:
+          data[cat]["SET"].append(doc)
+          data[cat]["LEFT"]-=counts[doc]
+          files.remove(doc)
+          added_devlst.append(doc)
+  for doc in added_devlst:
+    sys.stderr.write("Added dev docid: %s \n" % (doc))
 
   for cat in cycle(list(data.keys())):
     if len(files) == 0:
@@ -58,7 +77,8 @@ def main():
   for cat in list(data.keys()):
     sys.stderr.write("%s %f\n" % (cat, data[cat]["LEFT"]))
     for doc in data[cat]["SET"]:
-      outfile.write("%s\t%s\n" % (doc, cat)) 
+      outfile.write("%s\t%s\n" % (doc, cat))
+
 
 if __name__ == '__main__':
   main()

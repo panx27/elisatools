@@ -12,18 +12,22 @@ from subprocess import check_output, STDOUT, CalledProcessError
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 
-def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes, filetypes, srclang, indir, outdir):
+def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes, filetypes, srclang, indir, outdir, devlstfile=None):
   ''' do a data selection and apply it to a set of files '''
   rankfile = os.path.join(outdir, "%s.ranks" % prefix)
   countfile = os.path.join(outdir, "%s.counts" % prefix)
   catfile = os.path.join(outdir, "%s.cats" % prefix)
   try:
-    cmd_output=check_output("%s/rankdocuments.py -i %s -d %s -t %s -o %s" % 
+    cmd_output=check_output("%s/rankdocuments.py -i %s -d %s -t %s -o %s" %
                             (scriptdir, engfile, idfile, termfile, rankfile), stderr=STDOUT, shell=True)
-    cmd_output=check_output("%s/countwords.py -i %s -d %s -o %s" % 
+    cmd_output=check_output("%s/countwords.py -i %s -d %s -o %s" %
                             (scriptdir, engfile, idfile, countfile), stderr=STDOUT, shell=True)
-    cmd_output=check_output("%s/roundrobin.py -w %s -f %s -s %s -c %s -r %s -o %s" % 
-                            (scriptdir, countfile, rankfile, sizes, categories, remainder, catfile), stderr=STDOUT, shell=True)
+    roundrobin_cmd = "%s/roundrobin.py -w %s -f %s -s %s -c %s -r %s -o %s" % \
+                     (scriptdir, countfile, rankfile, sizes, categories, remainder, catfile)
+    if devlstfile:
+      roundrobin_cmd += ' -d %s' % (devlstfile)
+    cmd_output=check_output(roundrobin_cmd, stderr=STDOUT, shell=True)
+
     for filetype in filetypes:
       if os.path.exists(os.path.join(indir, filetype)):
         for flang in [srclang, 'eng']:
@@ -44,13 +48,13 @@ def main():
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--indir", "-i", help="location of parallel data")
   parser.add_argument("--language", "-l", help="source language three digit code")
-#  parser.add_argument("--devlist", "-d", help="file of desired documents for dev (subject to length constraints, must be a set called 'dev')")
   parser.add_argument("--extractpath", "-e", default="extracted", help="location of extracted data (might want to use 'filtered')")
   parser.add_argument("--minimum", "-m", default=100, help="minimum number of words per subselection")
   parser.add_argument("--sizes", "-s", nargs='+', type=int, help="list of sizes desired in each category")
   parser.add_argument("--categories", "-c", nargs='+', help="list of categories. Must match sizes")
   parser.add_argument("--termfile", "-t", help="file of desired terms, one per line")
   parser.add_argument("--remainder", "-r", default="train", help="remainder category. Should be a new category")
+  parser.add_argument("--devlstfile", "-d", default=None, help="file of desired documents for dev (subject to length constraints, must be a set called 'dev')")
 
 
 
@@ -66,6 +70,7 @@ def main():
   indir = args.indir
   origsizes = args.sizes
   termfile = args.termfile
+
   # TODO: find these?
   # doc = keep full docs together  (can detect this by counting number of unique docs)
   # TODO: re-add found.generic to docprefixes
@@ -80,12 +85,6 @@ def main():
   outpath = os.path.join(indir, 'splits')
   mkdir_p(outpath)
 
-  # TODO: enable this!
-  # devset = set()
-  # if args.devlist is not None:
-  #   for line in open(args.devlist, 'r'):
-  #     devset.add(line.strip())
-
   # number of words in each file
   fullsizes = {}
   adjsizes = {}
@@ -97,7 +96,7 @@ def main():
       if (not os.path.exists(manfile)) or os.path.getsize(manfile) == 0:
         print("removing "+prefix)
         preflist.remove(prefix)
-  for prefix in docprefixes+nodocprefixes:      
+  for prefix in docprefixes+nodocprefixes:
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
     prefsize = int(check_output("wc -w %s" % engfile, shell=True).decode('utf8').strip().split(' ')[0])
     fullsizes[prefix] = prefsize
@@ -117,8 +116,8 @@ def main():
     except CalledProcessError as exc:
       print("Status : FAIL", exc.returncode, exc.output)
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
-    sizelist = ' '.join(map(str, adjsizes[prefix])) 
-    catfile = runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
+    sizelist = ' '.join(map(str, adjsizes[prefix]))
+    catfile = runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath, args.devlstfile)
     for i in (args.language, 'eng'):
       manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
       cmd = "%s/categorize.py -i %s -d %s -c %s -p %s" % (scriptdir, manifest, idfile, catfile, outpath)
@@ -135,7 +134,7 @@ def main():
     except CalledProcessError as exc:
       print("Status : FAIL", exc.returncode, exc.output)
     engfile=os.path.join(origpath, "%s.original.eng.flat" % prefix)
-    sizelist = ' '.join(map(str, adjsizes[prefix])) 
+    sizelist = ' '.join(map(str, adjsizes[prefix]))
     catfile = runselection(prefix, idfile, engfile, termfile, catlist, args.remainder, sizelist, filetypes, args.language, extractpath, outpath)
     for i in (args.language, 'eng'):
       manifest = os.path.join(extractpath, "%s.%s.manifest" % (prefix, i))
