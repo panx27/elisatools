@@ -36,7 +36,7 @@ def prepfile(fh, code):
 
 def filterlines(ifh, seqs, lows, highs, keepfh, rejectfh):
   ''' pair ifh and seqs. if low < seq < high for any, then write to keepfh, else write to rejectfh '''
-  for *vals, line in zip(*seqs, ifh):
+  for line, *vals in zip(ifh, *seqs):
     doreject=True
     for val, low, high in zip(vals, lows, highs):
       if val > low and val < high:
@@ -73,7 +73,7 @@ def main():
   # for each file, including manifest, zip with ratios, determine whether it belongs in filter or remaindir
 
   # TODO: add deltas too!
-  
+
   indir = args.indir
   filterdir = args.filterdir
   remaindir = args.remaindir
@@ -174,4 +174,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
