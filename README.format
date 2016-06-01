@@ -6,9 +6,11 @@ ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
     INDEX_ID: six-digit unique identifier of document
     DATE: eight-digit date of document, expressed as YYYYMMDD. Field is zeroed if year/month/day is unknown
     DIRECTION: One of fromsource, fromtarget, found. Mono = 'fromsource'
-    SEGMENT: signifies a segment (sentence) and possibly its translation or other attributes. 
+    SEGMENT: signifies a segment (sentence) and possibly its translation or other attributes. If downloaded twitter, includes 'downloaded="true"' attribute
       SOURCE: signifies the source component of the segment. Includes document-local segment id, start and end (inclusive, 0-based) char offsets of 'ORIG_RAW_SOURCE'
         FULL_ID_SOURCE: repeat of document id
+        ORIG_SEG_ID: segment id in initial ltf file (for non-found data) (needed for eval)
+        ORIG_FILENAME: base name of the file where the data was originally found (needed for eval)
         ORIG_RAW_SOURCE: original form of segment. This canonical form is used as a reference by any annotations
         MD5_HASH_SOURCE: MD5 digest of the tokenized source. The data may contain duplicate segments, which we did not remove, in order to keep the context intact. This field can be used to efficiently detect duplicates.
         LRLP_TOKENIZED_SOURCE: Tokenization as provided in the original LRLP.

@@ -69,9 +69,10 @@ def main():
 
   rootdir = args.root
   language = args.language
-  outfile = args.outfile
+
   setdir = args.setdir
   outdir = os.path.join(rootdir, language, setdir)
+  outfile = os.path.join(outdir, args.outfile)
   start = args.start
   stop = args.stop + 1
 
@@ -108,9 +109,7 @@ def main():
   # # TODO: log tweets!
 
   # MONO
-  print("Looking in %s for %s" % (os.path.join(expdir, setdir, 'data', 'monolingual_text'), "%s.ltf.zip" % setdir))
   monoindirs = dirfind(os.path.join(expdir, setdir, 'data', 'monolingual_text'), "%s.ltf.zip" % setdir)
-  print(monoindirs)
   monooutdir = os.path.join(outdir, 'mono', 'extracted')
   monoerr = os.path.join(outdir, 'extract_mono.err')
   stepsbyname["extract_mono.py"].argstring = "--nogarbage -i %s -o %s" % \

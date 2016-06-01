@@ -17,9 +17,7 @@ def get_parallel_docs(paradir):
   for root, dirs, files in os.walk(paradir):
     for file in files:
       if file.endswith('.manifest'):
-        print(file)
         for line in open('%s/%s' % (root, file)):
-          print(line)
           paradocs.add(line.split('\t')[1])
   return paradocs
 

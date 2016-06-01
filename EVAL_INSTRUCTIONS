@@ -1,0 +1,37 @@
+Instructions for building elisa packs for evals:
+
+1) Once LDC gives you the package id (LDC\d{4,}[A-Z]\d{2,}), download it:
+
+ldcdl.py -l <login> -p <password> -c LDC2016E53 -o .
+
+2) ssh into elisa and create directories:
+$ pwd
+/sftp/guestuser/ELISA/dryruns
+$ pdir=16.06.02; lang=cmn; sudo mkdir -p $pdir/JMIST; sudo chown 777 $pdir/JMIST; for i in but isi usc nd rpi upenn; do for j in mt ie sf; do dir=$pdir/$j/$lang/$i; sudo mkdir -p $dir; sudo chmod 777 $dir; done; done
+
+3) run extract_select_il_package, which unpacks and decrypts set0, extracts all data and downloads things, selects dev/test/syscomb (randomly), and packages it up:
+format is
+panxbranchtools/extract_select_il_package.sh <path to tarball> <lang code> <work root> <version number> <set0 password>
+
+panxbranchtools/extract_select_il_package.sh release/cmn.fakeenc.tgz cmn tmp_160601 1 set0
+
+if all goes well it will ls -l you the directory. if not it will die silently.
+
+look at all the .err files in root/langcode and make sure it looks good. cat the .stats files and make sure that looks good.
+
+4) <sanity check on main stuff>
+
+5) upload the package file to sftp:
+scp tmp_160601/cmn/elisa.cmn.package.y1r1.v1.tgz elisa:/sftp/guestuser/ELISA/dryruns/16.06.02/JMIST
+
+6) decode and build setE:
+panxbranchtools/one_button_monoset.py -d <name of set> -l <lang code> -r <work root> -o <name of final file without path>  -k <setE password>
+
+panxbranchtools/one_button_monoset.py -d setE -l cmn -r tmp_160601 -o elisa.cmn-eng.eval.y1r1.v1.xml.gz -k setE
+
+7) <sanity check on set E:
+
+8) upload the set E file to sftp:
+
+9+) repeat steps 6-8 on sets 1,2,S as they become available
+
