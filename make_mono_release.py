@@ -17,7 +17,9 @@ def get_parallel_docs(paradir):
   for root, dirs, files in os.walk(paradir):
     for file in files:
       if file.endswith('.manifest'):
+        print(file)
         for line in open('%s/%s' % (root, file)):
+          print(line)
           paradocs.add(line.split('\t')[1])
   return paradocs
 
@@ -36,7 +38,7 @@ def main():
                       default=None, help="psm annotation file")
   parser.add_argument("--annfile", "-a", nargs='?', type=argparse.FileType('r'),
                       default=None, help="entity annotation file")
-  parser.add_argument("--paradir", "-pa", default=".", help="parallel flat dir")
+  parser.add_argument("--paradir", "-pa", default=None, help="parallel flat dir")
   parser.add_argument("--statsfile", "-s", type=argparse.FileType('w'),
                       default=sys.stderr, help="file to write statistics")
 
@@ -49,7 +51,7 @@ def main():
   statsfile = args.statsfile
   # outfile = writer(args.outfile)
 
-  paradocs = get_parallel_docs(args.paradir)
+  paradocs = get_parallel_docs(args.paradir) if args.paradir is not None else set()
 
   # For every document, for every position, a list of (pointers to) annotations
   # then for every segment, retrieve the sublist and create the set of
@@ -146,7 +148,6 @@ def main():
     posfile =       open(os.path.join(args.rootdir, "pos",
                                          "%s.flat" % corpus))
     lastfullid = None
-
     for manline, origline, tokline, cdectokline, cdectoklcline, morphtokline, \
     morphline, posline in zip(manifest, origfile, tokfile, cdectokfile,
                               cdectoklcfile, morphtokfile, morphfile, posfile):
@@ -160,8 +161,13 @@ def main():
       man = manline.strip().split('\t')
       fullid = man[1]
       fullidsplit = fullid.split('_')
+      # old style: genre(2)_prov(3)_lang(3)_id(var)_date(8)
+      # new style: lang(3)_genre(2)_prov(6)_date(8)_id(9)
       fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE', 'INDEX_ID', 'DATE']
-
+      if fullid[3] == "_" and fullid[6] == "_" and fullid[13] == "_":
+        fullidfields = ['SOURCE_LANGUAGE', 'GENRE', 'PROVENANCE', 'DATE', 'INDEX_ID']
+      elif fullid[2] != "_" or fullid[6] != "_" or fullid[10] != "_":
+        sys.stderr.write("unexpected filename format: "+fullid+"\n")
       if fullid in paradocs: # Parallel data is not repeated in the mono data
         #sys.stderr.write("Document %s exists in parallel data\n" % fullid)
         continue
@@ -182,6 +188,8 @@ def main():
       stats[corpus]["SEGMENTS"]+=1
       stats[corpus]["WORDS"] += len(origline.split())
       segroot = ET.Element('SEGMENT')
+      if len(man) > 5 and man[5] == "dl":
+        segroot.set("downloaded", "true")
       xroot = ET.SubElement(segroot, 'SOURCE')
       xroot.set('id', "%s.%s.%s.%s" % (man[1],man[2],man[3],man[4]))
       xroot.set('start_char', man[3])
@@ -189,7 +197,9 @@ def main():
       subelements = []
       # subelements.extend(zip(fullidfields, fullidsplit))
       # subelements.extend(zip(['SEGMENT_ID', 'START_CHAR', 'END_CHAR'], man[2:]))
-      subelements.append(("FULL_ID_SOURCE", man[1]))
+      subelements.append(("FULL_ID_SOURCE", man[1])) # TODO: bad name
+      subelements.append(("ORIG_SEG_ID", man[2])) # for nistification
+      subelements.append(("ORIG_FILENAME", os.path.basename(man[0]))) # for nistification
       subelements.append(("ORIG_RAW_SOURCE", origline))
       subelements.append(("MD5_HASH_SOURCE",
                           hashlib.md5(origline.encode('utf-8')).hexdigest()))

@@ -25,10 +25,13 @@ def dirfind(path, extension):
           ret.append(os.path.join(root, file))
   return ret
 
-def getgarbagemask(*linesets):
+def getgarbagemask(*linesets, disabled=False):
   ''' True in a position if all lines in that position are not garbage '''
   ret = []
   for lines in zip(*linesets):
+    if disabled:
+      ret.append(True)
+      continue
     result = False
     for line in lines:
       result = result or iscontrol(line.strip())

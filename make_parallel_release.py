@@ -221,9 +221,15 @@ def main():
       trg_agiletoklcline = strip(trg_agiletoklcline)
       trg_man = strip(trg_manline).split('\t')
       trg_fullid = trg_man[1]
+      # old style: genre(2)_prov(3)_lang(3)_id(var)_date(8)
+      # new style: lang(3)_genre(2)_prov(6)_date(8)_id(9)
 
       fullidfields = ['GENRE', 'PROVENANCE', 'SOURCE_LANGUAGE',
                       'INDEX_ID', 'DATE']
+      if src_fullid[3] == "_" and src_fullid[6] == "_" and src_fullid[13] == "_":
+        fullidfields = ['SOURCE_LANGUAGE', 'GENRE', 'PROVENANCE', 'DATE', 'INDEX_ID']
+      elif src_fullid[2] != "_" or src_fullid[6] != "_" or src_fullid[10] != "_":
+        sys.stderr.write("unexpected filename format: "+src_fullid+"\n")
 
       # Faking the document-level
       if src_lastfullid != src_fullid:
@@ -250,6 +256,8 @@ def main():
 
         subelements = []
         subelements.append(("FULL_ID_SOURCE", src_man[1]))
+        subelements.append(("ORIG_SEG_ID", src_man[2])) # for nistification
+        subelements.append(("ORIG_FILENAME", os.path.basename(src_man[0]))) # for nistification
         subelements.append(("ORIG_RAW_SOURCE", src_origline))
         src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
         subelements.append(("MD5_HASH_SOURCE", src_md5))
@@ -273,6 +281,8 @@ def main():
 
         subelements = []
         subelements.append(("FULL_ID_SOURCE", src_man[1]))
+        subelements.append(("ORIG_SEG_ID", "segment-0")) # for nistification
+        subelements.append(("ORIG_FILENAME", os.path.basename(src_man[0]))) # for nistification
         subelements.append(("ORIG_RAW_SOURCE", src_origline))
         src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
         subelements.append(("MD5_HASH_SOURCE", src_md5))

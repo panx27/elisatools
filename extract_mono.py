@@ -87,8 +87,8 @@ def main():
     man_fh = open(os.path.join(args.outdir, "%s.manifest" % inbase),'w')
     orig_fh = open(os.path.join(origoutdir, "%s.flat" % inbase), 'w')
     if args.nogarbage:
-      garbage_fh = orig_fh
-      garbage_man_fh = man_fh
+      garbage_fh = None
+      garbage_man_fh = None
     else:
       garbage_fh = open(os.path.join(garbageoutdir, "%s.flat" % inbase), 'w')
       garbage_man_fh = open(os.path.join(garbageoutdir, "%s.manifest" % inbase),'w')
@@ -109,19 +109,19 @@ def main():
           xobj = ET.parse(ifh)
           docid = xobj.findall(".//DOC")[0].get('id')
           origlines = [ x.text+"\n" for x in xobj.findall(".//ORIGINAL_TEXT") ]
-          garbagemask = getgarbagemask(origlines)
+          garbagemask = getgarbagemask(origlines, disabled=args.nogarbage)
           goodmask = [not x for x in garbagemask]
           seginfo = [ [ x.get(y) for y in ('id', 'start_char', 'end_char') ]
                       for x in xobj.findall(".//SEG") ]
           for line in compress(origlines, garbagemask):
             orig_fh.write(line)
-          for line in compress(origlines, goodmask):
-            garbage_fh.write(line)
-
           for tup in compress(seginfo, garbagemask):
             man_fh.write("\t".join(map(str, [info.filename,docid]+tup))+"\n")
-          for tup in compress(seginfo, goodmask):
-            garbage_man_fh.write("\t".join(map(str, [info.filename,docid]+tup))+"\n")
+          if not args.nogarbage:
+            for line in compress(origlines, goodmask):
+              garbage_fh.write(line)
+            for tup in compress(seginfo, goodmask):
+              garbage_man_fh.write("\t".join(map(str, [info.filename,docid]+tup))+"\n")
           for x in compress(xobj.findall(".//SEG"), garbagemask):
             tokens = x.findall(".//TOKEN")
             toktext = []
@@ -143,6 +143,7 @@ def main():
         except ET.ParseError:
           sys.stderr.write("Parse error on "+ifh.name+"\n")
           continue
+    orig_fh.close()
     cdec_cmd = "%s -i %s -o %s -t %s" % (args.cdectokenizer,
                                          orig_fh.name,
                                          os.path.join(cdectokoutdir,

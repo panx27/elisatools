@@ -8,6 +8,8 @@ SCRIPT=`basename ${BASH_SOURCE[0]}`
 #Initialize variables to default values.
 LRL_LANG=uzb
 WORKROOT=/home/nlg-02/LORELEI/ELISA/data
+ENC_KEY=""
+ENC_SET=""
 
 #Set fonts for Help.
 NORM=`tput sgr0`
@@ -21,6 +23,8 @@ function HELP {
   echo "Command line switches are optional. The following switches are recognized."
   echo "${REV}-l${NORM}  --Sets the language of the lrlp. Default is ${BOLD}$LRL_LANG${NORM}."
   echo "${REV}-r${NORM}  --Sets the data root. Default is ${BOLD}$WORKROOT${NORM}."
+  echo "${REV}-k${NORM}  --Sets the key to decrypt with. Default is unset."
+  echo "${REV}-s${NORM}  --Sets the set to decrypt. Default is unset."
   echo -e "${REV}-h${NORM}  --Displays this help message. No further functions are performed."\\n
   echo -e "Example: ${BOLD}$SCRIPT -l tur tarball.gz${NORM}"\\n
   exit 1
@@ -43,13 +47,19 @@ fi
 
 COMMANDLINE=$@;
 
-while getopts :l:r:h FLAG; do
+while getopts :l:r:k:s:h FLAG; do
   case $FLAG in
     l)  #set option "l"
       LRL_LANG=$OPTARG
       ;;
     r)  #set option "r"
       WORKROOT=$OPTARG
+      ;;
+    k)  #set option "k"
+      ENC_KEY=$OPTARG
+      ;;
+    s)  #set option "s"
+      ENC_SET=$OPTARG
       ;;
     h)  #show help
       HELP
@@ -115,6 +125,9 @@ EOF
   # get rid of dot files; nothing but trouble
   find $EXPLOC/$NEWBASENAME -name "\.*" | xargs rm
   echo "$EXPLOC/$NEWBASENAME"
-
+  if [ -n "$ENC_KEY" ]; then
+      cd $EXPLOC/$NEWBASENAME;
+      cat $ENC_SET.tar.bz2.openssl | openssl enc -d -aes-256-cbc -salt -k $ENC_KEY | tar jxf -
+  fi
 
 exit 0

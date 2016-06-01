@@ -83,8 +83,14 @@ def main():
                       help='path to gzipped tar for processing')
   parser.add_argument("--language", "-l", default='uzb',
                       help='three letter code of language')
+  parser.add_argument("--key", "-k", default=None,
+                      help='decryption key for encrypted il')
+  parser.add_argument("--set", "-S", default=None,
+                      help='decryption set for encrypted il')
   parser.add_argument("--root", "-r", default='/home/nlg-02/LORELEI/ELISA/data',
                       help='path to where the extraction will take place')
+  parser.add_argument("--evalil", "-E", action='store_true', default=False, 
+                      help='this is an eval il. makes expdir set0 aware')
   parser.add_argument("--expdir", "-e",
                       help='path to where the extraction is. If starting at ' \
                       'step 0 this is ignored')
@@ -113,19 +119,27 @@ def main():
   language = args.language
   start = args.start
   stop = args.stop + 1
+  if (args.key is None) ^ (args.set is None):
+    sys.stderr.write("key (-k) and set (-S) must both be set or unset\n")
+    sys.exit(1)
   # Patchups for step 0
-  stepsbyname["unpack_lrlp.sh"].argstring="-l %s -r %s %s" % \
-    (language, rootdir, args.tarball)
+  argstring = "-k %s -s %s" % (args.key, args.set) if args.key is not None else ""
+  argstring += " -l %s -r %s %s" % (language, rootdir, args.tarball)
+  stepsbyname["unpack_lrlp.sh"].argstring=argstring
 
   if start == 0:
     expdir = steps[0].run().strip().decode("utf-8")
+    if args.evalil:
+      expdir = os.path.join(expdir, 'set0')
     start += 1
   else:
     expdir = args.expdir
   # Patchups for the rest
   if stop > 0:
     # TWEET
-    tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing')
+    # LDC changed its mind again
+    # tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing')
+    tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing', 'bin')
     stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
     tweetdir = os.path.join(rootdir, language, 'tweet')
     stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language

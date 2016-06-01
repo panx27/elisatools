@@ -44,6 +44,7 @@ def main():
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--indir", "-i", help="location of parallel data")
   parser.add_argument("--language", "-l", help="source language three digit code")
+#  parser.add_argument("--devlist", "-d", help="file of desired documents for dev (subject to length constraints, must be a set called 'dev')")
   parser.add_argument("--extractpath", "-e", default="extracted", help="location of extracted data (might want to use 'filtered')")
   parser.add_argument("--minimum", "-m", default=100, help="minimum number of words per subselection")
   parser.add_argument("--sizes", "-s", nargs='+', type=int, help="list of sizes desired in each category")
@@ -78,6 +79,12 @@ def main():
   origpath = os.path.join(extractpath, 'original')
   outpath = os.path.join(indir, 'splits')
   mkdir_p(outpath)
+
+  # TODO: enable this!
+  # devset = set()
+  # if args.devlist is not None:
+  #   for line in open(args.devlist, 'r'):
+  #     devset.add(line.strip())
 
   # number of words in each file
   fullsizes = {}
