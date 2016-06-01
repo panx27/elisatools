@@ -1,0 +1,33 @@
+<!--
+  LORELEI Phase 1 MT Component DTD
+
+  * Created: 2015-11-24
+  * Relaxed version of mteval-xml-v1.7.dtd
+
+  Will _not_ conform with mteval if certain fields (f.e. setid) are missing, but
+  easy to transform into compliant mteval format if needed.
+
+  v1.2: 2016-03-24  Simplified sets, made all data which can be inferred from
+                    source optional (for backwards compatibility with mteval).
+-->
+
+<!ENTITY lt     "&#38;#60;">
+<!ENTITY gt     "&#62;">
+<!ENTITY amp    "&#38;#38;">
+<!ENTITY apos   "&#39;">
+<!ENTITY quot   "&#34;">
+
+<!ELEMENT mteval (tstset)>
+
+<!ELEMENT tstset (doc)>
+<!ATTLIST tstset setid CDATA #IMPLIED>
+<!ATTLIST tstset srclang CDATA #IMPLIED>
+<!ATTLIST tstset trglang (ENG) #IMPLIED>
+<!ATTLIST tstset sysid CDATA #IMPLIED>
+
+<!ELEMENT doc (seg*)>
+<!ATTLIST doc docid CDATA #REQUIRED>
+<!ATTLIST doc genre (NW | DN | SL | WL) #IMPLIED>
+
+<!ELEMENT seg (#PCDATA)>
+<!ATTLIST seg id CDATA #REQUIRED >
