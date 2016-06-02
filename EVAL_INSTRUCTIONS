@@ -22,7 +22,7 @@ look at all the .err files in root/langcode and make sure it looks good. cat the
 4) <sanity check on main stuff>
 
 5) upload the package file to sftp:
-scp tmp_160601/cmn/elisa.cmn.package.y1r1.v0.tgz elisa:/sftp/guestuser/ELISA/dryruns/16.06.02/JMIST
+scp tmp_160601/cmn/elisa.cmn.package.y1r1.v0.tgz elisa:$pdir/JMIST
 
 6) decode and build setE:
 panxbranchtools/one_button_monoset.py -d <name of set> -l <lang code> -r <work root> -o <name of final file without path>  -k <setE password>
@@ -32,6 +32,7 @@ panxbranchtools/one_button_monoset.py -d setE -l cmn -r tmp_160601 -o elisa.cmn-
 7) <sanity check on set E:
 
 8) upload the set E file to sftp:
+scp tmp_160601/cmn/setE/elisa.cmn-eng.eval.y1r1.v1.xml.gz elisa:$pdir/JMIST
 
 9+) repeat steps 6-8 on sets 1,2,S as they become available
 
