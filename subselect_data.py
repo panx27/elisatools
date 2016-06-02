@@ -25,9 +25,10 @@ def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes
     roundrobin_cmd = "%s/roundrobin.py -w %s -f %s -s %s -c %s -r %s -o %s" % \
                      (scriptdir, countfile, rankfile, sizes, categories, remainder, catfile)
     if devlstfile:
+      print("receive specified dev set ids")
       roundrobin_cmd += ' -d %s' % (devlstfile)
     cmd_output=check_output(roundrobin_cmd, stderr=STDOUT, shell=True)
-
+    print ((cmd_output).decode('utf-8'))
     for filetype in filetypes:
       if os.path.exists(os.path.join(indir, filetype)):
         for flang in [srclang, 'eng']:
@@ -125,7 +126,6 @@ def main():
       check_output(cmd, stderr=STDOUT, shell=True)
 
   # nodoc-based processing
-
   for prefix in nodocprefixes:
     idfile = os.path.join(outpath, "%s.fakeids" % prefix)
     try:
@@ -141,6 +141,15 @@ def main():
       cmd = "%s/categorize.py -i %s -d %s -c %s -p %s" % (scriptdir, manifest, idfile, catfile, outpath)
       print("Running "+cmd)
       check_output(cmd, stderr=STDOUT, shell=True)
+
+  # warning if entries not found in given dev list
+  if args.devlstfile:
+    devlst = set(open(args.devlstfile).read().split())
+    all_docids = list()
+    for prefix in docprefixes:
+      all_docids += open(os.path.join(outpath, "%s.ids" % prefix)).read().split('\n')
+    for i in devlst - set(all_docids):
+      print ("***Warning: docid not found: %s" % i)
 
 if __name__ == '__main__':
   main()

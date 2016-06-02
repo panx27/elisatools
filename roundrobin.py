@@ -63,8 +63,19 @@ def main():
           data[cat]["LEFT"]-=counts[doc]
           files.remove(doc)
           added_devlst.append(doc)
+    if len(added_devlst) < len(devlst):
+      sys.stderr.write("The word limit of '%s' is reached," \
+                       " %d documents are added to the dev set.\n" \
+                       "The remaining documents from the dev list are not handled specially.\n"
+                       % (os.path.basename(outfile.name), len(added_devlst)))
+    else:
+      sys.stderr.write("The word limit of '%s' is not reached," \
+                       " %d documents are added to the dev set.\n" \
+                       "Regular procedure is used to bring the dev set up to the specified limit.\n"
+                       % (os.path.basename(outfile.name), len(added_devlst)))
+  sys.stderr.write("Added doc ids:\n")
   for doc in added_devlst:
-    sys.stderr.write("Added dev docid: %s \n" % (doc))
+    sys.stderr.write("  %s\n" % (doc))
 
   for cat in cycle(list(data.keys())):
     if len(files) == 0:
