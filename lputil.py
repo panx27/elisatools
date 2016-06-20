@@ -255,7 +255,8 @@ def pair_files(srcdir, trgdir, ext='txt'):
   pats.append((pat_from_src, repl_from_src))
 
   # new style lorelei file conventions
-  newpat_from_src = re.compile(r"(.._..._......)_([^_.]+_[^_.]+).*\."+ext)
+  # CMN_NG_000004_20080505_800200044.ltf.xml
+  newpat_from_src = re.compile(r"(..._.._......)_([^_.]+_[^_.]+).*\."+ext)
   newrepl_from_src = r"%s_%s.*\."+ext
   pats.append((newpat_from_src, newrepl_from_src))
 

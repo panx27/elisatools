@@ -35,16 +35,19 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
   trg_orig_fh=open(trg_orig_fname, 'w')
 
   garbagefhs = {}
-  src_orig_garbage_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.flat" % \
-                                        (prefix,src)), 'w')
-  garbagefhs[src_orig_fh]=src_orig_garbage_fh
-  trg_orig_garbage_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.flat" % \
-                                        (prefix,trg)), 'w')
-  garbagefhs[trg_orig_fh]=trg_orig_garbage_fh
-  src_garbage_man_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.manifest" % (prefix, src)), 'w')
-  garbagefhs[src_man_fh]=src_garbage_man_fh
-  trg_garbage_man_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.manifest" % (prefix, trg)), 'w')
-  garbagefhs[trg_man_fh]=trg_garbage_man_fh
+  garbagedisabled=True
+  if garbageoutdir is not None:
+    garbagedisabled=False
+    src_orig_garbage_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.flat" % \
+                                          (prefix,src)), 'w')
+    garbagefhs[src_orig_fh]=src_orig_garbage_fh
+    trg_orig_garbage_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.flat" % \
+                                          (prefix,trg)), 'w')
+    garbagefhs[trg_orig_fh]=trg_orig_garbage_fh
+    src_garbage_man_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.manifest" % (prefix, src)), 'w')
+    garbagefhs[src_man_fh]=src_garbage_man_fh
+    trg_garbage_man_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.manifest" % (prefix, trg)), 'w')
+    garbagefhs[trg_man_fh]=trg_garbage_man_fh
   src_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % \
                                (prefix,tokoutdir,src)), 'w')
   trg_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % \
@@ -91,7 +94,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
       continue
 
     # filter out control code-bearing lines here. mask out the data from all fields
-    garbagemask = lputil.getgarbagemask(sdata["ORIG"], tdata["ORIG"])
+    garbagemask = lputil.getgarbagemask(sdata["ORIG"], tdata["ORIG"], disabled=garbagedisabled)
 
     goodmask = [not x for x in garbagemask]
     ### Write original
@@ -99,8 +102,9 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
       for line in compress(data, garbagemask):
         fh.write(line)
       ### Write garbage original
-      for line in compress(data, goodmask):
-        garbagefhs[fh].write(line)
+      if not garbagedisabled:
+        for line in compress(data, goodmask):
+          garbagefhs[fh].write(line)
     
     ### Write manifest
     if not tweet:
@@ -112,8 +116,9 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
                                           tdata["START"], tdata["END"])))):
           for tup in compress(tupgen, garbagemask):
             fh.write("\t".join(map(str, (fname,)+tup))+"\n")
-          for tup in compress(tupgen, goodmask):
-            garbagefhs[fh].write("\t".join(map(str, (fname,)+tup))+"\n")
+          if not garbagedisabled:
+            for tup in compress(tupgen, goodmask):
+              garbagefhs[fh].write("\t".join(map(str, (fname,)+tup))+"\n")
       except:
         sys.stderr.write(src_man_fh.name)
         #sys.stderr.write(fname)
@@ -127,11 +132,12 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
         fh.write('%s\t%s\n' % (line,
 #                               line))
                                re.search('.+/(\S*?)\.', line).group(1)))
-      for line in compress(field, goodmask):
-        line = line.strip()
-        garbagefhs[fh].write('%s\t%s\n' % (line,
-#                                           line))
-                               re.search('.+/(\S*?)\.', line).group(1)))
+      if not garbagedisabled:
+        for line in compress(field, goodmask):
+          line = line.strip()
+          garbagefhs[fh].write('%s\t%s\n' % (line,
+  #                                           line))
+                                 re.search('.+/(\S*?)\.', line).group(1)))
 
       # Target
       try:
@@ -140,9 +146,10 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
         for tup in compress(list(zip(tdata["DOCID"], tdata["SEGID"],
                                      tdata["START"], tdata["END"])), garbagemask):
             fh.write("\t".join(map(str, (fname,)+tup))+"\n")
-        for tup in compress(list(zip(tdata["DOCID"], tdata["SEGID"],
-                                     tdata["START"], tdata["END"])), goodmask):
-            garbagefhs[fh].write("\t".join(map(str, (fname,)+tup))+"\n")
+        if not garbagedisabled:
+          for tup in compress(list(zip(tdata["DOCID"], tdata["SEGID"],
+                                       tdata["START"], tdata["END"])), goodmask):
+              garbagefhs[fh].write("\t".join(map(str, (fname,)+tup))+"\n")
       except:
         sys.stderr.write(fname)
         raise
@@ -215,6 +222,8 @@ def main():
                       help="subdirectory for untokenized files")
   parser.add_argument("--garbagesubdir", default="garbage",
                       help="subdirectory for garbage files (under orig)")
+  parser.add_argument("--nogarbage", action='store_true', default=False,
+                      help="turn off garbage filtering")
   parser.add_argument("--toksubdir", default="tokenized",
                       help="subdirectory for tokenized files")
   parser.add_argument("--cdectoksubdir", default="cdec-tokenized",
@@ -241,7 +250,6 @@ def main():
     parser.error(str(msg))
 
   origoutdir=args.origsubdir
-  garbageoutdir=os.path.join(origoutdir, args.garbagesubdir)
   tokoutdir=args.toksubdir
   morphtokoutdir=args.morphtoksubdir
   cdectokoutdir=args.cdectoksubdir
@@ -252,8 +260,7 @@ def main():
   posoutdir=args.possubdir
   agiletokpath = args.agiletokpath
   cdectokpath = args.cdectokpath
-  dirs = [garbageoutdir,
-          origoutdir,
+  dirs = [origoutdir,
           tokoutdir,
           morphtokoutdir,
           cdectokoutdir,
@@ -262,6 +269,12 @@ def main():
           agiletoklcoutdir,
           morphoutdir,
           posoutdir]
+  if args.nogarbage:
+    garbageoutdir = None
+  else:
+    garbageoutdir=os.path.join(origoutdir, args.garbagesubdir)
+    dirs.append(garbageoutdir)
+
   for dir in dirs:
     fulldir = os.path.join(args.outdir, dir)
     lputil.mkdir_p(fulldir)
