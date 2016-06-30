@@ -48,6 +48,8 @@ def main():
                       help='three letter code of IL language')
   parser.add_argument("--key", "-k", default=None,
                       help='decryption key for encrypted il')
+  parser.add_argument("--notweets", "-n", action='store_true', default=None,
+                      help='do not include tweets (for eval IL setE only)')
   parser.add_argument("--expdir", "-e",
                       help='path to where the extraction is. If starting at ' \
                       'step 0 this is ignored')
@@ -91,20 +93,23 @@ def main():
     stepsbyname["decrypt_sets.py"].run()
     start+=1
   # TWEET
-  # LDC changed its mind again
-  tweetprogpath = os.path.join(expdir, 'set0', 'tools', 'twitter-processing', 'bin')
-
-  stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
-  tweetdir = os.path.join(outdir, 'tweet')
-  stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
-  tweetintab = os.path.join(expdir, setdir, 'docs', 'twitter_info.tab')
-  if os.path.exists(tweetintab):
-    stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
-  else:
+  if args.notweets:
     stepsbyname["get_tweet_by_id.rb"].disable()
-  tweeterr = os.path.join(outdir, 'extract_tweet.err')
-  stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
-  stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
+    stepsbyname["extract_mono_tweet.py"].disable()
+  else:
+    tweetprogpath = os.path.join(expdir, 'set0', 'tools', 'twitter-processing', 'bin')
+
+    stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
+    tweetdir = os.path.join(outdir, 'tweet')
+    stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
+    tweetintab = os.path.join(expdir, setdir, 'docs', 'twitter_info.tab')
+    if os.path.exists(tweetintab):
+      stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
+    else:
+      stepsbyname["get_tweet_by_id.rb"].disable()
+    tweeterr = os.path.join(outdir, 'extract_tweet.err')
+    stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
+    stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
 
   # # TODO: log tweets!
 
