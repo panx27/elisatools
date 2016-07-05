@@ -33,6 +33,15 @@ def main():
                       help="package parallel flat %s data" % i))
     stepsbyname["parallel-%s" % i]=steps[-1]
 
+  # using make_mono to do comparable
+  steps.append(Step('make_mono_release.py',
+                      help="package src side of comparable data"))
+  stepsbyname["comparable-src"]=steps[-1]
+
+  steps.append(Step('make_mono_release.py',
+                      help="package trg side of comparable data"))
+  stepsbyname["comparable-trg"]=steps[-1]
+
   # package up everything
   steps.append(Step('make_tarball.py',
                     help="final package"))
@@ -139,6 +148,28 @@ def main():
                           (extra, parallelxml))
     stepsbyname["parallel-%s" % i].stderr = parallelerr
 
+  # COMPARABLE RELEASES
+  cmpoutdir = os.path.join(rootdir, 'comparable', 'extracted')
+  if os.path.exists(cmpoutdir):
+    cmpsrcxml = os.path.join(rootdir, 'elisa.comparable.%s.y%dr%d.v%d.xml.gz' % \
+                             (language, args.year, args.part, args.version))
+    cmpsrcstatsfile = os.path.join(rootdir, 'elisa.comparable.%s.y%dr%d.v%d.stats' % \
+                                   (language, args.year, args.part, args.version))
+    cmptrgxml = os.path.join(rootdir, 'elisa.comparable.eng.y%dr%d.v%d.xml.gz' % \
+                             (args.year, args.part, args.version))
+    cmptrgstatsfile = os.path.join(rootdir, 'elisa.comparable.eng.y%dr%d.v%d.stats' % \
+                                   (args.year, args.part, args.version))
+    finalitems.extend([cmpsrcxml, cmptrgxml, cmpsrcstatsfile, cmptrgstatsfile])
+    stepsbyname["comparable-src"].argstring = "--direction comparable -r %s -l %s -c %s -s %s | gzip > %s" % \
+                                              (cmpoutdir, language, language, cmpsrcstatsfile, cmpsrcxml)
+    stepsbyname["comparable-src"].stderr = os.path.join(rootdir, 'make_comparable_%s_release.err' % language)
+    stepsbyname["comparable-trg"].argstring = "--direction comparable --exttokdir agile-tokenized --exttokprefix AGILE -r %s -l eng -c eng -s %s | gzip > %s" % \
+                                              (cmpoutdir, cmptrgstatsfile, cmptrgxml)
+    stepsbyname["comparable-trg"].stderr = os.path.join(rootdir, 'make_comparable_eng_release.err')
+    # TODO: psm/entity info in comparable?
+  else:
+    stepsbyname["comparable-src"].disable()
+    stepsbyname["comparable-trg"].disable()
   # FINAL PACKAGE
   finalpack = os.path.join(rootdir, 'elisa.%s.package.y%dr%d.v%d.tgz' % \
                            (language, args.year, args.part, args.version))
