@@ -364,23 +364,41 @@ def pair_found_files_from_al_xml(srcdir, trgdir, aldir):
   srcfiles = os.listdir(srcdir)
   alfiles = os.listdir(aldir)
   for alfile in alfiles:
+    print(alfile)
     alroot = ET.parse(os.path.join(aldir, alfile)).getroot()
-    sid=alroot.get('source_id')
-    tid=alroot.get('translation_id')
+    # LDC BUG
+#    sid=alroot.get('source_id')
+#    tid=alroot.get('translation_id')
+    sid=alroot.get('translation_id')
+    tid=alroot.get('source_id')
+    
     srcmatch = None
     trgmatch = None
     # file naming convention varies!
     for srcfile in srcfiles:
-      #sys.stderr.write("Searching for %s in %s\n" % (sid, srcfile))
+      #sys.stderr.write("Searching for source %s in %s\n" % (sid, srcfile))
       if re.search(sid, srcfile):
         srcmatch = srcfile
         break
+    if srcmatch is None:
+      for trgfile in trgfiles:
+        #sys.stderr.write("Backup: Searching for source %s in %s\n" % (sid, trgfile))
+        if re.search(sid, trgfile):
+          srcmatch = trgfile
+          break
     if srcmatch is not None:
       for trgfile in trgfiles:
-        #sys.stderr.write("Searching for %s in %s\n" % (tid, trgfile))
+        #sys.stderr.write("Searching for target %s in %s\n" % (tid, trgfile))
         if re.search(tid, trgfile):
           trgmatch = trgfile
           break
+      # if trgmatch is None:
+      #   for srcfile in srcfiles:
+      #     sys.stderr.write("Searching for target %s in %s\n" % (tid, trgfile))
+      #   if re.search(tid, trgfile):
+      #     trgmatch = trgfile
+      #     break
+
     if srcmatch is not None and trgmatch is not None:
       srcfiles.remove(srcmatch)
       trgfiles.remove(trgmatch)
@@ -388,7 +406,7 @@ def pair_found_files_from_al_xml(srcdir, trgdir, aldir):
                       os.path.join(trgdir, trgmatch),
                       os.path.join(aldir, alfile)))
     else:
-      # print "No match for "+alfile
+      print("No match for "+alfile)
       unals.append(alfile)
   return (matches, srcfiles, trgfiles, unals)
 

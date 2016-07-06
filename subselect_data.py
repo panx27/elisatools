@@ -75,8 +75,9 @@ def main():
   # TODO: find these?
   # doc = keep full docs together  (can detect this by counting number of unique docs)
   # TODO: re-add found.generic to docprefixes
-  docprefixes = ["fromsource.generic", "fromsource.tweet", "fromtarget.news", "found.generic"]
-  nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook"]
+  docprefixes = ["fromsource.generic", "fromsource.tweet", "fromtarget.news"]
+  # IL3: moving found.generic!!
+  nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook", "found.generic"]
 
   # TODO: find these
   filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc", "agile-tokenized", "cdec-tokenized", "agile-tokenized.lc", "cdec-tokenized.lc"]
