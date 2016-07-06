@@ -28,6 +28,9 @@ def main():
                                    argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--rootdir", "-r", default=".", help="root lrlp dir")
   parser.add_argument("--lang", "-l", help="lrlp language code")
+  parser.add_argument("--direction", default="fromsource", choices=["fromsource", "comparable"],
+                      help="direction tag. usually 'fromsource' but "\
+                      "'comparable' for comparable corpora")
   parser.add_argument("--corpora", "-c", nargs='+', help="prefixes that have " \
                       "at minimum a manifest and original/ file")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'),
@@ -37,6 +40,10 @@ def main():
   parser.add_argument("--annfile", "-a", nargs='?', type=argparse.FileType('r'),
                       default=None, help="entity annotation file")
   parser.add_argument("--paradir", "-pa", default=None, help="parallel flat dir")
+  parser.add_argument("--exttokdir", default="cdec-tokenized", help="location of externally"\
+                      "tokenized data")
+  parser.add_argument("--exttokprefix", default="CDEC", help="name of externally"\
+                      "tokenized data")
   parser.add_argument("--statsfile", "-s", type=argparse.FileType('w'),
                       default=sys.stderr, help="file to write statistics")
 
@@ -135,9 +142,9 @@ def main():
                                  "original", "%s.flat" % corpus))
     tokfile =       open(os.path.join(args.rootdir,
                                 "tokenized", "%s.flat" % corpus))
-    cdectokfile =   open(os.path.join(args.rootdir,"cdec-tokenized",
+    exttokfile =   open(os.path.join(args.rootdir,args.exttokdir,
                                     "%s.flat" % corpus))
-    cdectoklcfile = open(os.path.join(args.rootdir, "cdec-tokenized",
+    exttoklcfile = open(os.path.join(args.rootdir, args.exttokdir,
                                       "%s.flat.lc" % corpus))
     morphtokfile =  open(os.path.join(args.rootdir, "morph-tokenized",
                                      "%s.flat" % corpus))
@@ -146,13 +153,13 @@ def main():
     posfile =       open(os.path.join(args.rootdir, "pos",
                                          "%s.flat" % corpus))
     lastfullid = None
-    for manline, origline, tokline, cdectokline, cdectoklcline, morphtokline, \
-    morphline, posline in zip(manifest, origfile, tokfile, cdectokfile,
-                              cdectoklcfile, morphtokfile, morphfile, posfile):
+    for manline, origline, tokline, exttokline, exttoklcline, morphtokline, \
+    morphline, posline in zip(manifest, origfile, tokfile, exttokfile,
+                              exttoklcfile, morphtokfile, morphfile, posfile):
       origline = origline.strip()
       tokline = tokline.strip()
-      cdectokline = cdectokline.strip()
-      cdectoklcline = cdectoklcline.strip()
+      exttokline = exttokline.strip()
+      exttoklcline = exttoklcline.strip()
       morphtokline = morphtokline.strip()
       morphline = morphline.strip()
       posline = posline.strip()
@@ -182,12 +189,10 @@ def main():
         outfile.write('<DOCUMENT id="%s">\n' % fullid)
         for label, value in zip(fullidfields, fullidsplit):
           outfile.write("  <%s>%s</%s>\n" % (label, value, label))
-        outfile.write("  <DIRECTION>fromsource</DIRECTION>\n")
+        outfile.write("  <DIRECTION>%s</DIRECTION>\n" % args.direction)
       stats[corpus]["SEGMENTS"]+=1
       stats[corpus]["WORDS"] += len(origline.split())
       segroot = ET.Element('SEGMENT')
-      if len(man) > 5 and man[5] == "dl":
-        segroot.set("downloaded", "true")
       xroot = ET.SubElement(segroot, 'SOURCE')
       xroot.set('id', "%s.%s.%s.%s" % (man[1],man[2],man[3],man[4]))
       xroot.set('start_char', man[3])
@@ -202,9 +207,14 @@ def main():
       subelements.append(("MD5_HASH_SOURCE",
                           hashlib.md5(origline.encode('utf-8')).hexdigest()))
       subelements.append(("LRLP_TOKENIZED_SOURCE", tokline))
-      subelements.append(("CDEC_TOKENIZED_SOURCE", cdectokline))
-      subelements.append(("CDEC_TOKENIZED_LC_SOURCE", cdectoklcline))
+      subelements.append(("%s_TOKENIZED_SOURCE" % args.exttokprefix, exttokline))
+      subelements.append(("%s_TOKENIZED_LC_SOURCE" % args.exttokprefix, exttoklcline))
       subelements.append(("LRLP_POSTAG_SOURCE", posline))
+      if len(man) > 5:
+        if man[5] == "dl":
+          segroot.set("downloaded", "true")
+        else:
+          subelements.append(("CLUSTER_ID", man[5]))
       # don't add morph info if there's nothing interesting
       morphset = set(morphline.split())
       if len(morphset) == 1 and list(morphset)[0] == "none":

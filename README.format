@@ -17,12 +17,15 @@ ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
         LRLP_TOKENIZED_LC_SOURCE: Lowercased version of LRLP_TOKENIZED_SOURCE
         CDEC_TOKENIZED_SOURCE: Tokenization formed by running ORIG_RAW_SOURCE through tokenize-anything script in cdec machine translation software.
         CDEC_TOKENIZED_LC_SOURCE: Lowercased version of CDEC_TOKENIZED_SOURCE
+        AGILE_TOKENIZED_SOURCE: Tokenization formed by running ORIG_RAW_SOURCE through agile tokenization script (only available in comparable)
+        AGILE_TOKENIZED_LC_SOURCE: Lowercased version of AGILE_TOKENIZED_SOURCE
         LRLP_MORPH_TOKENIZED_SOURCE: Tokenization based on morphological segmentation, if available. (may not exist if none available)
         LRLP_MORPH_SOURCE: Morphological analysis of words, if available. (may not exist if none available)
         LRLP_POSTAG_SOURCE: Either coarse POS tags such as "punct", "word", "twitter", "unknown", "url", "number", "email", or "numstring", or full POS tags.
         IS_HEADLINE: set to 1 if segment is headline (otherwise not present)
         AUTHOR: Name of author if available
         POST_DATE_TIME: If available, posting info of the article
+        CLUSTER_ID: If available, comparable cluster to which this segment belongs
         ANNOTATIONS: Denotes annotations are available for this segment
          ANNOTATION: a semantic annotation labeled by task: FE (full named entity annotation)/NE (simple named entity annotation)/SSA (simple semantic annotation)/NPC (noun phrase chunking)
            HEAD: Extent of the head of the annotation

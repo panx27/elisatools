@@ -72,6 +72,10 @@ def main():
   steps.append(Step('extract_mono.py',
                     help="get flat form mono data"))
 
+  # extract_comparable.py
+  steps.append(Step('extract_comparable.py',
+                    help="get flat form comparable data"))
+
   stepsbyname = {}
   for step in steps:
     stepsbyname[step.prog] = step
@@ -226,6 +230,16 @@ def main():
       (' '.join(monoindirs), monooutdir)
     stepsbyname["extract_mono.py"].stderr = monoerr
 
+    # COMPARABLE
+    if os.path.exists(os.path.join(expdir, 'data', 'translation', 'comparable')):
+      compoutdir = os.path.join(rootdir, language, 'comparable', 'extracted')
+      comperr = os.path.join(rootdir, language, 'extract_comparable.err')
+      stepsbyname["extract_comparable.py"].argstring = "-r %s -o %s -s %s" % \
+                                                       (expdir, compoutdir, language)
+      stepsbyname["extract_comparable.py"].stderr = comperr
+    else:
+      stepsbyname["extract_comparable.py"].disable()
+    
     for step in steps[start:stop]:
       step.run()
 
