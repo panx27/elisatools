@@ -173,8 +173,10 @@ def main():
     # stepsbyname["ltf2rsd.perl"].stderr = l2rerr
 
     # LEXICON
-    # 
-    lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
+    #
+    # IL CHANGE
+    lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.xml')
+    #lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
     lexiconoutdir = os.path.join(rootdir, language, 'lexicon')
     lexiconoutfile = os.path.join(lexiconoutdir, 'lexicon')
     lexiconnormoutfile = os.path.join(lexiconoutdir, 'lexicon.norm')

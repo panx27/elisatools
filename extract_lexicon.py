@@ -40,21 +40,26 @@ def main():
     xobj = ET.parse(infile)
     try:
       for entry in xobj.findall(".//ENTRY"):
+        # POS hacked out and GLOSS->DEFINITION for IL
         words = entry.findall(".//WORD")
-        poses = entry.findall(".//POS")
-        glosses = entry.findall(".//GLOSS")
-        if len(poses) != len(glosses):
-          if len(poses) == 1:
-            poses = [poses[0]]*len(glosses)
-          else:
-            raise SkipEntry(ET.dump(entry))
+        #poses=["UNK",]
+        #poses = entry.findall(".//POS")
+        #glosses = entry.findall(".//GLOSS")
+        glosses = entry.findall(".//DEFINITION")
+        # if len(poses) != len(glosses):
+        #   if len(poses) == 1:
+        #     poses = [poses[0]]*len(glosses)
+        #   else:
+        #     raise SkipEntry(ET.dump(entry))
         for word in words:
-          for pos, gloss in zip(poses, glosses):
-            if gloss.text is None or pos.text is None or word.text is None:
+#          for pos, gloss in zip(poses, glosses):
+          for gloss in glosses:
+            if gloss.text is None or word.text is None:# or pos.text is None 
               continue
             stats+=1
             of.write("%s\t%s\t%s\n" % (word.text.strip(),
-                                       pos.text.strip(),
+#                                       pos.text.strip(),
+                                       "UNK",
                                        gloss.text.strip()))
     except SkipEntry as e:
       raise
