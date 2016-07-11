@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import sys
 import codecs
@@ -33,7 +33,7 @@ def prepfile(fh, code):
 
 
 def main():
-  parser = argparse.ArgumentParser(description="REPLACE WITH DESCRIPTION",
+  parser = argparse.ArgumentParser(description="nfc normalization of data",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
@@ -50,7 +50,7 @@ def main():
 
 
   for line in infile:
-    outfile.write(ud.normalize('NFC', line))
+    outfile.write(ud.normalize('NFKC', line))
 
 if __name__ == '__main__':
   main()
