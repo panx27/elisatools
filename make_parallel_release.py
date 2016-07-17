@@ -36,6 +36,8 @@ def main():
                       help="psm annotation file")
   parser.add_argument("--annfile", "-a", type=argparse.FileType('r'),
                       help="entity annotation file")
+  parser.add_argument("--nonone", "-n", action='store_true',
+                      default=False, help="filter out lines with NONE NONE")
   parser.add_argument("--statsfile", "-s", type=argparse.FileType('w'),
                       default=sys.stderr, help="file to write statistics")
   parser.add_argument("--evaluation", "-e", action='store_true',
@@ -221,6 +223,9 @@ def main():
       trg_agiletoklcline = strip(trg_agiletoklcline)
       trg_man = strip(trg_manline).split('\t')
       trg_fullid = trg_man[1]
+
+      if args.nonone and ("NONE NONE" in src_origline or "NONE NONE" in trg_origline):
+        continue
       # old style: genre(2)_prov(3)_lang(3)_id(var)_date(8)
       # new style: lang(3)_genre(2)_prov(6)_date(8)_id(9)
 
