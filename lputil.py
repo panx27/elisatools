@@ -364,6 +364,8 @@ def pair_found_files_from_al_xml(srcdir, trgdir, aldir):
   srcfiles = os.listdir(srcdir)
   alfiles = os.listdir(aldir)
   for alfile in alfiles:
+    if not alfile.endswith(".xml") or alfile.startswith("."):
+      continue
     print(alfile)
     alroot = ET.parse(os.path.join(aldir, alfile)).getroot()
     # LDC BUG
