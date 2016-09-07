@@ -623,7 +623,7 @@ def extract_lines(s, t, sxml=True, txml=True):
       l["MORPHTOK"].extend(morphtoks)
       l["MORPH"].extend(morphs)
       l["POS"].extend(poss)
-      l["ORIG"].extend([ node.text.strip('\n')+"\n" for node in root.findall(".//ORIGINAL_TEXT") ])
+      l["ORIG"].extend([ node.text.strip('\n')+"\n" if node.text is not None else "NONE\n" for node in root.findall(".//ORIGINAL_TEXT") ])
     else:
       import codecs
       with codecs.open(x, 'r', 'utf-8') as f:
