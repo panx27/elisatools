@@ -26,7 +26,7 @@ def prepfile(fh, code):
 def main():
   parser = argparse.ArgumentParser(description=" given manifest and text data, generate nist files (src/ref/tst)",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input text file")
+  parser.add_argument("--infiles", "-i", nargs='+', type=argparse.FileType('r'), default=sys.stdin, help="input text files")
   parser.add_argument("--type", "-t", choices=["src", "ref", "tst"], help="what kind of file is this")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output xml file")
 
@@ -35,27 +35,28 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
-  infile = prepfile(args.infile, 'r')
+  infiles = [prepfile(x, 'r') for x in args.infiles]
   outfile = prepfile(args.outfile, 'w')
 
   xroot = ET.Element('mteval')
-  currset = ET.SubElement(xroot, '%sset' % args.type)
-  currset.set('setid', 'ok-voon_ororok_sprok')
-  currdoc = ET.SubElement(currset, 'doc')
-  currdoc.set('docid', 'ok-voon_ororok_sprok.doc1')
-  currset.set('sysid', 'you')
-  if args.type == 'ref':
-    currset.set('refid', 'R1')
-  currset.set('srclang', 'cen')
-  currset.set('trglang', 'arc')
+  for ifn, infile in enumerate(infiles):
+    currset = ET.SubElement(xroot, '%sset' % args.type)
+    currset.set('setid', 'ok-voon_ororok_sprok')
+    currdoc = ET.SubElement(currset, 'doc')
+    currdoc.set('docid', 'ok-voon_ororok_sprok.doc1')
+    currset.set('sysid', 'you')
+    if args.type == 'ref':
+      currset.set('refid', 'R%d' % ifn)
+    currset.set('srclang', 'cen')
+    currset.set('trglang', 'arc')
 
-  segid = 1
-  for textline in infile:
-    textline = textline.strip()
-    seg = ET.SubElement(currdoc, 'seg')
-    seg.text = textline
-    seg.set('id', "ok-voon_ororok_sprok.doc1.seg%s" % segid)
-    segid += 1
+    segid = 1
+    for textline in infile:
+      textline = textline.strip()
+      seg = ET.SubElement(currdoc, 'seg')
+      seg.text = textline
+      seg.set('id', "ok-voon_ororok_sprok.doc1.seg%s" % segid)
+      segid += 1
   outfile.write(ET.tostring(xroot, pretty_print=True, encoding='utf-8', xml_declaration=True, doctype='<!DOCTYPE mteval SYSTEM "mteval-lorelei-p1.dtd">').decode('utf8'))
       
 if __name__ == '__main__':

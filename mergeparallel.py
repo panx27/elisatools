@@ -67,9 +67,9 @@ def main():
   for seg in prime.findall(".//SEGMENT"):
     srcid = seg.find(".//SOURCE").get('id')
     for doc in rest:
-      trgnode = doc.find(".//SOURCE[@id=%s]" % srcid).getparent().find(".//TARGET")
+      trgnode = doc.find(".//SOURCE[@id='%s']" % srcid).getparent().find(".//TARGET")
       seg.append(trgnode)
-  outfile.write(ET.tostring(prime, pretty_print=True, encoding='utf-8'))
+  outfile.write(ET.tostring(prime, pretty_print=True, encoding='utf-8').decode('utf-8'))
 
 if __name__ == '__main__':
   main()
