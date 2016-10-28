@@ -212,6 +212,8 @@ def main():
                                    "expanded lrlp to flat files and manifests.")
   parser.add_argument("--rootdir", "-r", default=".",
                       help="root lrlp dir")
+  parser.add_argument("--datadirs", nargs='+', default=['data', 'translation'],
+                      help="elements in path from root to ltf files")
   parser.add_argument("--outdir", "-o", default="./parallel/extracted",
                       help="where to write extracted files")
   parser.add_argument("--src", "-s", default='uzb',
@@ -284,7 +286,7 @@ def main():
                                                  datetime.datetime.now(),
                                                  ' '.join(sys.argv),
                                                  os.getcwd()))
-  datadirs=[args.rootdir, 'data', 'translation']
+  datadirs=[args.rootdir,]+args.datadirs
 
   '''
   from_eng/ -- manual translations from English into LRLP (elicitation,
