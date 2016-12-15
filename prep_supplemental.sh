@@ -12,9 +12,11 @@ MIDFIX=$5
 mkdir -p $OUTDIR
 tar -zxf $TARBALL -C $OUTDIR
 
+dstdir=`basename $TARBALL | cut -d'.' -f1`;
+
 # reshape for scripts
 for i in train tune test; do
-    $SCRIPTDIR/supplemental_reshape.sh $OUTDIR/data/$i $OUTDIR il3;
+    $SCRIPTDIR/supplemental_reshape.sh $OUTDIR/$dstdir/data/$i $OUTDIR il3;
 done
 
 # extract flat data
@@ -28,7 +30,7 @@ $SCRIPTDIR/make_parallel_release.py -r $OUTDIR/train/extracted -l il3 -c fromsou
 $SCRIPTDIR/mergexml.py -i $OLDTRAIN $OUTDIR/train/train.xml -o $OUTDIR/$PREFIX.train.$MIDFIX
 
 # divide tune into dev and syscomb
-$SCRIPTDIR/subselect_for_exercise.py -i $OUTDIR/tune -l il3 -s 50 -c syscomb -r dev
+$SCRIPTDIR/subselect_for_exercise.py -i $OUTDIR/tune -l il3 -s 2 -c syscomb -r dev
 for i in dev syscomb; do
     $SCRIPTDIR/make_parallel_release.py -r $OUTDIR/tune/splits/$i -l il3 -c fromsource.generic -o $OUTDIR/$PREFIX.$i.$MIDFIX -s $OUTDIR/$PREFIX.$i.$MIDFIX.stats;
 done
