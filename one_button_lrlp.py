@@ -83,8 +83,8 @@ def main():
   parser = argparse.ArgumentParser(description="Process a LRLP into flat format",
                                    formatter_class= \
                                    argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--tarball", "-t", default='lrlp.tar.gz',
-                      help='path to gzipped tar for processing')
+  parser.add_argument("--tarball", "-t", nargs='+', default=['lrlp.tar.gz'],
+                      help='path to gzipped tars for processing (all tars considered to be part of the same package)')
   parser.add_argument("--language", "-l", default='uzb',
                       help='three letter code of language')
   parser.add_argument("--key", "-k", default=None,
@@ -128,7 +128,7 @@ def main():
     sys.exit(1)
   # Patchups for step 0
   argstring = "-k %s -s %s" % (args.key, args.set) if args.key is not None else ""
-  argstring += " -l %s -r %s %s" % (language, rootdir, args.tarball)
+  argstring += " -l %s -r %s %s" % (language, rootdir, ' '.join(args.tarball))
   stepsbyname["unpack_lrlp.sh"].argstring=argstring
 
   if start == 0:
@@ -175,8 +175,8 @@ def main():
     # LEXICON
     #
     # IL CHANGE
-    lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.xml')
-    #lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
+    #lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.xml')
+    lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
     lexiconoutdir = os.path.join(rootdir, language, 'lexicon')
     lexiconoutfile = os.path.join(lexiconoutdir, 'lexicon')
     lexiconnormoutfile = os.path.join(lexiconoutdir, 'lexicon.norm')

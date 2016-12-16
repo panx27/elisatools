@@ -79,55 +79,52 @@ shift $((OPTIND-1))  #This tells getopts to move on to the next argument.
 
 ### End getopts code ###
 
-### Main loop to process files ###
-
-#This is where your main file processing will take place. This example is just
-#printing the files and extensions to the terminal. You should place any other
-#file processing tasks within the while-do loop.
 
 LRLPLOC=$WORKROOT/$LRL_LANG/lrlps;
 EXPLOC=$WORKROOT/$LRL_LANG/expanded;
 
-  TARBALL=$PWD/$1;
-  if [ ! -e $TARBALL ]; then
-      echo "Couldn't find $TARBALL"
-      exit 1;
-  fi
-  mkdir -p $LRLPLOC;
-  LRLPNAMEPREFIX=$LRLPLOC/$LRL_LANG
-  LRLPNAME=$LRLPNAMEPREFIX.tar.gz;
-  COUNTER=0
-  NEWBASENAME="lrlp"
-  EXPLOC=$WORKROOT/$LRL_LANG/expanded;
-  while [ -e $LRLPNAME ] || [ -h $LRLPNAME ]; do
-      COUNTER=$((COUNTER+1));
-      LRLPNAMEPREFIX=$LRLPLOC/$LRL_LANG.$COUNTER;
-      LRLPNAME=$LRLPNAMEPREFIX.tar.gz;
-      NEWBASENAME="lrlp.$COUNTER"
-  done
-  ln -s $TARBALL $LRLPNAME
-  cat >>$LRLPLOC/source <<EOF
+mkdir -p $LRLPLOC;
+LRLPNAMEPREFIX=$LRLPLOC/$LRL_LANG
+NEWBASENAME="lrlp"
+EXPLOC=$WORKROOT/$LRL_LANG/expanded;
+mkdir -p $EXPLOC/$NEWBASENAME;
+
+PART=0
+for TARBALL in $@; do
+    TARBALL=$PWD/$TARBALL;
+    if [ ! -e $TARBALL ]; then
+        echo "Couldn't find $TARBALL"
+        exit 1;
+    fi
+    LRLPNAME=$LRLPNAMEPREFIX.part.$PART.tar.gz;
+    ln -s $TARBALL $LRLPNAME
+    cat >>$LRLPLOC/source <<EOF
 Linked $TARBALL to $LRLPNAME on $(date).
 Will extract to $EXPLOC;
 Using [ $SCRIPT $COMMANDLINE ] from $PWD
 EOF
-  mkdir -p $EXPLOC;
-  cat >>$EXPLOC/source <<EOF
+
+    cat >>$EXPLOC/source <<EOF
 Extracted $LRLPNAME here on $(date).
 Using [ $SCRIPT $COMMANDLINE ] from $PWD
 $NEWBASENAME comes from $LRLPNAME
 EOF
-  #echo "about to run tar -C $EXPLOC -zxf $LRLPNAME "
-  # WARNING: very brittle way to find the directory name
-  ORIGBASENAME=`(tar -ztf $LRLPNAME | python -c "import os,sys; print ''.join([os.path.normpath(x) for x in sys.stdin])" | grep -v "^\." | grep "/" | head -1) 2>/dev/null`
-  tar -C $EXPLOC -zxf $LRLPNAME
-  mv $EXPLOC/$ORIGBASENAME $EXPLOC/$NEWBASENAME
-  # get rid of dot files; nothing but trouble
-  find $EXPLOC/$NEWBASENAME -name "\.*" | xargs rm
-  echo "$EXPLOC/$NEWBASENAME"
-  if [ -n "$ENC_KEY" ]; then
-      cd $EXPLOC/$NEWBASENAME;
-      cat $ENC_SET.tar.bz2.openssl | openssl enc -d -aes-256-cbc -salt -k $ENC_KEY | tar jxf -
-  fi
+    #echo "about to run tar -C $EXPLOC -zxf $LRLPNAME "
+    # WARNING: very brittle way to find the directory name
+    ORIGBASENAME=`(tar -ztf $LRLPNAME | python -c "import os,sys; print ''.join([os.path.normpath(x) for x in sys.stdin])" | grep -v "^\." | grep "/" | head -1) 2>/dev/null`
+    tar -C $EXPLOC -zxf $LRLPNAME
+    cp -R $EXPLOC/$ORIGBASENAME/* $EXPLOC/$NEWBASENAME/
+    rm -rf $EXPLOC/$ORIGBASENAME
+    PART=$((PART+1))
+done
+
+
+# get rid of dot files; nothing but trouble
+find $EXPLOC/$NEWBASENAME -name "\.*" | xargs rm
+echo "$EXPLOC/$NEWBASENAME"
+if [ -n "$ENC_KEY" ]; then
+    cd $EXPLOC/$NEWBASENAME;
+    cat $ENC_SET.tar.bz2.openssl | openssl enc -d -aes-256-cbc -salt -k $ENC_KEY | tar jxf -
+fi
 
 exit 0
