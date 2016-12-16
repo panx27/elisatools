@@ -183,7 +183,8 @@ def main():
 
     lexiconerr = os.path.join(rootdir, language, 'extract_lexicon.err')
     lexiconnormerr = os.path.join(rootdir, language, 'normalize_lexicon.err')
-    stepsbyname["extract_lexicon.py"].argstring = "-i %s -o %s" % \
+    # lexicon v1.5 for y2
+    stepsbyname["extract_lexicon.py"].argstring = " -v 1.5 -i %s -o %s" % \
                                                   (lexiconinfile, lexiconoutfile)
     stepsbyname["extract_lexicon.py"].stderr = lexiconerr
 
