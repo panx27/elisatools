@@ -93,13 +93,13 @@ def main():
   manarg = ' '.join([re.sub('.manifest', '', f) for f in os.listdir \
                      (monooutdir)if re.match('(.+)\.manifest', f)])
   monoerr = os.path.join(rootdir, 'make_mono_release.err')
-  stepsbyname["make_mono_release.py"].argstring = "-r %s -l %s -c %s -s %s" % \
+  stepsbyname["make_mono_release.py"].argstring = " --no-ext -r %s -l %s -c %s -s %s" % \
                                                   (monooutdir, language, manarg, monostatsfile)
   if os.path.exists(entityoutpath):
     stepsbyname["make_mono_release.py"].argstring+= (" -a "+entityoutpath)
   if os.path.exists(psmoutpath):
     stepsbyname["make_mono_release.py"].argstring+= (" -p "+psmoutpath)
-  stepsbyname["make_mono_release.py"].argstring+= (" -pa %s | gzip > %s" % \
+  stepsbyname["make_mono_release.py"].argstring+= (" --paradir %s | gzip > %s" % \
                                                          (paradir, monoxml))
   stepsbyname["make_mono_release.py"].stderr = monoerr
 

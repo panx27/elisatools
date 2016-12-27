@@ -275,7 +275,7 @@ def pair_files(srcdir, trgdir, ext='txt'):
 
   # From trg pbook
   # English_Phrasebook.uzb.ltf.xml vs English_Phrasebook.ltf.xml
-  pat_from_trg_pbook = re.compile(r"((?:[^\.].*)?Phrasebook).*\."+ext)
+  pat_from_trg_pbook = re.compile(r"((?:[^\.].*)?phrasebook).*\."+ext, re.IGNORECASE)
   repl_from_trg_pbook = r"%s.*\."+ext
   pats.append((pat_from_trg_pbook, repl_from_trg_pbook))
   matches = []
@@ -321,7 +321,8 @@ def pair_tweet_files(srcdir, trgdir, srcext='txt', trgext='xml'):
   repl_from_src = r"%s_..._%s.*\."+srcext
   pats.append((pat_from_src, repl_from_src))
   # new style lorelei file conventions
-  newpat_from_src = re.compile(r"(.._..._......)_([^_.]+_[^_.]+).*\."+srcext)
+  # FAS_SN_000370_20160205_G0T1002JS.rsd.txt
+  newpat_from_src = re.compile(r"(..._.._......_........)_([^_.]+).*\."+srcext)
   newrepl_from_src = r"%s_%s.*\."+srcext
   pats.append((newpat_from_src, newrepl_from_src))
   
@@ -331,21 +332,22 @@ def pair_tweet_files(srcdir, trgdir, srcext='txt', trgext='xml'):
   pat = pat_from_src
   repltmp = repl_from_src
   for srcfile in os.listdir(srcdir):
+    #print("Trying to match "+srcfile)
     for pat, repltmp in pats:
       # print (srcfile)
       filematch = None
-      # print ("Trying "+str(pat)+" on "+srcfile)
+      #print ("Trying "+str(pat)+" on "+srcfile)
       if re.match(pat, srcfile):
-        # print ("Matched")
+        #print ("Matched")
         repl = repltmp % re.match(pat, srcfile).groups()
         for trgfile in trgfiles:
           repl_trg = repl.replace(srcext, trgext)
-          # print ("Using "+repl_trg+" to match "+srcfile)
           if re.match(repl_trg, trgfile):
-            # print ("Matched to "+trgfile+"!")
+            #print ("Matched to "+trgfile+"!")
             filematch = trgfile
             break # From trg file search
         if filematch is not None:
+          #print("Matched "+filematch)
           trgfiles.remove(filematch)
           matches.append((os.path.join(srcdir, srcfile),
                           os.path.join(trgdir, filematch)))
@@ -354,7 +356,7 @@ def pair_tweet_files(srcdir, trgdir, srcext='txt', trgext='xml'):
           # unsrcs.append(srcfile)
           unsrcs.append(srcdir+"/"+srcfile)
   return (matches, unsrcs, ['%s/%s' % (trgdir, i) for i in trgfiles \
-                            if i.startswith('SN_TWT_')])
+                            if "SN_" in i])
 
 def pair_found_files_from_al_xml(srcdir, trgdir, aldir):
   ''' use xml alignment format to pair segments together; just read the headers '''
@@ -366,13 +368,13 @@ def pair_found_files_from_al_xml(srcdir, trgdir, aldir):
   for alfile in alfiles:
     if not alfile.endswith(".xml") or alfile.startswith("."):
       continue
-    print(alfile)
+    #print(alfile)
     alroot = ET.parse(os.path.join(aldir, alfile)).getroot()
-    # LDC BUG
-#    sid=alroot.get('source_id')
-#    tid=alroot.get('translation_id')
-    sid=alroot.get('translation_id')
-    tid=alroot.get('source_id')
+    # LDC BUG?
+    sid=alroot.get('source_id')
+    tid=alroot.get('translation_id')
+#    sid=alroot.get('translation_id')
+#    tid=alroot.get('source_id')
     
     srcmatch = None
     trgmatch = None
@@ -408,7 +410,7 @@ def pair_found_files_from_al_xml(srcdir, trgdir, aldir):
                       os.path.join(trgdir, trgmatch),
                       os.path.join(aldir, alfile)))
     else:
-      print("No match for "+alfile)
+      sys.stderr.write("No match for "+alfile+"\n")
       unals.append(alfile)
   return (matches, srcfiles, trgfiles, unals)
 

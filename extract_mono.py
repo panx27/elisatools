@@ -18,6 +18,13 @@ import shlex
 from lputil import morph_tok, getgarbagemask
 from itertools import compress
 
+def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
+  ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
+  group = parser.add_mutually_exclusive_group()
+  dest = arg if dest is None else dest
+  group.add_argument('--%s' % arg, dest=dest, action='store_true', default=default, help=help)
+  group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
+
 def main():
   parser = argparse.ArgumentParser(description="Extract and print monolingual" \
                                    " data, tokenized, morph, pos tag and " \
@@ -47,7 +54,8 @@ def main():
   parser.add_argument("--cdectokenizer", default=os.path.join(scriptdir,
                                                               "cdectok.sh"),
                       help="cdec tokenizer program wrapper")
-
+  addonoffarg(parser, 'cdec', help="do cdec tokenization", default=True)
+  
   try:
     args = parser.parse_args()
   except IOError as msg:
@@ -63,11 +71,12 @@ def main():
 
   dirs = [args.outdir,
           tokoutdir,
-          cdectokoutdir,
           origoutdir,
           morphtokoutdir,
           morphoutdir,
           posoutdir]
+  if args.cdec:
+    dirs.append(cdectokoutdir)
   if args.nogarbage:
     garbageoutdir = None
   else:
@@ -144,14 +153,15 @@ def main():
           sys.stderr.write("Parse error on "+ifh.name+"\n")
           continue
     orig_fh.close()
-    cdec_cmd = "%s -i %s -o %s -t %s" % (args.cdectokenizer,
-                                         orig_fh.name,
-                                         os.path.join(cdectokoutdir,
-                                                      "%s.flat.lc" % inbase),
-                                         os.path.join(cdectokoutdir,
-                                                      "%s.flat" % inbase))
-    p = subprocess.Popen(shlex.split(cdec_cmd))
-    p.wait()
+    if args.cdec:
+      cdec_cmd = "%s -i %s -o %s -t %s" % (args.cdectokenizer,
+                                           orig_fh.name,
+                                           os.path.join(cdectokoutdir,
+                                                        "%s.flat.lc" % inbase),
+                                           os.path.join(cdectokoutdir,
+                                                        "%s.flat" % inbase))
+      p = subprocess.Popen(shlex.split(cdec_cmd))
+      p.wait()
 
 if __name__ == '__main__':
   main()

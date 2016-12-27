@@ -21,6 +21,13 @@ def get_parallel_docs(paradir):
           paradocs.add(line.split('\t')[1])
   return paradocs
 
+def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
+  ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
+  group = parser.add_mutually_exclusive_group()
+  dest = arg if dest is None else dest
+  group.add_argument('--%s' % arg, dest=dest, action='store_true', default=default, help=help)
+  group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
+
 def main():
   parser = argparse.ArgumentParser(description="Create xml from extracted" \
                                    " and transformed monolingual data",
@@ -46,6 +53,7 @@ def main():
                       "tokenized data")
   parser.add_argument("--statsfile", "-s", type=argparse.FileType('w'),
                       default=sys.stderr, help="file to write statistics")
+  addonoffarg(parser, 'ext', help="do external tokenization", default=True)
 
   try:
     args = parser.parse_args()
@@ -137,32 +145,37 @@ def main():
   outfile.write('<ELISA_LRLP_CORPUS source_language="%s">\n' % args.lang)
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')
-    manifest =      open(os.path.join(args.rootdir, "%s.manifest" % corpus))
-    origfile =      open(os.path.join(args.rootdir,
-                                 "original", "%s.flat" % corpus))
-    tokfile =       open(os.path.join(args.rootdir,
-                                "tokenized", "%s.flat" % corpus))
-    exttokfile =   open(os.path.join(args.rootdir,args.exttokdir,
-                                    "%s.flat" % corpus))
-    exttoklcfile = open(os.path.join(args.rootdir, args.exttokdir,
-                                      "%s.flat.lc" % corpus))
-    morphtokfile =  open(os.path.join(args.rootdir, "morph-tokenized",
-                                     "%s.flat" % corpus))
-    morphfile =     open(os.path.join(args.rootdir, "morph",
-                                  "%s.flat" % corpus))
-    posfile =       open(os.path.join(args.rootdir, "pos",
-                                         "%s.flat" % corpus))
+    filelist = []
+    labellist = []
+    # note: manifest and orig lines are specially treated and identified
+    filelist.append(open(os.path.join(args.rootdir, "%s.manifest" % corpus)))
+    labellist.append("na") # dummy
+    filelist.append(open(os.path.join(args.rootdir,
+                                      "original", "%s.flat" % corpus)))
+    labellist.append("ORIG_RAW_SOURCE")
+    filelist.append(open(os.path.join(args.rootdir,
+                                      "tokenized", "%s.flat" % corpus)))
+    labellist.append("LRLP_TOKENIZED_SOURCE")
+    if args.ext:
+      filelist.append(open(os.path.join(args.rootdir,args.exttokdir,
+                                        "%s.flat" % corpus)))
+      labellist.append("%s_TOKENIZED_SOURCE" % args.exttokprefix)
+      filelist.append(open(os.path.join(args.rootdir, args.exttokdir,
+                                        "%s.flat.lc" % corpus)))
+      labellist.append("%s_TOKENIZED_LC_SOURCE" % args.exttokprefix)
+    
+    filelist.append(open(os.path.join(args.rootdir, "morph-tokenized",
+                                     "%s.flat" % corpus)))
+    labellist.append("LRLP_MORPH_TOKENIZED_SOURCE")
+    filelist.append(open(os.path.join(args.rootdir, "morph",
+                                  "%s.flat" % corpus)))
+    labellist.append("LRLP_MORPH_SOURCE")
+    filelist.append(open(os.path.join(args.rootdir, "pos",
+                                      "%s.flat" % corpus)))
+    labellist.append("LRLP_POSTAG_SOURCE")
     lastfullid = None
-    for manline, origline, tokline, exttokline, exttoklcline, morphtokline, \
-    morphline, posline in zip(manifest, origfile, tokfile, exttokfile,
-                              exttoklcfile, morphtokfile, morphfile, posfile):
-      origline = origline.strip()
-      tokline = tokline.strip()
-      exttokline = exttokline.strip()
-      exttoklcline = exttoklcline.strip()
-      morphtokline = morphtokline.strip()
-      morphline = morphline.strip()
-      posline = posline.strip()
+    for lines in zip(*filelist):
+      manline = lines[0]
       man = manline.strip().split('\t')
       fullid = man[1]
       fullidsplit = fullid.split('_')
@@ -176,7 +189,6 @@ def main():
       if fullid in paradocs: # Parallel data is not repeated in the mono data
         #sys.stderr.write("Document %s exists in parallel data\n" % fullid)
         continue
-
       # Faking the document-level
       if lastfullid != fullid:
         stats[corpus]["DOCS"]+=1
@@ -191,6 +203,7 @@ def main():
           outfile.write("  <%s>%s</%s>\n" % (label, value, label))
         outfile.write("  <DIRECTION>%s</DIRECTION>\n" % args.direction)
       stats[corpus]["SEGMENTS"]+=1
+      origline = lines[1].strip()
       stats[corpus]["WORDS"] += len(origline.split())
       segroot = ET.Element('SEGMENT')
       xroot = ET.SubElement(segroot, 'SOURCE')
@@ -198,31 +211,25 @@ def main():
       xroot.set('start_char', man[3])
       xroot.set('end_char', man[4])
       subelements = []
-      # subelements.extend(zip(fullidfields, fullidsplit))
-      # subelements.extend(zip(['SEGMENT_ID', 'START_CHAR', 'END_CHAR'], man[2:]))
       subelements.append(("FULL_ID_SOURCE", man[1])) # TODO: bad name
       subelements.append(("ORIG_SEG_ID", man[2])) # for nistification
       subelements.append(("ORIG_FILENAME", os.path.basename(man[0]))) # for nistification
-      subelements.append(("ORIG_RAW_SOURCE", origline))
       subelements.append(("MD5_HASH_SOURCE",
                           hashlib.md5(origline.encode('utf-8')).hexdigest()))
-      subelements.append(("LRLP_TOKENIZED_SOURCE", tokline))
-      subelements.append(("%s_TOKENIZED_SOURCE" % args.exttokprefix, exttokline))
-      subelements.append(("%s_TOKENIZED_LC_SOURCE" % args.exttokprefix, exttoklcline))
-      subelements.append(("LRLP_POSTAG_SOURCE", posline))
       if len(man) > 5:
         if man[5] == "dl":
           segroot.set("downloaded", "true")
         else:
           subelements.append(("CLUSTER_ID", man[5]))
-      # don't add morph info if there's nothing interesting
-      morphset = set(morphline.split())
-      if len(morphset) == 1 and list(morphset)[0] == "none":
-        pass
-      else:
-        subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", morphtokline))
-        subelements.append(("LRLP_MORPH_SOURCE", morphline))
 
+      for line, label in zip(lines[1:], labellist[1:]):
+        line = line.strip()
+        #  don't add data if there's nothing interesting
+        tokset = set(line.split())
+        if len(tokset) == 1 and list(tokset)[0] == "none":
+          pass
+        else:
+          subelements.append((label, line))
 
       # On-demand fill of psms and anns hashes that assumesit will be
       # used contiguously
@@ -241,7 +248,9 @@ def main():
         startchar = int(man[3])
         endchar = int(man[4])
         if endchar > len(psms[fullid]):
-          endchar = None
+          sys.stderr.write("at %s: %d > %d so setting one back\n" % (' '.join(man), endchar, len(psms[fullid])))
+          #endchar = None
+          endchar = len(psms[fullid])
         for i in range(startchar, endchar):
           slot = psms[fullid][i]
           psmcoll.update(list(map(tuple, slot)))

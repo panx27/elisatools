@@ -143,7 +143,9 @@ def main():
     # TWEET
     # LDC changed its mind again
     # tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing')
-    tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing', 'bin')
+    # tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing', 'bin')
+    # and again
+    tweetprogpath = os.path.join(expdir, 'tools', 'ldclib', 'bin')
     stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
     tweetdir = os.path.join(rootdir, language, 'tweet')
     stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
@@ -229,7 +231,7 @@ def main():
     monoindirs = dirfind(os.path.join(expdir, 'data', 'monolingual_text'), "ltf.zip")
     monooutdir = os.path.join(rootdir, language, 'mono', 'extracted')
     monoerr = os.path.join(rootdir, language, 'extract_mono.err')
-    stepsbyname["extract_mono.py"].argstring = "-i %s -o %s" % \
+    stepsbyname["extract_mono.py"].argstring = "--no-cdec -i %s -o %s" % \
       (' '.join(monoindirs), monooutdir)
     stepsbyname["extract_mono.py"].stderr = monoerr
 

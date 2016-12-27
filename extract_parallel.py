@@ -23,7 +23,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
              agiletokpath, cdectokpath, 
              stp=lputil.selected_translation_pairs, el=lputil.extract_lines,
-             tweet=False):
+             tweet=False, swap=False):
   ''' Find files and print them out '''
   src_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, src)), 'w')
   trg_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, trg)), 'w')
@@ -73,13 +73,18 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
   trg_agiletoklc_fname=os.path.join(outdir, agiletoklcoutdir, "%s.%s.%s.flat" % \
                                     (prefix,agiletoklcoutdir,trg))
 
-  for m in stp(path, src=src, trg=trg, xml=True, tweet=tweet):
+  (stpsrc, stptrg) = (trg, src) if swap else (src, trg)
+  for m in stp(path, src=stpsrc, trg=stptrg, xml=True, tweet=tweet):
 
     if not tweet:
       sdata, tdata = el(*m)
     else:
       sdata, tdata = el(*m, sxml=False, txml=True)
 
+    # found data sometimes seems to require swap behavior
+    if swap:
+      sdata, tdata = tdata, sdata
+      
     if sdata is None or tdata is None:
       sys.stderr.write("Warning: empty files:\n%s or %s\n" % (m[0], m[1]))
       continue
@@ -314,7 +319,7 @@ def main():
            tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
            agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
            agiletokpath, cdectokpath,
-           stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences)
+           stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences, swap=True)
 
   # Tweet data
   if args.extwtdir is not None and os.path.exists(args.extwtdir):

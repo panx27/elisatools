@@ -16,6 +16,7 @@ scriptdir = os.path.dirname(os.path.abspath(__file__))
 manifest = {"docs":"docs",
             "tools":"tools",
             "README.txt":"README.txt",
+            "README_annotations.txt":"README_annotations.txt",
             os.path.join("data", "audio"):"audio",
             os.path.join("data", "annotation", "morph_alignment"):"morph_alignment",
             }
