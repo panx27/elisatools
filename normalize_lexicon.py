@@ -59,13 +59,16 @@ def main():
     trgs = [trgs, ] if args.nosplit else re.split(r'[;,/]| or ', trgs)
     for trg in trgs:
       trg = trg.strip()
-      if len(trg) == 0:
-        continue
       # nothing too long
       if len(trg.split()) > args.targetlimit:
         tmword+=1
         continue
       # OTHER HEURISTICS...
+      # eliminate initial "to" (to walk -> walk)
+      if re.match(r"to\b", trg, flags=re.I):
+        trg = ' '.join(trg.split()[1:])
+      if len(trg) == 0:
+        continue      
       outfile.write("%s\t%s\t%s\n" % (src, pos, trg))
       wrote +=1
   stderr.write("%d bad %d source mword %d target mword %d wrote\n" % (bad, smword, tmword, wrote))
