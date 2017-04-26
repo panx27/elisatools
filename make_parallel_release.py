@@ -21,6 +21,8 @@ def strip(x):
   except:
     return None
 
+
+
 def main():
   parser = argparse.ArgumentParser(description="Create xml from extracted" \
                                    " and transformed monolingual data",
@@ -106,9 +108,10 @@ def main():
           sys.stderr.write("Skipping line %d of annfile; bad data (%d toks)\n" \
                            % (ln, len(toks)))
           continue;
-        if int(toks[3])-int(toks[2]) == 0:
-          anndiscardcount+=1
-          continue
+        # single char entity shouldn't be banned...
+        #if int(toks[3])-int(toks[2]) == 0:
+        #  anndiscardcount+=1
+        #  continue
         anntemp[toks[1]].append(toks)
       except ValueError:
         anndiscardcount+=1

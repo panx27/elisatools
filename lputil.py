@@ -15,6 +15,11 @@ from subprocess import check_output, check_call, CalledProcessError
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
+def is_sn(docid):
+  ''' determine if we're in SN twitter, which LDC likes to change periodically '''
+  return docid.startswith('SN_TWT_') or "_SN_" in docid
+
+
 # http://stackoverflow.com/questions/3964681/find-all-files-in-directory-with-extension-txt-in-python
 def dirfind(path, extension):
   ''' find files that end with the given extension in the given path '''
@@ -283,6 +288,8 @@ def pair_files(srcdir, trgdir, ext='txt'):
   trgfiles = os.listdir(trgdir)
   for srcfile in os.listdir(srcdir):
     filematch = None
+    if is_sn(srcfile): # avoid underscore tweet files
+      continue
     for pat, repltmp in pats:
       # print "Trying "+str(pat)+" on "+srcfile
       if re.match(pat, srcfile):
@@ -305,7 +312,7 @@ def pair_files(srcdir, trgdir, ext='txt'):
       # unsrcs.append(srcfile)
       unsrcs.append(srcdir+"/"+srcfile)
   return (matches, unsrcs, ['%s/%s' % (trgdir, i) for i in trgfiles \
-                            if not i.startswith('SN_TWT_')])
+                            if not is_sn(i)])
 
 def pair_tweet_files(srcdir, trgdir, srcext='txt', trgext='xml'):
   ''' Heuristically pair tweet files from rsd directories (source) and ltf

@@ -13,7 +13,7 @@ import gzip
 import os
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 import datetime
-from lputil import funornone
+from lputil import funornone, is_sn
 
 # Scrape annotation files for full/simple entities and semantic annotation
 
@@ -64,7 +64,7 @@ def main():
         if docid.startswith('doc-'): # In NPC annotation, LDC uses "doc-n"
                                      # instead of original docid
             docid = os.path.basename(annfile).replace('.laf.xml', '')
-        if docid.startswith('SN_TWT_'): # No string head for TWT, need rsd file
+        if is_sn(docid): # No string head for TWT, need rsd file
             if not os.path.isfile('%s/%s.rsd.txt' % (twtdir, docid)):
                 continue
 
@@ -89,23 +89,28 @@ def main():
           if anntask == "NPchunk":
             anntask = "NPC"
           xextent = xann.find('EXTENT')
-          if docid.startswith('SN_TWT_'): # No string head for TWT
+          try:
+            if is_sn(docid): # No string head for TWT
               strhead = xextent.text
               tweet = open('%s/%s.rsd.txt' % (twtdir, docid)).read()
               beg = int(xextent.get("start_char"))
               end = int(xextent.get("end_char"))
               # but don't go negative
               if beg < 0 or end > len(tweet):
-                  sys.stderr.write(annfile+" Bad offsets: can't do %d, %d on %s\n" % (beg, end, docid))
-                  continue
+                sys.stderr.write(annfile+" Bad offsets: can't do %d, %d on %s\n" % (beg, end, docid))
+                continue
               strhead = tweet[beg:end+1]
-              tup = [anntask, docid, xextent.get("start_char") or "None",
+              tup = [anntask, docid, str(int(xextent.get("start_char"))) or "None",
                      xextent.get("end_char") or "None", annid or "None",
                      strhead or "None"]
-          else:
-              tup = [anntask, docid, xextent.get("start_char") or "None",
+            else:
+              tup = [anntask, docid, str(int(xextent.get("start_char"))) or "None",
                      xextent.get("end_char") or "None", annid or "None",
                      xextent.text or "None"]
+          except:
+            sys.stderr.write("Trouble at %s in %s should be investigated\n" % (docid,annfile))
+            continue
+
           if anntask == "NE": # Simple ne annotation
             # old style: in attributes. new style: in tag
             if "type" in xann.keys():

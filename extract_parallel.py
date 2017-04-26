@@ -305,7 +305,8 @@ def main():
   corpustuples = [("fromsource.generic", os.path.join(*(datadirs+["from_%s" % args.src,]))),
                   ("fromtarget.news", os.path.join(*(datadirs+["from_%s" % args.trg, "news"]))),
                   ("fromtarget.phrasebook", os.path.join(*(datadirs+["from_%s" % args.trg, "phrasebook"]))),
-                  ("fromtarget.elicitation", os.path.join(*(datadirs+["from_%s" % args.trg, "elicitation"])))]
+                  ("fromtarget.elicitation", os.path.join(*(datadirs+["from_%s" % args.trg, "elicitation"])))
+  ]
   for corpustuple in corpustuples:
     printout(corpustuple[0], corpustuple[1],
              args.src, args.trg, args.outdir, origoutdir, garbageoutdir,

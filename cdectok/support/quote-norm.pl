@@ -35,8 +35,9 @@ while(<STDIN>) {
   s/&\s*#45\s*;/--/g;               # hyphen-minus
 
   # Convert arbitrary hex or decimal HTML entities to actual characters:
-  s/&\#x([0-9A-Fa-f]+);/pack("U", hex($1))/ge;
-  s/&\#([0-9]+);/pack("U", $1)/ge;
+  # JM: these can be dangerous so I'm turning them off
+  #s/&\#x([0-9A-Fa-f]+);/pack("U", hex($1))/ge;
+  #s/&\#([0-9]+);/pack("U", $1)/ge;
 
   # Regularlize spaces:
   s/\x{ad}//g;        # soft hyphen
