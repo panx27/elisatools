@@ -99,12 +99,15 @@ def main():
   parser.add_argument("--set", "-S", default=None,
                       help='decryption set for encrypted il')
   addonoffarg(parser, "mono", help="extract mono data", default=True)
+  parser.add_argument("--previous", default=None,
+                      help='path to previous extraction (equivalent to one level down from root)')
+
   parser.add_argument("--root", "-r", default='/home/nlg-02/LORELEI/ELISA/data',
                       help='path to where the extraction will take place')
   parser.add_argument("--evalil", "-E", action='store_true', default=False, 
                       help='this is an eval il. makes expdir set0 aware')
   parser.add_argument("--expdir", "-e",
-                      help='path to where the extraction is. If starting at ' \
+                      help='path to where the extraction is (equivalent to root/lang/expanded/lrlp). If starting at ' \
                       'step 0 this is ignored')
   parser.add_argument("--start", "-s", type=int, default=0,
                       help='step to start at')
@@ -126,10 +129,6 @@ def main():
     sys.stderr.write \
       ("Error: must explicitly set expdir if not starting at step 0")
     sys.exit(1)
-
-  if not args.mono:
-    stepsbyname["extract_mono.py"].disable()
-    stepsbyname["extract_psm_annotation.py"].disable()
 
   rootdir = args.root
   language = args.language
@@ -158,22 +157,36 @@ def main():
     # tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing', 'bin')
     # and again
     tweetprogpath = os.path.join(expdir, 'tools', 'ldclib', 'bin')
-    stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
     tweetdir = os.path.join(rootdir, language, 'tweet')
-    stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
-    tweetintab = os.path.join(expdir, 'docs', 'twitter_info.tab')
-    if os.path.exists(tweetintab):
-      stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
-    else:
-      stepsbyname["get_tweet_by_id.rb"].disable()
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
-    stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
+
+    # just copy from previous or skip if no mono
+    if not args.mono:
+      if args.previous is None:
+        stepsbyname["get_tweet_by_id.rb"].disable()
+      else:
+        oldtweetdir = os.path.join(args.previous, 'tweet')
+        stepsbyname["get_tweet_by_id.rb"].progpath = "/bin"
+        stepsbyname["get_tweet_by_id.rb"].prog = "cp"
+        stepsbyname["get_tweet_by_id.rb"].argstring = "-r {} {}".format(oldtweetdir, tweetdir)
+    else:
+      stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
+      stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
+      stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
+      tweetintab = os.path.join(expdir, 'docs', 'twitter_info.tab')
+      if os.path.exists(tweetintab):
+        stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
+      else:
+        stepsbyname["get_tweet_by_id.rb"].disable()
+
 
     # EPHEMERA
     ephemdir = os.path.join(rootdir, language, 'ephemera')
-    stepsbyname['gather_ephemera.py'].argstring = "-s %s -t %s" %\
-                                                  (expdir, ephemdir)
+    ephemarg = "-s {} -t {}".format(expdir, ephemdir)
+    if args.previous is not None:
+      ephemarg += " -o {}".format(os.path.join(args.previous, 'ephemera'))
+    stepsbyname['gather_ephemera.py'].argstring = ephemarg
     ephemerr = os.path.join(rootdir, language, 'gather_ephemera.err')
     stepsbyname['gather_ephemera.py'].stderr = ephemerr
 
@@ -210,13 +223,24 @@ def main():
     stepsbyname["cp"].argstring = "-r %s %s" % (lexiconoutdir, ephemdir)
 
     # PSM
-    psmindir = os.path.join(expdir, 'data', 'monolingual_text',
-                            'zipped', '*.psm.zip')
-    psmoutpath = os.path.join(rootdir, language, 'psm.ann')
+    # just copy from previous or skip if no mono
     psmerr = os.path.join(rootdir, language, 'extract_psm_annotation.err')
-    stepsbyname["extract_psm_annotation.py"].argstring = "-i %s -o %s" % \
-                                                         (psmindir, psmoutpath)
     stepsbyname["extract_psm_annotation.py"].stderr = psmerr
+    psmoutpath = os.path.join(rootdir, language, 'psm.ann')
+    if not args.mono:
+      if args.previous is None:
+        stepsbyname["extract_psm_annotation.py"].disable()
+      else:
+        oldpsm = os.path.join(args.previous, 'psm.ann')
+        stepsbyname["extract_psm_annotation.py"].progpath = "/bin"
+        stepsbyname["extract_psm_annotation.py"].prog = "cp"
+        stepsbyname["extract_psm_annotation.py"].argstring = "{} {}".format(oldpsm, psmoutpath)
+    else:
+      psmindir = os.path.join(expdir, 'data', 'monolingual_text',
+                              'zipped', '*.psm.zip')
+      stepsbyname["extract_psm_annotation.py"].argstring = "-i %s -o %s" % \
+                                                           (psmindir, psmoutpath)
+
 
     # ENTITY
     entityoutpath = os.path.join(rootdir, language, 'entity.ann')
@@ -240,12 +264,24 @@ def main():
     stepsbyname["filter_parallel.py"].stderr = filtererr
 
     # MONO
-    monoindirs = dirfind(os.path.join(expdir, 'data', 'monolingual_text'), "ltf.zip")
-    monooutdir = os.path.join(rootdir, language, 'mono', 'extracted')
+    # just copy from previous or skip if no mono
     monoerr = os.path.join(rootdir, language, 'extract_mono.err')
-    stepsbyname["extract_mono.py"].argstring = "--no-cdec -i %s -o %s" % \
-      (' '.join(monoindirs), monooutdir)
     stepsbyname["extract_mono.py"].stderr = monoerr
+    if not args.mono:
+      if args.previous is None:
+        stepsbyname["extract_mono.py"].disable()
+      else:
+        oldmonodir = os.path.join(args.previous, 'mono')
+        monooutdir = os.path.join(rootdir, language, 'mono')
+        stepsbyname["extract_mono.py"].progpath = "/bin"
+        stepsbyname["extract_mono.py"].prog = "cp"
+        stepsbyname["extract_mono.py"].argstring = "-r {} {}".format(oldmonodir, monooutdir)
+    else:
+      monoindirs = dirfind(os.path.join(expdir, 'data', 'monolingual_text'), "ltf.zip")
+      monooutdir = os.path.join(rootdir, language, 'mono', 'extracted')
+      stepsbyname["extract_mono.py"].argstring = "--no-cdec -i %s -o %s" % \
+                                                 (' '.join(monoindirs), monooutdir)
+
 
     # COMPARABLE
     if os.path.exists(os.path.join(expdir, 'data', 'translation', 'comparable')):

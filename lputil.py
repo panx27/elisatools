@@ -700,7 +700,11 @@ class Step:
       retval = self.call(basecallstring, **kwargs)
       sys.stderr.write("%s: Done\n" % prog)
     except CalledProcessError as exc:
-      sys.stderr.write("%s: FAIL: %d %s\n" % (prog, exc.returncode, exc.output))
+      sys.stderr.write("%s: FAIL\n" % (prog))
+      if self.stderr is not None:
+        kwargs["stderr"].close()
+        for line in open(self.stderr, 'r'):
+          self.stderr.write(line)
       if self.abortOnFail:
         sys.exit(1)
     return retval

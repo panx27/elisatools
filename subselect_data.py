@@ -49,7 +49,7 @@ def main():
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--indir", "-i", help="location of parallel data")
   parser.add_argument("--language", "-l", help="source language three digit code")
-  parser.add_argument("--extractpath", "-e", default="extracted", help="location of extracted data (might want to use 'filtered')")
+  parser.add_argument("--extractpath", "-e", default="filtered", help="location of extracted data (might want to use 'filtered')")
   parser.add_argument("--minimum", "-m", default=100, help="minimum number of words per subselection")
   parser.add_argument("--sizes", "-s", nargs='+', type=int, help="list of sizes desired in each category")
   parser.add_argument("--categories", "-c", nargs='+', help="list of categories. Must match sizes")
