@@ -18,8 +18,8 @@ from itertools import compress
 
 
 
-def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
-             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
+def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbageoutdir,
+             tokoutdir, cleantokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
              agiletokpath, cdectokpath, 
              stp=lputil.selected_translation_pairs, el=lputil.extract_lines,
@@ -27,12 +27,29 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
   ''' Find files and print them out '''
   src_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, src)), 'w')
   trg_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, trg)), 'w')
-  src_orig_fname=os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % \
-                                (prefix,origoutdir,src))
-  src_orig_fh=open(src_orig_fname, 'w')
-  trg_orig_fname=os.path.join(outdir, origoutdir, "%s.%s.%s.flat" % \
-                              (prefix,origoutdir,trg))
-  trg_orig_fh=open(trg_orig_fname, 'w')
+
+  # open a bunch of file handles
+  # third element indicates whether it should actually be opened
+  namedirpairs = [('orig', origoutdir,True),
+                  ('cleanorig', cleanorigoutdir,False),
+                  (       'tok',                       tokoutdir,True),
+                  (       'cleantok',                       cleantokoutdir,False),
+                  (  'morphtok',                  morphtokoutdir,True),
+                  (   'cdectok',                   cdectokoutdir,False),
+                  ( 'cdectoklc',                 cdectoklcoutdir,False),
+                  (  'agiletok',                  agiletokoutdir,False),
+                  ('agiletoklc',                agiletoklcoutdir,False),
+                  (     'morph',                     morphoutdir,True),
+                  (       'pos',                       posoutdir,True),
+                  ]
+  outfiles = dd(dict)
+  for sidename, side in (('src', src),
+                         ('trg', trg)):
+    for dirname, dirval, doopen in namedirpairs:
+      entry = os.path.join(outdir, dirval, "{}.{}.{}.flat".format(prefix, dirval, side))
+      if doopen:
+        entry = open(entry, 'w')
+      outfiles[sidename][dirname]=entry
 
   garbagefhs = {}
   garbagedisabled=True
@@ -40,38 +57,14 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
     garbagedisabled=False
     src_orig_garbage_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.flat" % \
                                           (prefix,src)), 'w')
-    garbagefhs[src_orig_fh]=src_orig_garbage_fh
+    garbagefhs[outfiles['src']['orig']]=src_orig_garbage_fh
     trg_orig_garbage_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.flat" % \
                                           (prefix,trg)), 'w')
-    garbagefhs[trg_orig_fh]=trg_orig_garbage_fh
+    garbagefhs[outfiles['trg']['orig']]=trg_orig_garbage_fh
     src_garbage_man_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.manifest" % (prefix, src)), 'w')
     garbagefhs[src_man_fh]=src_garbage_man_fh
     trg_garbage_man_fh=open(os.path.join(outdir, garbageoutdir, "%s.%s.manifest" % (prefix, trg)), 'w')
     garbagefhs[trg_man_fh]=trg_garbage_man_fh
-  src_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % \
-                               (prefix,tokoutdir,src)), 'w')
-  trg_tok_fh=open(os.path.join(outdir, tokoutdir, "%s.%s.%s.flat" % \
-                               (prefix,tokoutdir,trg)), 'w')
-  src_morphtok_fh=open(os.path.join(outdir, morphtokoutdir, "%s.%s.%s.flat" % \
-                                    (prefix,morphtokoutdir,src)),'w')
-  trg_morphtok_fh=open(os.path.join(outdir, morphtokoutdir, "%s.%s.%s.flat" % \
-                                    (prefix,morphtokoutdir,trg)),'w')
-  src_morph_fh=open(os.path.join(outdir, morphoutdir, "%s.%s.%s.flat" % \
-                                 (prefix,morphoutdir,src)),'w')
-  trg_morph_fh=open(os.path.join(outdir, morphoutdir, "%s.%s.%s.flat" % \
-                                 (prefix,morphoutdir,trg)),'w')
-  src_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % \
-                               (prefix,posoutdir,src)),'w')
-  trg_pos_fh=open(os.path.join(outdir, posoutdir, "%s.%s.%s.flat" % \
-                               (prefix,posoutdir,trg)),'w')
-  src_cdectok_fname=os.path.join(outdir, cdectokoutdir, "%s.%s.%s.flat" % \
-                                    (prefix,cdectokoutdir,src))
-  trg_agiletok_fname=os.path.join(outdir, agiletokoutdir, "%s.%s.%s.flat" % \
-                                    (prefix,agiletokoutdir,trg))
-  src_cdectoklc_fname=os.path.join(outdir, cdectoklcoutdir, "%s.%s.%s.flat" % \
-                                    (prefix,cdectoklcoutdir,src))
-  trg_agiletoklc_fname=os.path.join(outdir, agiletoklcoutdir, "%s.%s.%s.flat" % \
-                                    (prefix,agiletoklcoutdir,trg))
 
   (stpsrc, stptrg) = (trg, src) if swap else (src, trg)
   for m in stp(path, src=stpsrc, trg=stptrg, xml=True, tweet=tweet):
@@ -103,7 +96,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
 
     goodmask = [not x for x in garbagemask]
     ### Write original
-    for fh, data in zip((src_orig_fh, trg_orig_fh), (sdata["ORIG"], tdata["ORIG"])):
+    for fh, data in zip((outfiles['src']['orig'], outfiles['trg']['orig']), (sdata["ORIG"], tdata["ORIG"])):
       for line in compress(data, garbagemask):
         fh.write(line)
       ### Write garbage original
@@ -161,12 +154,12 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
 
     ### Write tokenized, morph tokenized, pos tag
     if not tweet:
-      zipset = zip(((src_tok_fh, src_morphtok_fh, src_morph_fh, src_pos_fh),
-                    (trg_tok_fh, trg_morphtok_fh, trg_morph_fh, trg_pos_fh)),
+      zipset = zip(((outfiles["src"]["tok"], outfiles["src"]["morphtok"], outfiles["src"]["morph"], outfiles["src"]["pos"]),
+                    (outfiles["trg"]["tok"], outfiles["trg"]["morphtok"], outfiles["trg"]["morph"], outfiles["trg"]["pos"])),
                    (sdata, tdata))
     else:
       # no source tok/morph info in tweets
-      zipset = zip(((trg_tok_fh, trg_morphtok_fh, trg_morph_fh, trg_pos_fh),),
+      zipset = zip(((outfiles["trg"]["tok"], outfiles["trg"]["morphtok"], outfiles["trg"]["morph"], outfiles["trg"]["pos"]),),
                    (tdata,))
 
     for fhset, data in zipset:
@@ -176,8 +169,8 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
 
   # run agile tokenizer on target orig
   # TODO: lowercase
-  trg_orig_fh.close()
-  agiletok_cmd = "%s -i %s -o %s -t %s " % (agiletokpath, trg_orig_fname, trg_agiletoklc_fname, trg_agiletok_fname)
+  outfiles['trg']['orig'].close()
+  agiletok_cmd = "%s -i %s -o %s -t %s " % (agiletokpath, outfiles['trg']['orig'].name, outfiles["trg"]["agiletoklc"], outfiles["trg"]["agiletok"])
   sys.stderr.write(agiletok_cmd+"\n")
   try:
     check_call(agiletok_cmd, shell=True)
@@ -185,8 +178,8 @@ def printout(prefix, path, src, trg, outdir, origoutdir, garbageoutdir,
     sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
     sys.exit(1)
   # run cdec tokenizer on source orig
-  src_orig_fh.close()
-  cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, src_orig_fname, src_cdectoklc_fname, src_cdectok_fname)
+  outfiles['src']['orig'].close()
+  cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, outfiles['src']['orig'].name, outfiles["src"]["cdectoklc"], outfiles["src"]["cdectok"])
   sys.stderr.write(cdectok_cmd+"\n")
   try:
     check_call(cdectok_cmd, shell=True)
@@ -225,14 +218,18 @@ def main():
                       help="source language 3 letter code")
   parser.add_argument("--trg", "-t", default='eng',
                       help="target language 3 letter code")
-  parser.add_argument("--origsubdir", default="original",
+  parser.add_argument("--origsubdir", default="raw.original",
                       help="subdirectory for untokenized files")
+  parser.add_argument("--cleanorigsubdir", default="original",
+                      help="subdirectory for cleaned raw original")
   parser.add_argument("--garbagesubdir", default="garbage",
                       help="subdirectory for garbage files (under orig)")
   parser.add_argument("--nogarbage", action='store_true', default=False,
                       help="turn off garbage filtering")
-  parser.add_argument("--toksubdir", default="tokenized",
-                      help="subdirectory for tokenized files")
+  parser.add_argument("--toksubdir", default="raw.tokenized",
+                      help="subdirectory for ldc-tokenized but raw files")
+  parser.add_argument("--cleantoksubdir", default="tokenized",
+                      help="subdirectory for cleaned ldc-tokenized files")
   parser.add_argument("--cdectoksubdir", default="cdec-tokenized",
                       help="subdirectory for cdec-tokenized files")
   parser.add_argument("--agiletoksubdir", default="agile-tokenized",
@@ -257,7 +254,9 @@ def main():
     parser.error(str(msg))
 
   origoutdir=args.origsubdir
+  cleanorigoutdir=args.cleanorigsubdir
   tokoutdir=args.toksubdir
+  cleantokoutdir=args.toksubdir
   morphtokoutdir=args.morphtoksubdir
   cdectokoutdir=args.cdectoksubdir
   agiletokoutdir=args.agiletoksubdir
@@ -268,7 +267,9 @@ def main():
   agiletokpath = args.agiletokpath
   cdectokpath = args.cdectokpath
   dirs = [origoutdir,
+          cleanorigoutdir,
           tokoutdir,
+          cleantokoutdir,
           morphtokoutdir,
           cdectokoutdir,
           agiletokoutdir,
@@ -307,30 +308,23 @@ def main():
                   ("fromtarget.phrasebook", os.path.join(*(datadirs+["from_%s" % args.trg, "phrasebook"]))),
                   ("fromtarget.elicitation", os.path.join(*(datadirs+["from_%s" % args.trg, "elicitation"])))
   ]
-  for corpustuple in corpustuples:
-    printout(corpustuple[0], corpustuple[1],
-             args.src, args.trg, args.outdir, origoutdir, garbageoutdir,
-             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
+  commonargs=[args.src, args.trg, args.outdir, origoutdir, cleanorigoutdir, garbageoutdir,
+             tokoutdir, cleantokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-             agiletokpath, cdectokpath)
+             agiletokpath, cdectokpath]
+  for corpustuple in corpustuples:
+    printout(corpustuple[0], corpustuple[1], *commonargs)
+
 
   # Found data
-  printout("found.generic",
-           args.rootdir, args.src, args.trg, args.outdir, origoutdir, garbageoutdir,
-           tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
-           agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-           agiletokpath, cdectokpath,
+  printout("found.generic", args.rootdir, *commonargs, 
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences, swap=True)
 
   # Tweet data
   if args.extwtdir is not None and os.path.exists(args.extwtdir):
     move_extracted_tweet(os.path.join(*datadirs), args.src, args.extwtdir)
     printout("fromsource.tweet",
-             os.path.join(*(datadirs+["from_%s" % args.src,])),
-             args.src, args.trg, args.outdir, origoutdir, garbageoutdir,
-             tokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
-             agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-             agiletokpath, cdectokpath,
+             os.path.join(*(datadirs+["from_%s" % args.src,])), *commonargs,
              tweet=True)
 
 if __name__ == '__main__':
