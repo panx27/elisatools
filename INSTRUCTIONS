@@ -1,7 +1,10 @@
 How to build a LP (assuming all parts are there)
 
-1) create the base lrlp:
-one_button_lrlp.py -t <path/to/LDC/lrlp> -l <lang> -r <location>
+1a) (full lrlp) create the base lrlp:
+one_button_lrlp.py -t <path/to/LDC/lrlps>...  -l <lang> -r <location>
+
+1b) (new version, monolingual excluded) create the lrlp but explicitly avoid monolingual stuff
+one_button_lrlp.py --no-mono -t <path/to/LDC/lrlps>...  -l <lang> -r <location>
 
 e.g.
 panxbranchtoolsv3/one_button_lrlp.py -t release/LDC2015E70_BOLT_LRL_Hausa_Representative_Language_Pack_V1.2.tgz -l hau -r tmp8v3

@@ -11,6 +11,13 @@ from lputil import Step, make_action, dirfind
 from subprocess import check_output, check_call, CalledProcessError
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
+def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
+  ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
+  group = parser.add_mutually_exclusive_group()
+  dest = arg if dest is None else dest
+  group.add_argument('--%s' % arg, dest=dest, action='store_true', default=default, help=help)
+  group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
+
 
 def main():
   steps = []
@@ -91,6 +98,7 @@ def main():
                       help='decryption key for encrypted il')
   parser.add_argument("--set", "-S", default=None,
                       help='decryption set for encrypted il')
+  addonoffarg(parser, "mono", help="extract mono data", default=True)
   parser.add_argument("--root", "-r", default='/home/nlg-02/LORELEI/ELISA/data',
                       help='path to where the extraction will take place')
   parser.add_argument("--evalil", "-E", action='store_true', default=False, 
@@ -118,6 +126,10 @@ def main():
     sys.stderr.write \
       ("Error: must explicitly set expdir if not starting at step 0")
     sys.exit(1)
+
+  if not args.mono:
+    stepsbyname["extract_mono.py"].disable()
+    stepsbyname["extract_psm_annotation.py"].disable()
 
   rootdir = args.root
   language = args.language
