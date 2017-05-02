@@ -6,6 +6,7 @@ import codecs
 
 from collections import defaultdict as dd
 import re
+import os
 import os.path
 from lputil import mkdir_p
 from subprocess import check_output, STDOUT, CalledProcessError
@@ -77,10 +78,10 @@ def main():
   docprefixes = ["fromsource.generic", "fromsource.tweet", "fromtarget.news", "found.generic"]
   nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook"]
 
-  # TODO: find these
-  filetypes = ["morph", "morph-tokenized", "original", "pos", "tokenized", "mttok", "mttoklc", "agile-tokenized", "cdec-tokenized", "agile-tokenized.lc", "cdec-tokenized.lc"]
-
   extractpath = os.path.join(indir, args.extractpath)
+  #http://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
+  filetypes = [subdir for subdir in next(os.walk(extractpath))[1]]
+
   origpath = os.path.join(extractpath, 'original')
   outpath = os.path.join(indir, 'splits')
   mkdir_p(outpath)

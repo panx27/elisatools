@@ -9,6 +9,7 @@ import re
 import os
 import os.path
 import shutil
+import shlex
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 import lputil
 import datetime
@@ -21,7 +22,7 @@ from itertools import compress
 def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbageoutdir,
              tokoutdir, cleantokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-             agiletokpath, cdectokpath, 
+             agiletokpath, cdectokpath, cleanpath,
              stp=lputil.selected_translation_pairs, el=lputil.extract_lines,
              tweet=False, swap=False):
   ''' Find files and print them out '''
@@ -29,7 +30,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbag
   trg_man_fh=open(os.path.join(outdir, "%s.%s.manifest" % (prefix, trg)), 'w')
 
   # open a bunch of file handles
-  # third element indicates whether it should actually be opened
+  # third element indicates whether it should actually be opened or if the file should be simply named
   namedirpairs = [('orig', origoutdir,True),
                   ('cleanorig', cleanorigoutdir,False),
                   (       'tok',                       tokoutdir,True),
@@ -167,22 +168,36 @@ def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbag
         for line in compress(data[field], garbagemask):
           fh.write(line)
 
+
+  # raw orig->clean orig
+  # raw tok->clean tok
   # run agile tokenizer on target orig
   # TODO: lowercase
-  outfiles['trg']['orig'].close()
-  agiletok_cmd = "%s -i %s -o %s -t %s " % (agiletokpath, outfiles['trg']['orig'].name, outfiles["trg"]["agiletoklc"], outfiles["trg"]["agiletok"])
+
+  outfiles['src']['orig'].close()
+  for side in ('src', 'trg'):
+    for contents in ('orig', 'tok'):
+      outfiles[side][contents].close()
+      cleancmd = "{cmd} {infile} {outfile}".format(cmd=cleanpath, infile=outfiles[side][contents].name, outfile=outfiles[side]["clean{}".format(contents)])
+      sys.stderr.write(cleancmd+"\n")
+      try:
+        check_call(shlex.split(cleancmd))
+      except CalledProcessError as e:
+        sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
+        sys.exit(1)
+  agiletok_cmd = "%s -i %s -o %s -t %s " % (agiletokpath, outfiles['trg']['cleanorig'], outfiles["trg"]["agiletoklc"], outfiles["trg"]["agiletok"])
   sys.stderr.write(agiletok_cmd+"\n")
   try:
-    check_call(agiletok_cmd, shell=True)
+    check_call(shlex.split(agiletok_cmd))
   except CalledProcessError as e:
     sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
     sys.exit(1)
   # run cdec tokenizer on source orig
-  outfiles['src']['orig'].close()
-  cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, outfiles['src']['orig'].name, outfiles["src"]["cdectoklc"], outfiles["src"]["cdectok"])
+
+  cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, outfiles['src']['cleanorig'], outfiles["src"]["cdectoklc"], outfiles["src"]["cdectok"])
   sys.stderr.write(cdectok_cmd+"\n")
   try:
-    check_call(cdectok_cmd, shell=True)
+    check_call(shlex.split(cdectok_cmd))
   except CalledProcessError as e:
     sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
     sys.exit(1)
@@ -247,7 +262,10 @@ def main():
                       help="path to agile tokenizer binary")
   parser.add_argument("--cdectokpath", default=os.path.join(scriptdir, 'cdectok.sh'),
                       help="path to cdec tokenizer binary")
+  parser.add_argument("--cleanpath", default=os.path.join(scriptdir, 'clean.sh'),
+                      help="path to cleaning script")
 
+  
   try:
     args = parser.parse_args()
   except IOError as msg:
@@ -256,7 +274,7 @@ def main():
   origoutdir=args.origsubdir
   cleanorigoutdir=args.cleanorigsubdir
   tokoutdir=args.toksubdir
-  cleantokoutdir=args.toksubdir
+  cleantokoutdir=args.cleantoksubdir
   morphtokoutdir=args.morphtoksubdir
   cdectokoutdir=args.cdectoksubdir
   agiletokoutdir=args.agiletoksubdir
@@ -266,6 +284,7 @@ def main():
   posoutdir=args.possubdir
   agiletokpath = args.agiletokpath
   cdectokpath = args.cdectokpath
+  cleanpath = args.cleanpath
   dirs = [origoutdir,
           cleanorigoutdir,
           tokoutdir,
@@ -311,7 +330,7 @@ def main():
   commonargs=[args.src, args.trg, args.outdir, origoutdir, cleanorigoutdir, garbageoutdir,
              tokoutdir, cleantokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-             agiletokpath, cdectokpath]
+              agiletokpath, cdectokpath, cleanpath]
   for corpustuple in corpustuples:
     printout(corpustuple[0], corpustuple[1], *commonargs)
 
