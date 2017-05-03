@@ -141,72 +141,50 @@ def main():
                                        (corpus, args.lang)))
       trg_manifest = open(os.path.join(rootdir, "%s.eng.manifest" % \
                                        (corpus)))
-      src_origfile = open(os.path.join(rootdir, "original",
-                                       "%s.original.%s.flat" % \
-                                       (corpus, args.lang)))
-      trg_origfile = open(os.path.join(rootdir, "original",
-                                       "%s.original.eng.flat" % (corpus)))
-      src_tokfile =  open(os.path.join(rootdir, "tokenized",
-                                      "%s.tokenized.%s.flat" % \
-                                      (corpus, args.lang)))
-      trg_tokfile =  open(os.path.join(rootdir, "tokenized",
-                                             "%s.tokenized.eng.flat" % (corpus)))
+      # open a bunch of file handles. later on, add their contents to xml
+      # also indicate whether file is for src, trg, or both
+      name_dir_key = [
+        ('orig', 'original', 'ORIG_RAW', 'both'),
+        ('tok', 'tokenized', 'LRLP_TOKENIZED', 'both'),
+        ('morph', 'morph', 'LRLP_MORPH', 'both'),
+        ('morphtok', 'morph-tokenized', 'LRLP_MORPH_TOKENIZED', 'both'),
+        ('pos', 'pos', 'LRLP_POSTAG', 'both'),
+        ('agiletok', 'agile-tokenized', 'AGILE_TOKENIZED', 'trg'),
+        ('agiletoklc', 'agile-tokenized.lc', 'AGILE_TOKENIZED_LC', 'trg'),
+        ('cdectok', 'cdec-tokenized', 'CDEC_TOKENIZED', 'src'),
+        ('cdectoklc', 'cdec-tokenized.lc', 'CDEC_TOKENIZED_LC', 'src'),
+        ]
 
-      src_morphtokfile = open(os.path.join(rootdir, "morph-tokenized",
-                                           "%s.morph-tokenized.%s.flat" % \
-                                           (corpus,args.lang)))
-      trg_morphtokfile = open(os.path.join(rootdir, "morph-tokenized",
-                                          "%s.morph-tokenized.eng.flat" % \
-                                           (corpus)))
-      src_morphfile =    open(os.path.join(rootdir, "morph",
-                                        "%s.morph.%s.flat" % \
-                                        (corpus, args.lang)))
-      trg_morphfile =    open(os.path.join(rootdir, "morph",
-                                        "%s.morph.eng.flat" % (corpus)))
-      src_posfile =      open(os.path.join(rootdir, "pos",
-                                      "%s.pos.%s.flat" % \
-                                      (corpus, args.lang)))
-      trg_posfile =      open(os.path.join(rootdir, "pos",
-                                             "%s.pos.eng.flat" % (corpus)))
-      trg_agiletokfile = open(os.path.join(rootdir, "agile-tokenized",
-                                             "%s.agile-tokenized.eng.flat" % (corpus)))
-      src_cdectokfile = open(os.path.join(rootdir, "cdec-tokenized",
-                                             "%s.cdec-tokenized.%s.flat" % (corpus, args.lang)))
-      trg_agiletoklcfile = open(os.path.join(rootdir, "agile-tokenized.lc",
-                                             "%s.agile-tokenized.lc.eng.flat" % (corpus)))
-      src_cdectoklcfile = open(os.path.join(rootdir, "cdec-tokenized.lc",
-                                             "%s.cdec-tokenized.lc.%s.flat" % (corpus, args.lang)))
+      idlist = []
+      fhlist = [src_manifest, trg_manifest]
+      keys = dd(dict)
+      for sidename, side, keyadd in (('src', args.lang, "_SOURCE"),
+                                     ('trg', 'eng', "_TARGET")):
+        for dirname, dirval, key, choice in name_dir_key:
+          if choice == "both" or choice == sidename:
+            fh = open(os.path.join(rootdir, dirval, "{}.{}.{}.flat".format(corpus, dirval, side)))
+            idlist.append((sidename, dirname))
+            keys[sidename][dirname]=key+keyadd
+            fhlist.append(fh)
 
       src_lastfullid = None
-
-      # iteration = zip(src_manifest, trg_manifest, src_origfile, trg_origfile,
-      #                 src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
-      #                 src_morphfile, trg_morphfile, src_posfile, trg_posfile,
-      #                 src_cdectokfile, trg_agiletokfile,
-      #                 src_cdectoklcfile, trg_agiletoklcfile)
-
-      # zip ---> zip_longest
-      # in case of tweet src doest have ltf
-      iteration = zip_longest(src_manifest, trg_manifest, src_origfile, trg_origfile,
-                              src_tokfile, trg_tokfile, src_morphtokfile, trg_morphtokfile,
-                              src_morphfile, trg_morphfile, src_posfile, trg_posfile,
-                              src_cdectokfile, trg_agiletokfile,
-                              src_cdectoklcfile, trg_agiletoklcfile)
-      for src_manline, trg_manline, \
-          src_origline, trg_origline, \
-          src_tokline, trg_tokline, \
-          src_morphtokline, trg_morphtokline, \
-          src_morphline, trg_morphline, \
-          src_posline, trg_posline, \
-          src_cdectokline, trg_agiletokline, \
-          src_cdectoklcline, trg_agiletoklcline \
-          in iteration:
-
-        src_origline = strip(src_origline)
-        src_tokline = strip(src_tokline)
-        src_morphtokline = strip(src_morphtokline)
-        src_morphline = strip(src_morphline)
-        src_posline = strip(src_posline)
+      for linelist in zip_longest(*fhlist):
+        src_manline = linelist[0]
+        trg_manline = linelist[1]
+        inlines = dd(dict)
+        badmorph = False
+        for (sidename, dirname), line in zip(idlist, linelist[2:]):
+          if line is None:
+            continue
+          # don't add morph info if there's nothing interesting
+          if dirname == "morph":
+            morphset = set(line.strip().split())
+            if len(morphset) == 1 and list(morphset)[0] == "none":
+              badmorph = True
+              continue
+          if dirname.startswith("morph") and badmorph:
+            continue
+          inlines[sidename][dirname] = strip(line)
         src_man = strip(src_manline).split('\t')
         src_fullid = src_man[1]
         src_fullidsplit = src_fullid.split('_')
@@ -216,17 +194,10 @@ def main():
         if corpus == 'fromtarget.phrasebook':
           src_fullidsplit = ['PHRASEBOOK', 'NONE', args.lang.upper(),
                              'NONE', 'NONE']
-        trg_origline = strip(trg_origline)
-        trg_tokline = strip(trg_tokline)
-        trg_morphtokline = strip(trg_morphtokline)
-        trg_morphline = strip(trg_morphline)
-        trg_posline = strip(trg_posline)
-        src_cdectokline = strip(src_cdectokline)
-        src_cdectoklcline = strip(src_cdectoklcline)
-        trg_agiletokline = strip(trg_agiletokline)
-        trg_agiletoklcline = strip(trg_agiletoklcline)
         trg_man = strip(trg_manline).split('\t')
         trg_fullid = trg_man[1]
+        src_origline = inlines["src"]["orig"]
+        trg_origline = inlines["trg"]["orig"]
 
         if args.nonone and ("NONE NONE" in src_origline or "NONE NONE" in trg_origline):
           continue
@@ -238,7 +209,8 @@ def main():
         if src_fullid[3] == "_" and src_fullid[6] == "_" and src_fullid[13] == "_":
           fullidfields = ['SOURCE_LANGUAGE', 'GENRE', 'PROVENANCE', 'DATE', 'INDEX_ID']
         elif src_fullid[2] != "_" or src_fullid[6] != "_" or src_fullid[10] != "_":
-          sys.stderr.write("unexpected filename format: "+src_fullid+"\n")
+          if "_" in src_fullid:
+            sys.stderr.write("unexpected filename format: "+src_fullid+"\n")
 
         # Faking the document-level
         if src_lastfullid != src_fullid:
@@ -256,46 +228,25 @@ def main():
         stats[rooted_corpus]["TRGWORDS"] += len(trg_origline.split())
         xroot = ET.Element('SEGMENT')
         src_seg = ET.SubElement(xroot, 'SOURCE')
+        subelements = []
+        subelements.append(("FULL_ID_SOURCE", src_man[1]))
         # Non-tweet (ltf)
         if corpus != 'fromsource.tweet':
           src_seg.set('id', "%s.%s.%s.%s" % (src_man[1], src_man[2], src_man[3], src_man[4]))
           src_seg.set('start_char', src_man[3])
           src_seg.set('end_char', src_man[4])
-
-          subelements = []
-          subelements.append(("FULL_ID_SOURCE", src_man[1]))
           subelements.append(("ORIG_SEG_ID", src_man[2])) # for nistification
-          subelements.append(("ORIG_FILENAME", os.path.basename(src_man[0]))) # for nistification
-          subelements.append(("ORIG_RAW_SOURCE", src_origline))
-          src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
-          subelements.append(("MD5_HASH_SOURCE", src_md5))
-          subelements.append(("LRLP_TOKENIZED_SOURCE", src_tokline))
-          subelements.append(("LRLP_POSTAG_SOURCE", src_posline))
-          subelements.append(("CDEC_TOKENIZED_SOURCE", src_cdectokline))
-          subelements.append(("CDEC_TOKENIZED_LC_SOURCE", src_cdectoklcline))
-          # don't add morph info if there's nothing interesting
-          morphset = set(src_morphline.split())
-          if len(morphset) == 1 and list(morphset)[0] == "none":
-            pass
-          else:
-            subelements.append(("LRLP_MORPH_TOKENIZED_SOURCE", src_morphtokline))
-            subelements.append(("LRLP_MORPH_SOURCE", src_morphline))
-        # Tweet (rsd)
         else:
           src_seg.set('id', src_man[1])
           src_seg.set('start_char', '0')
           src_seg.set('end_char', str(len(src_origline.encode('utf-8'))-1))
-
-
-          subelements = []
-          subelements.append(("FULL_ID_SOURCE", src_man[1]))
           subelements.append(("ORIG_SEG_ID", "segment-0")) # for nistification
-          subelements.append(("ORIG_FILENAME", os.path.basename(src_man[0]))) # for nistification
-          subelements.append(("ORIG_RAW_SOURCE", src_origline))
-          src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
-          subelements.append(("MD5_HASH_SOURCE", src_md5))
-          subelements.append(("CDEC_TOKENIZED_SOURCE", src_cdectokline))
-          subelements.append(("CDEC_TOKENIZED_LC_SOURCE", src_cdectoklcline))
+
+        subelements.append(("ORIG_FILENAME", os.path.basename(src_man[0]))) # for nistification
+        src_md5 = hashlib.md5(src_origline.encode('utf-8')).hexdigest()
+        subelements.append(("MD5_HASH_SOURCE", src_md5))
+        for dirname in inlines["src"].keys():
+          subelements.append((keys["src"][dirname], inlines["src"][dirname]))
 
         # On-demand fill of psms and anns hashes that assumesit will be
         # used contiguously
@@ -402,7 +353,6 @@ def main():
             for key, text in subsubs:
               sse = ET.SubElement(se, key)
               sse.text = text
-
         # TODO: more tokenizations, etc.
         for key, text in subelements:
           se = ET.SubElement(src_seg, key)
@@ -415,24 +365,11 @@ def main():
           trg_seg.set('id', "%s.%s.%s.%s" % (trg_man[1], trg_man[2], trg_man[3], trg_man[4]))
           trg_seg.set('start_char', trg_man[3])
           trg_seg.set('end_char', trg_man[4])
-          ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
-          ET.SubElement(trg_seg, "ORIG_RAW_TARGET").text = trg_origline
           trg_md5 = hashlib.md5(trg_origline.encode('utf-8')).hexdigest()
+          ET.SubElement(trg_seg, "FULL_ID_TARGET").text = trg_fullid
           ET.SubElement(trg_seg, "MD5_HASH_TARGET").text = trg_md5
-          ET.SubElement(trg_seg, "LRLP_TOKENIZED_TARGET").text = trg_tokline
-          ET.SubElement(trg_seg, "LRLP_POSTAG_TARGET").text = trg_posline
-          ET.SubElement(trg_seg, "AGILE_TOKENIZED_TARGET").text = trg_agiletokline
-          ET.SubElement(trg_seg, "AGILE_TOKENIZED_LC_TARGET").text = trg_agiletoklcline
-          # don't add morph info if there's nothing interesting
-          morphset = set(trg_morphline.split())
-          if len(morphset) == 1 and list(morphset)[0] == "none":
-            pass
-          else:
-            ET.SubElement(trg_seg,
-                          "LRLP_MORPH_TOKENIZED_TARGET").text = trg_morphtokline
-            ET.SubElement(trg_seg, "LRLP_MORPH_TARGET").text = trg_morphline
-
-
+          for dirname in inlines["trg"].keys():
+            ET.SubElement(trg_seg, keys["trg"][dirname]).text = inlines["trg"][dirname]
         xmlstr = ET.tostring(xroot, pretty_print=True, encoding='utf-8',
                              xml_declaration=False).decode('utf-8')
         outfile.write(xmlstr)

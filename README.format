@@ -12,12 +12,15 @@ ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
         ORIG_SEG_ID: segment id in initial ltf file (for non-found data) (needed for eval)
         ORIG_FILENAME: base name of the file where the data was originally found (needed for eval)
         ORIG_RAW_SOURCE: original form of segment. This canonical form is used as a reference by any annotations
+        ORIG_SOURCE: original form of segment, passed through utf8 cleaning and normalization scripts
         MD5_HASH_SOURCE: MD5 digest of the tokenized source. The data may contain duplicate segments, which we did not remove, in order to keep the context intact. This field can be used to efficiently detect duplicates.
-        LRLP_TOKENIZED_SOURCE: Tokenization as provided in the original LRLP.
+        LRLP_TOKENIZED_RAW_SOURCE: Tokenization as provided in the original LRLP.
+        LRLP_TOKENIZED_LC_RAW_SOURCE: Lowercased version of LRLP_TOKENIZED_RAW_SOURCE
+        LRLP_TOKENIZED_SOURCE: Tokenization as provided in the original LRLP, passed through utf8 cleaning and normalization scripts.
         LRLP_TOKENIZED_LC_SOURCE: Lowercased version of LRLP_TOKENIZED_SOURCE
-        CDEC_TOKENIZED_SOURCE: Tokenization formed by running ORIG_RAW_SOURCE through tokenize-anything script in cdec machine translation software.
+        CDEC_TOKENIZED_SOURCE: Tokenization formed by running ORIG_SOURCE through tokenize-anything script in cdec machine translation software.
         CDEC_TOKENIZED_LC_SOURCE: Lowercased version of CDEC_TOKENIZED_SOURCE
-        AGILE_TOKENIZED_SOURCE: Tokenization formed by running ORIG_RAW_SOURCE through agile tokenization script (only available in comparable)
+        AGILE_TOKENIZED_SOURCE: Tokenization formed by running ORIG_SOURCE through agile tokenization script (only available in comparable)
         AGILE_TOKENIZED_LC_SOURCE: Lowercased version of AGILE_TOKENIZED_SOURCE
         LRLP_MORPH_TOKENIZED_SOURCE: Tokenization based on morphological segmentation, if available. (may not exist if none available)
         LRLP_MORPH_SOURCE: Morphological analysis of words, if available. (may not exist if none available)
@@ -39,11 +42,12 @@ ELISA_LRLP_CORPUS: root node of the file. Includes language code as attribute
       TARGET: signifies the target component of the segment. Includes document-local segment id, start and end (inclusive, 0-based) char offsets of 'ORIG_RAW_SOURCE'
         FULL_ID_TARGET: target-side document id (usually similar to source-side id)
         ORIG_RAW_TARGET: original form of target segment. This canonical form is used as a reference by any annotations
+        ORIG_TARGET: original form of target segment, passed through utf8 cleaning and normalization scripts
         MD5_HASH_TARGET: MD5 digest of the tokenized target. The data may contain duplicate segments, which we did not remove, in order to keep the context intact. This field can be used to efficiently detect duplicates.
-        LRLP_TOKENIZED_TARGET: Tokenization as provided in the original LRLP.
+        LRLP_TOKENIZED_RAW_TARGET: Tokenization as provided in the original LRLP.
+        LRLP_TOKENIZED_LC_RAW_TARGET: Lowercased version of LRLP_TOKENIZED_RAW_TARGET 
+        LRLP_TOKENIZED_TARGET: Tokenization as provided in the original LRLP, passed through utf8 cleaning and normalization scripts
         LRLP_TOKENIZED_LC_TARGET: Lowercased version of LRLP_TOKENIZED_TARGET 
-        AGILE_TOKENIZED_TARGET: Tokenization formed by running ORIG_RAW_TARGET through agile tokenization script
+        AGILE_TOKENIZED_TARGET: Tokenization formed by running ORIG_TARGET through agile tokenization script
         AGILE_TOKENIZED_LC_TARGET: Lowercased version of AGILE_TOKENIZED_TARGET
-        LRLP_MORPH_TOKENIZED_TARGET: Tokenization based on morphological segmentation, if available. (NOTE: should be removed; this never exists!)
-        LRLP_MORPH_TARGET: POS tags of morphemes, if available, otherwise 'none' (NOTE: should be removed: this never exists!)
         LRLP_POSTAG_TARGET: Coarse POS tags such as "punct", "word", "twitter", "unknown", "url", "number", "email", or “numstring"

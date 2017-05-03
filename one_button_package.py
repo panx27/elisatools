@@ -11,6 +11,13 @@ from lputil import Step, make_action
 from subprocess import check_output, check_call, CalledProcessError
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
+def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
+  ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
+  group = parser.add_mutually_exclusive_group()
+  dest = arg if dest is None else dest
+  group.add_argument('--%s' % arg, dest=dest, action='store_true', default=default, help=help)
+  group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
+
 
 def main():
   steps = []
@@ -18,34 +25,36 @@ def main():
   # make_mono_release.py
   steps.append(Step('make_mono_release.py',
                     help="package mono flat data"))
-  # TODO: lexicon, audio, readme, tarball
-  for step in steps:
-    stepsbyname[step.prog] = step
 
   # package up audio and ephemera
   steps.append(Step('make_tarball.py',
+                    name="tar-ephemera",
                     help="package ephemera"))
-  stepsbyname["tar-ephemera"]=steps[-1]
+
 
   # make_parallel_release.py
   for i in ('train', 'dev', 'test', 'syscomb', 'eval', 'rejected'):
     steps.append(Step('make_parallel_release.py',
+                      name="parallel-{}".format(i),
                       help="package parallel flat %s data" % i))
-    stepsbyname["parallel-%s" % i]=steps[-1]
 
   # using make_mono to do comparable
   steps.append(Step('make_mono_release.py',
-                      help="package src side of comparable data"))
-  stepsbyname["comparable-src"]=steps[-1]
+                    name="comparable-src",
+                    help="package src side of comparable data"))
 
   steps.append(Step('make_mono_release.py',
-                      help="package trg side of comparable data"))
-  stepsbyname["comparable-trg"]=steps[-1]
+                    name="comparable-trg",
+                    help="package trg side of comparable data"))
 
   # package up everything
   steps.append(Step('make_tarball.py',
+                    name="tar-all",
                     help="final package"))
-  stepsbyname["tar-all"]=steps[-1]
+
+
+  for step in steps:
+    stepsbyname[step.name] = step
 
   parser = argparse.ArgumentParser(description="Process a flattened LRLP into xml tarballed release format",
                                    formatter_class= \
@@ -56,6 +65,7 @@ def main():
   parser.add_argument("--year", "-yr", type=int, default=1, help='year of release')
   parser.add_argument("--part", "-pt", type=int, default=1, help='part of release')
   parser.add_argument("--noeval", action='store_true', default=False, help="don't build an eval set")
+  addonoffarg(parser, "mono", help="include mono data", default=True)
   parser.add_argument("--root", "-r",
                       help='path to where the flat extraction is/output belongs')
   parser.add_argument("--start", "-s", type=int, default=0,
@@ -81,28 +91,31 @@ def main():
   # MONO RELEASE
   psmoutpath = os.path.join(rootdir, 'psm.ann')
   entityoutpath = os.path.join(rootdir, 'entity.ann')
-  monooutdir = os.path.join(rootdir, 'mono', 'extracted')
-  monoxml = os.path.join(rootdir, 'elisa.%s.y%dr%d.v%d.xml.gz' % \
-                         (language, args.year, args.part, args.version))
-  monostatsfile = os.path.join(rootdir, 'elisa.%s.y%dr%d.v%d.stats' % \
-                         (language, args.year, args.part, args.version))
-  finalitems.append(monostatsfile)
-  paradir = os.path.join(rootdir, 'parallel')
-  finalitems.append(monoxml)
+  if args.mono:
+    monooutdir = os.path.join(rootdir, 'mono', 'extracted')
+    monoxml = os.path.join(rootdir, 'elisa.%s.y%dr%d.v%d.xml.gz' % \
+                           (language, args.year, args.part, args.version))
+    monostatsfile = os.path.join(rootdir, 'elisa.%s.y%dr%d.v%d.stats' % \
+                           (language, args.year, args.part, args.version))
+    finalitems.append(monostatsfile)
+    paradir = os.path.join(rootdir, 'parallel')
+    finalitems.append(monoxml)
 
-  manarg = ' '.join([re.sub('.manifest', '', f) for f in os.listdir \
-                     (monooutdir)if re.match('(.+)\.manifest', f)])
-  monoerr = os.path.join(rootdir, 'make_mono_release.err')
-  stepsbyname["make_mono_release.py"].argstring = " --no-ext -r %s -l %s -c %s -s %s" % \
-                                                  (monooutdir, language, manarg, monostatsfile)
-  if os.path.exists(entityoutpath):
-    stepsbyname["make_mono_release.py"].argstring+= (" -a "+entityoutpath)
-  if os.path.exists(psmoutpath):
-    stepsbyname["make_mono_release.py"].argstring+= (" -p "+psmoutpath)
-  stepsbyname["make_mono_release.py"].argstring+= (" --paradir %s | gzip > %s" % \
-                                                         (paradir, monoxml))
-  stepsbyname["make_mono_release.py"].stderr = monoerr
-
+    manarg = ' '.join([re.sub('.manifest', '', f) for f in os.listdir \
+                       (monooutdir)if re.match('(.+)\.manifest', f)])
+    monoerr = os.path.join(rootdir, 'make_mono_release.err')
+    stepsbyname["make_mono_release.py"].argstring = " --no-ext -r %s -l %s -c %s -s %s" % \
+                                                    (monooutdir, language, manarg, monostatsfile)
+    if os.path.exists(entityoutpath):
+      stepsbyname["make_mono_release.py"].argstring+= (" -a "+entityoutpath)
+    if os.path.exists(psmoutpath):
+      stepsbyname["make_mono_release.py"].argstring+= (" -p "+psmoutpath)
+    stepsbyname["make_mono_release.py"].argstring+= (" --paradir %s | gzip > %s" % \
+                                                           (paradir, monoxml))
+    stepsbyname["make_mono_release.py"].stderr = monoerr
+  else:
+    stepsbyname["make_mono_release.py"].disable()
+    
   # EPHEMERA PACKAGE
   ephemerapack = os.path.join(rootdir, 'elisa.%s.additional.y%dr%d.v%d.tgz' % \
                                                         (language, args.year,
@@ -171,8 +184,12 @@ def main():
     stepsbyname["comparable-src"].disable()
     stepsbyname["comparable-trg"].disable()
   # FINAL PACKAGE
-  finalpack = os.path.join(rootdir, 'elisa.%s.package.y%dr%d.v%d.tgz' % \
+  finalpack = os.path.join(rootdir, 'elisa.%s.package.y%dr%d.v%d' % \
                            (language, args.year, args.part, args.version))
+  if not args.mono:
+    finalpack +=".nomono"
+  finalpack +=".tgz"
+  
   finalpackprefix = os.path.basename(finalpack)[:-4]
   stepsbyname["tar-all"].argstring = "-p %s -i %s -o %s" % \
                                      (finalpackprefix, ' '.join(finalitems), finalpack)

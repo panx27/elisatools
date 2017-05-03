@@ -36,6 +36,11 @@ def main():
                     help="get flat form of bilingual lexicon",
                     abortOnFail=False))
 
+  # clean_lexicon
+  steps.append(Step('clean.sh',
+                    name="clean_lexicon",
+                    help="wildeclean/nfkc lexicon file"))
+
   # normalize_lexicon.py
   steps.append(Step('normalize_lexicon.py',
                     help="heuristically convert lexicon into something more machine readable",
@@ -43,6 +48,7 @@ def main():
 
   # relocate lexicon
   steps.append(Step('cp', progpath='/bin',
+                    name="relocate_lexicon",
                     help="move the lexicon stuff into ephemera",
                     abortOnFail=False))
 
@@ -85,7 +91,7 @@ def main():
 
   stepsbyname = {}
   for step in steps:
-    stepsbyname[step.prog] = step
+    stepsbyname[step.name] = step
 
   parser = argparse.ArgumentParser(description="Process a LRLP into flat format",
                                    formatter_class= \
@@ -205,22 +211,27 @@ def main():
     #lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.xml')
     lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
     lexiconoutdir = os.path.join(rootdir, language, 'lexicon')
+    lexiconrawoutfile = os.path.join(lexiconoutdir, 'lexicon.raw')
     lexiconoutfile = os.path.join(lexiconoutdir, 'lexicon')
     lexiconnormoutfile = os.path.join(lexiconoutdir, 'lexicon.norm')
 
     lexiconerr = os.path.join(rootdir, language, 'extract_lexicon.err')
+    lexiconcleanerr = os.path.join(rootdir, language, 'clean_lexicon.err')
     lexiconnormerr = os.path.join(rootdir, language, 'normalize_lexicon.err')
     # lexicon v1.5 for y2
     stepsbyname["extract_lexicon.py"].argstring = " -v 1.5 -i %s -o %s" % \
-                                                  (lexiconinfile, lexiconoutfile)
+                                                  (lexiconinfile, lexiconrawoutfile)
     stepsbyname["extract_lexicon.py"].stderr = lexiconerr
+
+    stepsbyname["clean_lexicon"].argstring = "{} {}".format(lexiconrawoutfile, lexiconoutfile)
+    stepsbyname["clean_lexicon"].stderr = lexiconcleanerr
 
     stepsbyname["normalize_lexicon.py"].argstring = "-i %s -o %s" % \
                                                   (lexiconoutfile, lexiconnormoutfile)
     stepsbyname["normalize_lexicon.py"].stderr = lexiconnormerr
 
 
-    stepsbyname["cp"].argstring = "-r %s %s" % (lexiconoutdir, ephemdir)
+    stepsbyname["relocate_lexicon"].argstring = "-r %s %s" % (lexiconoutdir, ephemdir)
 
     # PSM
     # just copy from previous or skip if no mono

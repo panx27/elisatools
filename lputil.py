@@ -650,8 +650,9 @@ def extract_lines(s, t, sxml=True, txml=True):
 class Step:
   def __init__(self, prog, progpath=scriptdir, argstring="", stdin=None,
                stdout=None, stderr=None, help=None, call=check_call,
-               abortOnFail=True, scriptbin=None):
+               abortOnFail=True, scriptbin=None, name=None):
     self.prog = prog
+    self.name = self.prog if name is None else name
     self.scriptbin = scriptbin
     self.help = help
     self.progpath = progpath
@@ -713,7 +714,7 @@ def make_action(steps):
   class customAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
       for stepnum, step in enumerate(steps):
-        sys.stderr.write("%d: %s" % (stepnum, step.prog))
+        sys.stderr.write("%d: %s (%s)" % (stepnum, step.name, step.prog))
         if step.help is not None:
           sys.stderr.write(" = " + step.help)
         sys.stderr.write("\n")
