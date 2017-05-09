@@ -705,7 +705,7 @@ class Step:
       if self.stderr is not None:
         kwargs["stderr"].close()
         for line in open(self.stderr, 'r'):
-          self.stderr.write(line)
+          sys.stderr.write(line)
       if self.abortOnFail:
         sys.exit(1)
     return retval

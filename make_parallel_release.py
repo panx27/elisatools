@@ -144,8 +144,10 @@ def main():
       # open a bunch of file handles. later on, add their contents to xml
       # also indicate whether file is for src, trg, or both
       name_dir_key = [
-        ('orig', 'original', 'ORIG_RAW', 'both'),
-        ('tok', 'tokenized', 'LRLP_TOKENIZED', 'both'),
+        ('orig', 'raw.original', 'ORIG_RAW', 'both'),
+        ('cleanorig', 'original', 'ORIG', 'both'),
+        ('tok', 'raw.tokenized', 'LRLP_TOKENIZED_RAW', 'both'),
+        ('cleantok', 'tokenized', 'LRLP_TOKENIZED', 'both'),
         ('morph', 'morph', 'LRLP_MORPH', 'both'),
         ('morphtok', 'morph-tokenized', 'LRLP_MORPH_TOKENIZED', 'both'),
         ('pos', 'pos', 'LRLP_POSTAG', 'both'),

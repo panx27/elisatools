@@ -6,7 +6,7 @@ if sys.version_info[0] == 2:
   from itertools import izip
 else:
   izip = zip
-from collections import defaultdict as dd
+from collections import defaultdict as dd, Counter
 import re
 import os.path
 import gzip
@@ -34,14 +34,16 @@ def prepfile(fh, code):
   return ret
 
 
-def filterlines(ifh, seqs, lows, highs, keepfh, rejectfh):
-  ''' pair ifh and seqs. if low < seq < high for any, then write to keepfh, else write to rejectfh '''
-  for line, *vals in zip(ifh, *seqs):
+def filterlines(ifh, blackballs, seqs, lows, highs, keepfh, rejectfh):
+  ''' pair ifh and seqs. if low < seq < high for all, then write to keepfh, else write to rejectfh '''
+  for ln, (line, bb, *vals) in enumerate(zip(ifh, blackballs, *seqs)):
     doreject=True
-    for val, low, high in zip(vals, lows, highs):
-      if val > low and val < high:
-        doreject=False
-        break
+    if not bb:
+      for val, low, high in zip(vals, lows, highs):
+        if val > low and val < high:
+          doreject=False
+          break
+    #sys.stderr.write("{} {} {} vs {} to {}: {}\n".format(ifh.name, ln, vals, lows, highs, doreject))
     fh = rejectfh if doreject else keepfh
     fh.write(line)
 
@@ -51,6 +53,17 @@ def countfiles(dir):
   for _, _, files in os.walk(dir):
     ret += len(files)
   return ret
+
+def blackball(fline, eline):
+  ''' rules for eliminating lines '''
+  return len(fline)==0 or \
+    len(eline) == 0 or \
+    len(fline.strip().split()) == 0 or \
+    len(eline.strip().split()) == 0 or \
+    fline.startswith("#untranslated") or \
+    eline.startswith("#untranslated") or \
+    fline.startswith("#Untranslated") or \
+    eline.startswith("#Untranslated")
 
 def main():
   parser = argparse.ArgumentParser(description="filter extracted parallel data directory",
@@ -85,6 +98,7 @@ def main():
   fmanifests = []
   ratios = dd(list)
   deltas = dd(list)
+  blackballs = dd(list)
   genres = set()
   for eman in engmanifests:
     ebase = os.path.basename(eman)
@@ -105,10 +119,18 @@ def main():
     for ln, (eline, fline) in enumerate(izip(eorig, forig)):
       ewords = eline.strip().split()
       fwords = fline.strip().split()
-      ratios[genre].append((len(ewords)+0.0)/(len(fwords)+0.0))
+      blackballs[genre].append(blackball(eline, fline))
       deltas[genre].append(abs(len(ewords)-len(fwords)))
+      try:
+        ratios[genre].append((len(ewords)+0.0)/(len(fwords)+0.0))
+      except ZeroDivisionError:
+        sys.stderr.write("0-length foreign sentence at line {} of {}\n".format(ln+1, forig.name))
+        ratios[genre].append(0.)
+
   allratios = np.concatenate(list(map(np.array, ratios.values())), 0)
   alldeltas = np.concatenate(list(map(np.array, deltas.values())), 0)
+  allblackballs = np.concatenate(list(map(np.array, blackballs.values())), 0)
+  bbrejectsize = Counter(allblackballs)[True]
   ratiomean = np.mean(allratios)
   ratiostd = np.std(allratios)
   lowratio = ratiomean-(args.stds*ratiostd)
@@ -121,12 +143,13 @@ def main():
   highdelta = deltamean+(args.stds*deltastd)
   rejectdeltasize = len(list(filter(lambda x: x<lowdelta or x > highdelta, alldeltas)))
 
-  sys.stderr.write("Rejecting %d of %d lines (%f %%) with ratio below %f or above %f\n" % (rejectratiosize, len(allratios), 100.0*rejectratiosize/len(allratios), lowratio, highratio))
-  sys.stderr.write("Rejecting %d of %d lines (%f %%) with delta below %f or above %f\n" % (rejectdeltasize, len(alldeltas), 100.0*rejectdeltasize/len(alldeltas), lowdelta, highdelta))
+  sys.stderr.write("Could be rejecting %d of %d lines (%f %%) with ratio below %f or above %f\n" % (rejectratiosize, len(allratios), 100.0*rejectratiosize/len(allratios), lowratio, highratio))
+  sys.stderr.write("Could be rejecting %d of %d lines (%f %%) with delta below %f or above %f\n" % (rejectdeltasize, len(alldeltas), 100.0*rejectdeltasize/len(alldeltas), lowdelta, highdelta))
 
   reject_ratio_delta_size = len(list(filter(lambda x: (x[0]<lowratio or x[0]>highratio) and (x[1]<lowdelta or x[1]>highdelta), zip(allratios, alldeltas))))
-  sys.stderr.write("Rejecting %d of %d lines (%f %%) meeting both delta and ratio criteria\n" % (reject_ratio_delta_size, len(alldeltas), 100.0*reject_ratio_delta_size/len(alldeltas)))
+  sys.stderr.write("Actually rejecting %d of %d lines (%f %%) meeting both delta and ratio criteria\n" % (reject_ratio_delta_size, len(alldeltas), 100.0*reject_ratio_delta_size/len(alldeltas)))
 
+  sys.stderr.write("Also rejecting %d of %d lines (%f %%) for blackball criteria\n" % (bbrejectsize, len(allblackballs), 100.0*bbrejectsize/len(allblackballs)))
   # iterate through manifests and all files and filter per ratio and delta
   for manset in (engmanifests, fmanifests):
     for man in manset:
@@ -136,13 +159,14 @@ def main():
       sys.stderr.write("genre %s\n" % genre)
       rats = ratios[genre]
       delts = deltas[genre]
+      bbs = blackballs[genre]
       reject_ratio_delta_size = len(list(filter(lambda x: (x[0]<lowratio or x[0]>highratio) and (x[1]<lowdelta or x[1]>highdelta), zip(rats, delts))))
       #rejectratiosize = len(list(filter(lambda x: x<lowratio or x > highratio, rats)))
       sys.stderr.write("rejecting %d of %d\n" % (reject_ratio_delta_size, len(rats)))
       infile = prepfile(open(man, 'r'), 'r')
       filterfile = prepfile(open(os.path.join(filterdir, base), 'w'), 'w')
       remainfile = prepfile(open(os.path.join(remaindir, base), 'w'), 'w')
-      filterlines(infile, (rats, delts), (lowratio,lowdelta), (highratio,highdelta), filterfile, remainfile)
+      filterlines(infile, bbs, (rats, delts), (lowratio,lowdelta), (highratio,highdelta), filterfile, remainfile)
 
   # for directories in extracted
   #http://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
@@ -164,7 +188,7 @@ def main():
           infile = prepfile(open(infilename, 'r'), 'r')
           filterfile = prepfile(open(os.path.join(filtersubdir, base), 'w'), 'w')
           remainfile = prepfile(open(os.path.join(remainsubdir, base), 'w'), 'w')
-          filterlines(infile, (ratios[genre], deltas[genre]), (lowratio,lowdelta), (highratio,highdelta), filterfile, remainfile)
+          filterlines(infile, blackballs[genre], (ratios[genre], deltas[genre]), (lowratio,lowdelta), (highratio,highdelta), filterfile, remainfile)
         else:
           sys.stderr.write("%s does not exist\n" % infilename)
 

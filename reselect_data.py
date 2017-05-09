@@ -11,6 +11,7 @@ import os.path
 from lputil import mkdir_p, touch
 from subprocess import check_output, STDOUT, CalledProcessError
 from shutil import copy
+import shlex
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 def runselection(prefix, idfile, catfile, remainder, filetypes, srclang, indir, outdir):
@@ -25,7 +26,8 @@ def runselection(prefix, idfile, catfile, remainder, filetypes, srclang, indir, 
             continue
           cmd = "%s/categorize.py -i %s -d %s -c %s -p %s -P %s -r %s" % (scriptdir, flatfile, idfile, catfile, outdir, filetype, remainder)
           print("Running "+cmd)
-          cmd_output=check_output(cmd, stderr=STDOUT, shell=True)
+          cmd_output=check_output(shlex.split(cmd), stderr=STDOUT)
+          print(cmd_output)
   except CalledProcessError as exc:
     print("Status : FAIL", exc.returncode, exc.output)
     sys.exit(1)
