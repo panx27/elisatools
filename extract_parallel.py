@@ -69,11 +69,7 @@ def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbag
 
   (stpsrc, stptrg) = (trg, src) if swap else (src, trg)
   for m in stp(path, src=stpsrc, trg=stptrg, xml=True, tweet=tweet):
-
-    if not tweet:
-      sdata, tdata = el(*m)
-    else:
-      sdata, tdata = el(*m, sxml=False, txml=True)
+    sdata, tdata = el(*m)
 
     # found data sometimes seems to require swap behavior
     if swap:
@@ -106,62 +102,28 @@ def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbag
           garbagefhs[fh].write(line)
     
     ### Write manifest
-    if not tweet:
-      try:
-        for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]),
-                                     (list(zip(sdata["DOCID"], sdata["SEGID"],
-                                          sdata["START"], sdata["END"])),
-                                      list(zip(tdata["DOCID"], tdata["SEGID"],
-                                          tdata["START"], tdata["END"])))):
-          for tup in compress(tupgen, garbagemask):
-            fh.write("\t".join(map(str, (fname,)+tup))+"\n")
-          if not garbagedisabled:
-            for tup in compress(tupgen, goodmask):
-              garbagefhs[fh].write("\t".join(map(str, (fname,)+tup))+"\n")
-      except:
-        sys.stderr.write(src_man_fh.name)
-        #sys.stderr.write(fname)
-        raise
-    else:
-      # Source
-      fh = src_man_fh
-      field = sdata["DOCID"]
-      for line in compress(field, garbagemask):
-        line = line.strip()
-        fh.write('%s\t%s\n' % (line,
-#                               line))
-                               re.search('.+/(\S*?)\.', line).group(1)))
-      if not garbagedisabled:
-        for line in compress(field, goodmask):
-          line = line.strip()
-          garbagefhs[fh].write('%s\t%s\n' % (line,
-  #                                           line))
-                                 re.search('.+/(\S*?)\.', line).group(1)))
 
-      # Target
-      try:
-        fh = trg_man_fh
-        fname = m[1]
-        for tup in compress(list(zip(tdata["DOCID"], tdata["SEGID"],
-                                     tdata["START"], tdata["END"])), garbagemask):
-            fh.write("\t".join(map(str, (fname,)+tup))+"\n")
+    try:
+      for fh, fname, tupgen in zip((src_man_fh, trg_man_fh), (m[0], m[1]),
+                                   (list(zip(sdata["DOCID"], sdata["SEGID"],
+                                        sdata["START"], sdata["END"])),
+                                    list(zip(tdata["DOCID"], tdata["SEGID"],
+                                        tdata["START"], tdata["END"])))):
+        for tup in compress(tupgen, garbagemask):
+          fh.write("\t".join(map(str, (fname,)+tup))+"\n")
         if not garbagedisabled:
-          for tup in compress(list(zip(tdata["DOCID"], tdata["SEGID"],
-                                       tdata["START"], tdata["END"])), goodmask):
-              garbagefhs[fh].write("\t".join(map(str, (fname,)+tup))+"\n")
-      except:
-        sys.stderr.write(fname)
-        raise
+          for tup in compress(tupgen, goodmask):
+            garbagefhs[fh].write("\t".join(map(str, (fname,)+tup))+"\n")
+    except:
+      sys.stderr.write(src_man_fh.name)
+      #sys.stderr.write(fname)
+      raise
 
     ### Write tokenized, morph tokenized, pos tag
-    if not tweet:
-      zipset = zip(((outfiles["src"]["tok"], outfiles["src"]["morphtok"], outfiles["src"]["morph"], outfiles["src"]["pos"]),
-                    (outfiles["trg"]["tok"], outfiles["trg"]["morphtok"], outfiles["trg"]["morph"], outfiles["trg"]["pos"])),
-                   (sdata, tdata))
-    else:
-      # no source tok/morph info in tweets
-      zipset = zip(((outfiles["trg"]["tok"], outfiles["trg"]["morphtok"], outfiles["trg"]["morph"], outfiles["trg"]["pos"]),),
-                   (tdata,))
+
+    zipset = zip(((outfiles["src"]["tok"], outfiles["src"]["morphtok"], outfiles["src"]["morph"], outfiles["src"]["pos"]),
+                  (outfiles["trg"]["tok"], outfiles["trg"]["morphtok"], outfiles["trg"]["morph"], outfiles["trg"]["pos"])),
+                 (sdata, tdata))
 
     for fhset, data in zipset:
       for fh, field in zip(fhset, ("TOK", "MORPHTOK", "MORPH", "POS")):
@@ -256,8 +218,8 @@ def main():
                       help="subdirectory for morphological files")
   parser.add_argument("--possubdir", default="pos",
                       help="subdirectory for pos tag files")
-  parser.add_argument("--extwtdir", "-et", default=None,
-                      help="directory of extracted tweet rsd files")
+  # parser.add_argument("--extwtdir", "-et", default=None,
+  #                     help="directory of extracted tweet rsd files")
   parser.add_argument("--agiletokpath", default=os.path.join(scriptdir, 'agiletok.sh'),
                       help="path to agile tokenizer binary")
   parser.add_argument("--cdectokpath", default=os.path.join(scriptdir, 'cdectok.sh'),
@@ -339,12 +301,10 @@ def main():
   printout("found.generic", args.rootdir, *commonargs, 
            stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences, swap=True)
 
-  # Tweet data
-  if args.extwtdir is not None and os.path.exists(args.extwtdir):
-    move_extracted_tweet(os.path.join(*datadirs), args.src, args.extwtdir)
-    printout("fromsource.tweet",
-             os.path.join(*(datadirs+["from_%s" % args.src,])), *commonargs,
-             tweet=True)
+  # # Tweet data
+  printout("fromsource.tweet",
+           os.path.join(*(datadirs+["from_%s" % args.src,])), *commonargs,
+           tweet=True)
 
 if __name__ == '__main__':
   main()

@@ -58,6 +58,13 @@ def main():
                     "and full internet",
                     abortOnFail=False))
 
+  steps.append(Step('ldc_tok.py',
+                    help="run ldc tokenizer on tweets "))
+
+  # Tokenize tweets
+  # Replace fake tweets with tokenized and validate
+
+  
   # Use .ltf instead of .rsd for tweet translations
   # # ltf2rsd.perl
   # steps.append(Step('ltf2rsd.perl',
@@ -163,8 +170,10 @@ def main():
     # tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing', 'bin')
     # and again
     tweetprogpath = os.path.join(expdir, 'tools', 'ldclib', 'bin')
-    tweetdir = os.path.join(rootdir, language, 'tweet')
+    tweetdir = os.path.join(rootdir, language, 'tweet', 'rsd')
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
+    # TODO: can look for a match to this or even use an archived backup if needed
+    tokparam = os.path.join(expdir, 'tools', 'tokenization_parameters.v4.0.yaml')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
 
     # just copy from previous or skip if no mono
@@ -172,7 +181,7 @@ def main():
       if args.previous is None:
         stepsbyname["get_tweet_by_id.rb"].disable()
       else:
-        oldtweetdir = os.path.join(args.previous, 'tweet')
+        oldtweetdir = os.path.join(args.previous, 'tweet', 'rsd') #WARNING: old versions of data won't have this structure
         stepsbyname["get_tweet_by_id.rb"].progpath = "/bin"
         stepsbyname["get_tweet_by_id.rb"].prog = "cp"
         stepsbyname["get_tweet_by_id.rb"].argstring = "-r {} {}".format(oldtweetdir, tweetdir)
@@ -186,6 +195,13 @@ def main():
       else:
         stepsbyname["get_tweet_by_id.rb"].disable()
 
+    # TOKENIZE AND RELOCATE TWEETS
+    stepsbyname["ldc_tok.py"].argstring = "--ruby {ruby} --dldir {tweetdir} --exec {tokexec} --param {tokparam}".format(
+      ruby=args.ruby,
+      tweetdir=tweetdir,
+      tokexec=os.path.join(tweetprogpath, 'token_parse.rb'),
+      tokparam=tokparam)
+    stepsbyname["ldc_tok.py"].stderr = os.path.join(rootdir, language, 'ldc_tok.err')
 
     # EPHEMERA
     ephemdir = os.path.join(rootdir, language, 'ephemera')
