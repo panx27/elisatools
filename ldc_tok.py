@@ -51,8 +51,9 @@ def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
 
 def tokrsd(dldir, ruby, exec, param, workdir):
   ''' create ltfs from rsds '''
-  rsddir = os.path.join(dldir, 'rsd')
-  ltfdir = os.path.join(dldir, 'ltf')
+  rsddir = dldir
+  parent = os.path.dirname(rsddir)
+  ltfdir = os.path.join(parent, 'ltf')
   if not os.path.exists(rsddir):
     sys.stderr.write("Directories not set up properly; couldn't find {}\n".format(rsddir))
     sys.exit(1)
@@ -67,7 +68,7 @@ def tokrsd(dldir, ruby, exec, param, workdir):
 
 def validate(dldir, lrlpdir, logfile, args):
   ''' compare files about to be replaced '''
-  tweetdir = os.path.join(dldir, 'ltf')
+  tweetdir = dldir
   if not os.path.exists(tweetdir):
     sys.stderr.write("Directories not set up properly; couldn't find {}\n".format(tweetdir))
     sys.exit(1)
@@ -123,11 +124,12 @@ def validate(dldir, lrlpdir, logfile, args):
 def relocate_ltf(dldir, lrlpdir, logfile):
   ''' relocate files and replace them '''
   # source of the new files
-  repldir = os.path.join(dldir, 'ltf')
+  parent = os.path.dirname(dldir)
+  repldir = os.path.join(parent, 'ltf')
   if not os.path.exists(repldir):
     sys.stderr.write("Directories not set up properly; couldn't find {}\n".format(repldir))
     sys.exit(1)
-  bkpdir = os.path.join(dldir, 'ltf.retired')
+  bkpdir = os.path.join(parent, 'ltf.retired')
   mkdir_p(bkpdir)
   for file in os.listdir(lrlpdir):
     if not is_sn(file) or not file.endswith(".ltf.xml"):
@@ -149,7 +151,7 @@ def main():
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   addonoffarg(parser, 'debug', help="debug mode", default=False)
   parser.add_argument("--ruby", "-r", default="/Users/jonmay/.rvm/rubies/ruby-2.3.0/bin/ruby", help="flavor of ruby")
-  parser.add_argument("--dldir", "-d", required=True, help="parent of the 'rsd' directory (probably 'tweet'); an 'ltf' will be built alongside it")
+  parser.add_argument("--dldir", "-d", required=True, help="rsd directory containing original tweets (probably subdir of 'tweet'; an 'ltf' will be built alongside it")
   parser.add_argument("--lrlpdir", "-l", required=True, help="the 'ltf' directory in an expanded lrlp that contains anonymized tweet files (usu. data/translation/from_xxx/xxx/ltf for lang xxx)")
   parser.add_argument("--exec", "-e", required=True, help="path to ldc tokenizer; usually in tools/ldclib/bin/token_parse.rb of the lrlp")
   parser.add_argument("--param", "-p", required=True, help="path to ldc tokenizer parameter set; usually tools/tokenization_parameters.v4.0.yaml in the lrlp")

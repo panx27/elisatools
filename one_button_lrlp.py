@@ -61,16 +61,6 @@ def main():
   steps.append(Step('ldc_tok.py',
                     help="run ldc tokenizer on tweets "))
 
-  # Tokenize tweets
-  # Replace fake tweets with tokenized and validate
-
-  
-  # Use .ltf instead of .rsd for tweet translations
-  # # ltf2rsd.perl
-  # steps.append(Step('ltf2rsd.perl',
-  #                   help="get flat form of tweet translations",
-  #                   abortOnFail=False))
-
   # extract_psm_annotation.py
   steps.append(Step('extract_psm_annotation.py',
                     help="get annotations from psm files into psm.ann",
@@ -196,11 +186,14 @@ def main():
         stepsbyname["get_tweet_by_id.rb"].disable()
 
     # TOKENIZE AND RELOCATE TWEETS
-    stepsbyname["ldc_tok.py"].argstring = "--ruby {ruby} --dldir {tweetdir} --exec {tokexec} --param {tokparam}".format(
+    lrlpdir=os.path.join(expdir, 'data', 'translation', 'from_{}'.format(language), language, 'ltf')
+    stepsbyname["ldc_tok.py"].argstring = "--ruby {ruby} --dldir {tweetdir} --lrlpdir {lrlpdir} --exec {tokexec} --param {tokparam} --outfile {outfile}".format(
       ruby=args.ruby,
       tweetdir=tweetdir,
+      lrlpdir=lrlpdir,
       tokexec=os.path.join(tweetprogpath, 'token_parse.rb'),
-      tokparam=tokparam)
+      tokparam=tokparam,
+      outfile=os.path.join(rootdir, language, 'ldc_tok.stats'))
     stepsbyname["ldc_tok.py"].stderr = os.path.join(rootdir, language, 'ldc_tok.err')
 
     # EPHEMERA
@@ -279,8 +272,8 @@ def main():
     # PARALLEL
     paralleloutdir = os.path.join(rootdir, language, 'parallel', 'extracted')
     parallelerr = os.path.join(rootdir, language, 'extract_parallel.err')
-    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s -et %s" % \
-      (expdir, paralleloutdir, language, tweetdir)
+    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s" % \
+      (expdir, paralleloutdir, language)
     stepsbyname["extract_parallel.py"].stderr = parallelerr
 
     filteroutdir = os.path.join(rootdir, language, 'parallel', 'filtered')
