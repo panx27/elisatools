@@ -144,36 +144,31 @@ def main():
   outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
   outfile.write('<!DOCTYPE ELISA_LRLP_CORPUS SYSTEM "elisa.lrlp.v1.1.dtd">\n')
   outfile.write('<ELISA_LRLP_CORPUS source_language="%s">\n' % args.lang)
+
+  pairs = [    (os.path.join(args.rootdir, "%s.manifest" ),"na"),
+               (os.path.join(args.rootdir, "raw.original", "%s.flat" ), "ORIG_RAW_SOURCE"),
+               (os.path.join(args.rootdir, "original", "%s.flat" ), "ORIG_SOURCE"),
+               (os.path.join(args.rootdir, "raw.tokenized", "%s.flat" ), "LRLP_TOKENIZED_RAW_SOURCE"),
+               (os.path.join(args.rootdir, "tokenized", "%s.flat" ), "LRLP_TOKENIZED_SOURCE"),
+               (os.path.join(args.rootdir, "morph-tokenized", "%s.flat" ), "LRLP_MORPH_TOKENIZED_SOURCE"),
+               (os.path.join(args.rootdir, "morph", "%s.flat" ), "LRLP_MORPH_SOURCE"),
+               (os.path.join(args.rootdir, "pos", "%s.flat" ), "LRLP_POSTAG_SOURCE"),
+             ]
+  if args.ext:
+    pairs.extend([
+      (os.path.join(args.rootdir,args.exttokdir, "%s.flat" ), "%s_TOKENIZED_SOURCE" % args.exttokprefix),
+      (os.path.join(args.rootdir, args.exttokdir, "%s.flat.lc" ), "%s_TOKENIZED_LC_SOURCE" % args.exttokprefix)
+    ])
+
   for corpus in args.corpora:
     corpus = corpus.replace('.manifest', '')
     filelist = []
     labellist = []
-    # note: manifest and orig lines are specially treated and identified
-    filelist.append(open(os.path.join(args.rootdir, "%s.manifest" % corpus)))
-    labellist.append("na") # dummy
-    filelist.append(open(os.path.join(args.rootdir,
-                                      "original", "%s.flat" % corpus)))
-    labellist.append("ORIG_RAW_SOURCE")
-    filelist.append(open(os.path.join(args.rootdir,
-                                      "tokenized", "%s.flat" % corpus)))
-    labellist.append("LRLP_TOKENIZED_SOURCE")
-    if args.ext:
-      filelist.append(open(os.path.join(args.rootdir,args.exttokdir,
-                                        "%s.flat" % corpus)))
-      labellist.append("%s_TOKENIZED_SOURCE" % args.exttokprefix)
-      filelist.append(open(os.path.join(args.rootdir, args.exttokdir,
-                                        "%s.flat.lc" % corpus)))
-      labellist.append("%s_TOKENIZED_LC_SOURCE" % args.exttokprefix)
-    
-    filelist.append(open(os.path.join(args.rootdir, "morph-tokenized",
-                                     "%s.flat" % corpus)))
-    labellist.append("LRLP_MORPH_TOKENIZED_SOURCE")
-    filelist.append(open(os.path.join(args.rootdir, "morph",
-                                  "%s.flat" % corpus)))
-    labellist.append("LRLP_MORPH_SOURCE")
-    filelist.append(open(os.path.join(args.rootdir, "pos",
-                                      "%s.flat" % corpus)))
-    labellist.append("LRLP_POSTAG_SOURCE")
+    for unfile, label in pairs:
+      file = unfile % corpus
+      if os.path.exists(file):
+        filelist.append(open(file))
+        labellist.append(label)
     lastfullid = None
     for lines in zip(*filelist):
       manline = lines[0]

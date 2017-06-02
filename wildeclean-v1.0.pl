@@ -197,7 +197,11 @@ while (<>) {
       $result .= $s;
       $s = $result;
    }
-
+   # no empties
+   if ($s =~ /^\s+$/){
+       $s = "_\n";
+       &register_change("NOZERO", "empty to _") if $report_changes_p;
+   }
    print $s;
 }
 

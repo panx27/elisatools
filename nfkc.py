@@ -35,7 +35,7 @@ def prepfile(fh, code):
 def main():
   parser = argparse.ArgumentParser(description="nfc normalization of data",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="input file")
+  parser.add_argument("--infile", "-i", nargs='?', type=argparse.FileType('rb'), default=sys.stdin, help="input file")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
 
 
@@ -48,10 +48,15 @@ def main():
   infile = prepfile(args.infile, 'r')
   outfile = prepfile(args.outfile, 'w')
 
-
+  errcount=0
   for line in infile:
-    outfile.write(ud.normalize('NFKC', line))
-
+    try:
+      outfile.write(ud.normalize('NFKC', line.decode('utf-8')))
+    except UnicodeDecodeError:
+      errcount+=1
+      continue
+  if errcount>0:
+    sys.stderr.write("{} lines skipped for unicode errors\n".format(errcount))
 if __name__ == '__main__':
   main()
 
