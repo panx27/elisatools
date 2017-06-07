@@ -12,9 +12,9 @@ ENC_KEY=""
 ENC_SET=""
 
 #Set fonts for Help.
-NORM=`tput sgr0`
-BOLD=`tput bold`
-REV=`tput smso`
+NORM="";#`tput sgr0`
+BOLD="";#`tput bold`
+REV="";#`tput smso`
 
 #Help function
 function HELP {

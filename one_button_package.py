@@ -64,6 +64,7 @@ def main():
   parser.add_argument("--version", "-v", type=int, default=1, help='version name of release')
   parser.add_argument("--year", "-yr", type=int, default=1, help='year of release')
   parser.add_argument("--part", "-pt", type=int, default=1, help='part of release')
+  parser.add_argument("--splits", default='splits', help='where to look for prepared train/dev/test splits')
   parser.add_argument("--noeval", action='store_true', default=False, help="don't build an eval set")
   addonoffarg(parser, "mono", help="include mono data", default=True)
   parser.add_argument("--root", "-r",
@@ -134,7 +135,7 @@ def main():
     if i == "rejected":
       paralleloutdir = os.path.join(rootdir, 'parallel', i)
     else:
-      paralleloutdir = os.path.join(rootdir, 'parallel', 'splits', i)
+      paralleloutdir = os.path.join(rootdir, 'parallel', args.splits, i)
     parallelxml = os.path.join(rootdir,
                                'elisa.%s-eng.%s.y%dr%d.v%d.xml.gz' % \
                              (language, i, args.year, args.part, args.version))
@@ -195,6 +196,7 @@ def main():
                                      (finalpackprefix, ' '.join(finalitems), finalpack)
 
   for step in steps[start:stop]:
+    print("running {}, {}, {}, {}, {}".format(step.prog, step.name, step.scriptbin, step.progpath, step.call))
     step.run()
 
   print("Done")

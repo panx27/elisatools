@@ -63,7 +63,8 @@ def tokrsd(dldir, ruby, exec, param, workdir):
   for l in iglob(os.path.join(rsddir, '*.rsd.txt')):
     lfh.write("{}\n".format(l))
   lfh.close()
-  cmd = "{} {} -t {} {}".format(ruby, exec, param, listfile)
+  paramtxt = "" if param is None else "-t {}".format(param)
+  cmd = "{} {} {} {}".format(ruby, exec, paramtxt, listfile)
   return check_call(shlex.split(cmd))
 
 def validate(dldir, lrlpdir, logfile, args):
@@ -131,6 +132,7 @@ def relocate_ltf(dldir, lrlpdir, logfile):
     sys.exit(1)
   bkpdir = os.path.join(parent, 'ltf.retired')
   mkdir_p(bkpdir)
+  mkdir_p(lrlpdir)
   for file in os.listdir(lrlpdir):
     if not is_sn(file) or not file.endswith(".ltf.xml"):
       continue
@@ -154,7 +156,7 @@ def main():
   parser.add_argument("--dldir", "-d", required=True, help="rsd directory containing original tweets (probably subdir of 'tweet'; an 'ltf' will be built alongside it")
   parser.add_argument("--lrlpdir", "-l", required=True, help="the 'ltf' directory in an expanded lrlp that contains anonymized tweet files (usu. data/translation/from_xxx/xxx/ltf for lang xxx)")
   parser.add_argument("--exec", "-e", required=True, help="path to ldc tokenizer; usually in tools/ldclib/bin/token_parse.rb of the lrlp")
-  parser.add_argument("--param", "-p", required=True, help="path to ldc tokenizer parameter set; usually tools/tokenization_parameters.v4.0.yaml in the lrlp")
+  parser.add_argument("--param", "-p", required=True, help="path to ldc tokenizer parameter set; usually tools/tokenization_parameters.v4.0.yaml in the lrlp", default=None)
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
   addonoffarg(parser, 'verbose', help="print specific errors per file", default=False)
   try:

@@ -690,7 +690,6 @@ class Step:
         callstring = callstring+" > %s" % self.stdout
       if self.stderr is not None:
         callstring = callstring+" 2> %s" % self.stderr
-
       localstderr.write("Calling %s\n" % callstring)
       retval = self.call(basecallstring, **kwargs)
       sys.stderr.write("%s: Done\n" % prog)

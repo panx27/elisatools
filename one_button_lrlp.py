@@ -7,7 +7,7 @@ import codecs
 from collections import defaultdict as dd
 import re
 import os.path
-from lputil import Step, make_action, dirfind
+from lputil import Step, make_action, dirfind, mkdir_p
 from subprocess import check_output, check_call, CalledProcessError
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,7 +39,8 @@ def main():
   # clean_lexicon
   steps.append(Step('clean.sh',
                     name="clean_lexicon",
-                    help="wildeclean/nfkc lexicon file"))
+                    help="wildeclean/nfkc lexicon file",
+                    abortOnFail=False))
 
   # normalize_lexicon.py
   steps.append(Step('normalize_lexicon.py',
@@ -155,15 +156,19 @@ def main():
   # Patchups for the rest
   if stop > 0:
     # TWEET
-    # LDC changed its mind again
-    # tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing')
-    # tweetprogpath = os.path.join(expdir, 'tools', 'twitter-processing', 'bin')
-    # and again
-    tweetprogpath = os.path.join(expdir, 'tools', 'ldclib', 'bin')
+    tweetprogpaths = []
+    for toolroot in (expdir, scriptdir):
+      tweetprogpaths = dirfind(os.path.join(toolroot, 'tools'), 'get_tweet_by_id.rb')
+      if len(tweetprogpaths) > 0:
+        break
+    if len(tweetprogpaths) == 0:
+      sys.stderr.write("Can't find get_tweet_by_id.rb\n")
+      sys.exit(1)
+    else:
+      tweetprogpath = os.path.dirname(tweetprogpaths[0])
     tweetdir = os.path.join(rootdir, language, 'tweet', 'rsd')
+    mkdir_p(tweetdir)
     tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
-    # TODO: can look for a match to this or even use an archived backup if needed
-    tokparam = os.path.join(expdir, 'tools', 'tokenization_parameters.v4.0.yaml')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
 
     # just copy from previous or skip if no mono
@@ -186,12 +191,26 @@ def main():
         stepsbyname["get_tweet_by_id.rb"].disable()
 
     # TOKENIZE AND RELOCATE TWEETS
+    # find rb location, params file
+    toxexecpaths = []
+    thetoolroot = None
+    for toolroot in (expdir, scriptdir):
+      tokexecpaths = dirfind(os.path.join(toolroot, 'tools'), 'token_parse.rb')
+      if len(tokexecpaths) > 0:
+        thetoolroot = toolroot
+        break
+    if len(tokexecpaths) == 0:
+      sys.stderr.write("Can't find token_parse.rb\n")
+      sys.exit(1)
+    tokexec = tokexecpaths[0]
+    tokparamopts = dirfind(os.path.join(thetoolroot, 'tools'), 'yaml')
+    tokparam = "--param {}".format(tokparamopts[0]) if len(tokparamopts) > 0 else ""
     lrlpdir=os.path.join(expdir, 'data', 'translation', 'from_{}'.format(language), language, 'ltf')
-    stepsbyname["ldc_tok.py"].argstring = "--ruby {ruby} --dldir {tweetdir} --lrlpdir {lrlpdir} --exec {tokexec} --param {tokparam} --outfile {outfile}".format(
+    stepsbyname["ldc_tok.py"].argstring = "--ruby {ruby} --dldir {tweetdir} --lrlpdir {lrlpdir} --exec {tokexec} {tokparam} --outfile {outfile}".format(
       ruby=args.ruby,
       tweetdir=tweetdir,
       lrlpdir=lrlpdir,
-      tokexec=os.path.join(tweetprogpath, 'token_parse.rb'),
+      tokexec=tokexec,
       tokparam=tokparam,
       outfile=os.path.join(rootdir, language, 'ldc_tok.stats'))
     stepsbyname["ldc_tok.py"].stderr = os.path.join(rootdir, language, 'ldc_tok.err')
@@ -217,8 +236,10 @@ def main():
     # LEXICON
     #
     # IL CHANGE
-    #lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.xml')
-    lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
+    if args.evalil:
+      lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.xml')
+    else:
+      lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
     lexiconoutdir = os.path.join(rootdir, language, 'lexicon')
     lexiconrawoutfile = os.path.join(lexiconoutdir, 'lexicon.raw')
     lexiconoutfile = os.path.join(lexiconoutdir, 'lexicon')

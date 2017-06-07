@@ -49,6 +49,7 @@ def main():
   parser = argparse.ArgumentParser(description="Make dataset selections for experimentation",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("--indir", "-i", help="location of parallel data")
+  parser.add_argument("--outdir", "-o", default="splits", help="location of split output, as a subdir of indir")
   parser.add_argument("--language", "-l", help="source language three digit code")
   parser.add_argument("--extractpath", "-e", default="filtered", help="location of extracted data (might want to use 'filtered')")
   parser.add_argument("--minimum", "-m", default=100, help="minimum number of words per subselection")
@@ -83,7 +84,7 @@ def main():
   filetypes = [subdir for subdir in next(os.walk(extractpath))[1]]
 
   origpath = os.path.join(extractpath, 'original')
-  outpath = os.path.join(indir, 'splits')
+  outpath = os.path.join(indir, args.outdir)
   mkdir_p(outpath)
 
   # number of words in each file

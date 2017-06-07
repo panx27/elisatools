@@ -27,7 +27,11 @@ transferexcluded = set(["tools"])
 
 def copything(src, dst):
   if os.path.isdir(src):
-    shutil.copytree(src, dst)
+    # nfs to nfs copytree bug
+    try:
+      shutil.copytree(src, dst)
+    except shutil.Error:
+      sys.stderr.write("possible nfs bug encountered moving {} to {}\n".format(src, dst))
   elif os.path.isfile(src):
     shutil.copy(src, dst)
   else:
