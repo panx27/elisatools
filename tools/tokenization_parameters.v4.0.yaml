@@ -1,0 +1,23 @@
+---
+:tokenizer: :patterns
+:patterns:
+- - !ruby/regexp /^(?:[a-z]+:\/\/|www).+\z/i
+  - url
+- - !ruby/regexp /^(?:[@\#].+|<\/?\w+>?)\z/
+  - tag
+- - !ruby/regexp /^&(?:amp|lt|gt|quot|\#\d+);\z/i
+  - escaped_char
+- - !ruby/regexp /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?\z/
+  - word
+- - !ruby/regexp /^\p{Word}+(?:[\'\u2019]\p{Word}+)*\z/
+  - word
+- - !ruby/regexp /^\p{P}+\z/
+  - punct
+- - !ruby/regexp /^(\p{Word}+(?:[\'\u2019]\p{Word}+)*)(\p{P}+)\z/
+  - word punct
+- - !ruby/regexp /^(\p{P}+)(\p{Word}+(?:[\'\u2019]\p{Word}+)*)\z/
+  - punct word
+- - !ruby/regexp /^(\p{P}+)(\p{Word}+(?:[\'\u2019]\p{Word}+)*)(\p{P}+)\z/
+  - punct word punct
+- - !ruby/regexp /^.+\z/ # catch-all for everything else
+  - unknown
