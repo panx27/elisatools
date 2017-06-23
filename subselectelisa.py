@@ -35,7 +35,8 @@ def prepfile(fh, code):
 def main():
   parser = argparse.ArgumentParser(description="Keep only documents in a document list",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--infile", "-i", help="input file; this is filtered down")
+  parser.add_argument("--infile", "-i", required=True, help="input file; this is filtered down")
+  parser.add_argument("--reffile", "-r", type=str, default=None, help="optional reference file; TARGET items are transferred over from here")
   parser.add_argument("--document", default="DOCUMENT", help="document object to keep or reject")
   parser.add_argument("--manifest", "-m", nargs='?', type=argparse.FileType('r'), default=sys.stdin, help="manifest file; doc id in first tab")
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
@@ -54,6 +55,7 @@ def main():
   for line in manifestfile:
     manifest.add(line.strip().split('\t')[0])
   inode = ET.parse(args.infile)
+  refnode = ET.parse(args.reffile) if args.reffile is not None else None
   keepcount=0
   removecount=0
   for doc in inode.findall('.//%s' % args.document):
@@ -62,6 +64,19 @@ def main():
       removecount+=1
     else:
       keepcount+=1
+      if refnode is not None:
+        refdoc = refnode.find('.//{}[@id="{}"]'.format(args.document, doc.get('id')))
+        if refdoc is None:
+          sys.stderr.write('{} not found in reference; skipping transfer\n'.format(doc.get('id')))
+          continue
+        # TODO: for each segment in doc and ref (check sources match) put all targets from ref into doc
+        for dseg, rseg in zip(doc.findall('.//SEGMENT'), refdoc.findall('.//SEGMENT')):
+          if dseg.find('SOURCE').get('id') != rseg.find('SOURCE').get('id'):
+            sys.stderr.write('mismatching sources {}, {} in {}\n'.format(dseg.find('SOURCE').get('id'), rseg.find('SOURCE').get('id'), doc.get('id')))
+            break
+          for targ in rseg.findall('TARGET'):
+            dseg.insert(-1, targ)
+            
   xmlstr = ET.tostring(inode, pretty_print=True, encoding='utf-8', xml_declaration=True).decode('utf-8')
   outfile.write(xmlstr+"\n")
   sys.stderr.write("{} kept, {} removed ({} in keep set)\n".format(keepcount, removecount, len(manifest)))

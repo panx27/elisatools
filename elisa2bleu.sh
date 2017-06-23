@@ -17,14 +17,18 @@ INFILE=$1;
 
 x=$MTMP/xtract
 
-$SCRIPTDIR/elisa2flat.py -f ORIG_RAW_SOURCE ORIG_RAW_TARGET TEXT -i $INFILE -o $x
+$SCRIPTDIR/elisa2flat.py -f ORIG_RAW_SOURCE TEXT ORIG_RAW_TARGET -i $INFILE -o $x
 
+reflen=$(head -1 $x | awk -F'\t' '{print NF}')
 cut -f1 $x > $MTMP/src
-cut -f2 $x > $MTMP/ref
-cut -f3 $x > $MTMP/tst
+cut -f2 $x > $MTMP/tst
+for i in $(seq 3 $reflen); do
+    cut -f$i $x > $MTMP/ref.$i;
+done
+
 
 for i in src ref tst; do 
-    $SCRIPTDIR/flat2nist.py -i $MTMP/$i -t $i -o $MTMP/$i.xml
+    $SCRIPTDIR/flat2nist.py -i $(find $MTMP -name "$i*") -t $i -o $MTMP/$i.xml
 done
 
 $SCRIPTDIR/mteval-v14.pl -b -c -r $MTMP/ref.xml -s $MTMP/src.xml -t $MTMP/tst.xml | grep "^BLEU" | cut -d' ' -f4
