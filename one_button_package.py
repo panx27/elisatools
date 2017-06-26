@@ -174,7 +174,7 @@ def main():
     cmptrgstatsfile = os.path.join(rootdir, 'elisa.comparable.eng.y%dr%d.v%d.stats' % \
                                    (args.year, args.part, args.version))
     finalitems.extend([cmpsrcxml, cmptrgxml, cmpsrcstatsfile, cmptrgstatsfile])
-    stepsbyname["comparable-src"].argstring = "--direction comparable -r %s -l %s -c %s -s %s | gzip > %s" % \
+    stepsbyname["comparable-src"].argstring = "--direction comparable --no-ext -r %s -l %s -c %s -s %s | gzip > %s" % \
                                               (cmpoutdir, language, language, cmpsrcstatsfile, cmpsrcxml)
     stepsbyname["comparable-src"].stderr = os.path.join(rootdir, 'make_comparable_%s_release.err' % language)
     stepsbyname["comparable-trg"].argstring = "--direction comparable --exttokdir agile-tokenized --exttokprefix AGILE -r %s -l eng -c eng -s %s | gzip > %s" % \

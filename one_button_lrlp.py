@@ -124,7 +124,7 @@ def main():
   parser.add_argument("--liststeps", "-x", nargs=0, action=make_action(steps),
                       help='print step list and exit')
   parser.add_argument("--ruby", default="/opt/local/bin/ruby2.2", help='path to ruby (2.1 or higher)')
-
+  addonoffarg(parser, "swap", help="swap source/target in found data (e.g. il3)", default=False)
   try:
     args = parser.parse_args()
   except IOError as msg:
@@ -210,7 +210,9 @@ def main():
     tokparamopts = dirfind(os.path.join(thetoolroot, 'tools'), 'yaml')
     tokparam = "--param {}".format(tokparamopts[0]) if len(tokparamopts) > 0 else ""
     lrlpdir=os.path.join(expdir, 'data', 'translation', 'from_{}'.format(language), language, 'ltf')
-    stepsbyname["ldc_tok.py"].argstring = "--ruby {ruby} --dldir {tweetdir} --lrlpdir {lrlpdir} --exec {tokexec} {tokparam} --outfile {outfile}".format(
+    monodir=os.path.join(expdir, 'data', 'monolingual_text')
+    stepsbyname["ldc_tok.py"].argstring = "-m {monodir} --ruby {ruby} --dldir {tweetdir} --lrlpdir {lrlpdir} --exec {tokexec} {tokparam} --outfile {outfile}".format(
+      monodir=monodir,
       ruby=args.ruby,
       tweetdir=tweetdir,
       lrlpdir=lrlpdir,
@@ -299,6 +301,8 @@ def main():
     stepsbyname["extract_parallel.py"].argstring="--no-cdec -r %s -o %s -s %s" % \
       (expdir, paralleloutdir, language)
     stepsbyname["extract_parallel.py"].stderr = parallelerr
+    if args.swap:
+      stepsbyname["extract_parallel.py"].argstring += " --swap"
 
     filteroutdir = os.path.join(rootdir, language, 'parallel', 'filtered')
     rejectoutdir = os.path.join(rootdir, language, 'parallel', 'rejected')

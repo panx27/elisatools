@@ -117,7 +117,7 @@ def main():
   monoindirs = dirfind(os.path.join(expdir, setdir, 'data', 'monolingual_text'), "%s.ltf.zip" % setdir)
   monooutdir = os.path.join(outdir, 'mono', 'extracted')
   monoerr = os.path.join(outdir, 'extract_mono.err')
-  stepsbyname["extract_mono.py"].argstring = "--nogarbage -i %s -o %s" % \
+  stepsbyname["extract_mono.py"].argstring = "--no-cdec --nogarbage -i %s -o %s" % \
     (' '.join(monoindirs), monooutdir)
   stepsbyname["extract_mono.py"].stderr = monoerr
 
@@ -139,7 +139,7 @@ def main():
   monostatsfile = outfile+".stats"
   manarg = ' '.join(manfiles)
   monoerr = os.path.join(outdir, 'make_mono_release.err')
-  stepsbyname["make_mono_release.py"].argstring = "-r %s -l %s -c %s -s %s | gzip > %s" % \
+  stepsbyname["make_mono_release.py"].argstring = "--no-ext -r %s -l %s -c %s -s %s | gzip > %s" % \
                                                   (monooutdir, language, manarg, monostatsfile, monoxml)
   stepsbyname["make_mono_release.py"].stderr = monoerr
 

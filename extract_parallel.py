@@ -235,6 +235,7 @@ def main():
   parser.add_argument("--cleanpath", default=os.path.join(scriptdir, 'clean.sh'),
                       help="path to cleaning script")
   addonoffarg(parser, 'cdec', help="do cdec tokenization", default=True)
+  addonoffarg(parser, 'swap', help="swap source/translation in found file (il3=true, cmn=false)", default=False)
   
   
   try:
@@ -308,7 +309,7 @@ def main():
 
   # Found data
   printout("found.generic", args.rootdir, *commonargs, 
-           stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences, swap=True)
+           stp=lputil.all_found_tuples, el=lputil.get_aligned_sentences, swap=args.swap)
 
   # # Tweet data
   printout("fromsource.tweet",

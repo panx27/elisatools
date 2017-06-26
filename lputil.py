@@ -231,9 +231,22 @@ def _fast_get_aligned_data(srcfile, trgfile, alignfile):
   srcdoc, srctable = _get_seg_by_id(srcfile)
   trgdoc, trgtable = _get_seg_by_id(trgfile)
   alroot = ET.parse(alignfile)
+  sys.stderr.write("Getting data from {} : {} <-> {}\n".format(alignfile, srcfile, trgfile))
   for align in alroot.findall(".//alignment"):
     srcsegs = align.find(".//source").get('segments').split(' ')
     trgsegs = align.find(".//translation").get('segments').split(' ')
+    # ldc has some rogue segments; double check that they're all present
+    good = True
+    for doc, segs, table in zip((srcdoc, trgdoc), (srcsegs, trgsegs), (srctable, trgtable)):
+      for seg in segs:
+        if seg not in table:
+          good=False
+          sys.stderr.write("{seg} not found in {doc} per {align} in {alfile}; skipping\n".format(seg=seg, doc=doc, align=ET.tostring(align), alfile=alignfile))
+          break
+      if not good:
+        break
+    if not good:
+      continue
     for doc, table, segs, data in zip((srcdoc, trgdoc), (srctable, trgtable), (srcsegs, trgsegs), (sdata, tdata)):
       # docid: doc id of the first seg
       # start: start of the first seg
@@ -243,7 +256,7 @@ def _fast_get_aligned_data(srcfile, trgfile, alignfile):
       data["START"].append(table[segs[0]].get('start_char'))
       data["END"].append(table[segs[-1]].get('end_char'))
       # orig: concatenation of orig text of each seg
-      
+
       # tok: concatenation of token text of each seg
       # pos: concatenation of pos text of each seg (or none)
       # morph, morphseg: concatenation of morph, morphseg text of each seg (or none)
@@ -273,6 +286,7 @@ def _fast_get_aligned_data(srcfile, trgfile, alignfile):
         morph.append(' '.join(submorph))
         morphseg.append(' '.join(submorphseg))
       data["ORIG"].append(' '.join(orig)+"\n")
+      data["TOK"].append(' '.join(tok)+"\n")
       data["POS"].append(' '.join(pos)+"\n")
       data["MORPH"].append(' '.join(morph)+"\n")
       data["SEGID"].append('_'.join(segid))
@@ -286,7 +300,7 @@ def _fast_get_aligned_data(srcfile, trgfile, alignfile):
     sys.stderr.write("{} elements in {}\n".format(lengths[0], doc))
   return [sdata, tdata]
 
-@deprecated
+#@deprecated
 def get_aligned_sentences_xml(srcfile, trgfile, alignfile, alxml=False):
   ''' Build sentence pairs given xml files and alignment info (can be slow!) '''
   sdata = dd(list)
@@ -633,20 +647,20 @@ def get_tokens(xml):
 def morph_tok(node):
   ''' Get morph and morph tok from node if present, otherwise fall back to text '''
   if node.get("morph") is None:
-    return "none", node.text
+    yield "none", node.text
   elif node.get("morph") == "none" or node.get("morph") == "unanalyzable":
-    return node.get("morph"), node.text
+    yield node.get("morph"), node.text
   else:
     try:
       morph = node.get("morph").split(' ')
     except AttributeError:
-      sys.stderr.write(ET.dump(node)+"\n")
+      sys.stderr.write(ET.tostring(node)+"\n")
       raise
     for morphtok in morph:
       try:
         yield morphtok.split('=')[1], morphtok.split(':')[0]
       except IndexError:
-        return morphtok, morphtok
+        yield morphtok, morphtok
 
 def get_segments(xml):
   ''' Get segments from xml ltf file '''
