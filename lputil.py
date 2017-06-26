@@ -87,8 +87,7 @@ def get_aligned_sentences(srcfile, trgfile, alignfile,
   # align files ending with 'xml' get different treatment than those ending with 'align'
   # assumption is one of two formats
   if xml:
-    return get_aligned_sentences_xml(srcfile, trgfile,
-                                     alignfile, alxml=alignfile.endswith('xml'))
+    return _fast_get_aligned_data(srcfile, trgfile, alignfile)
   return get_aligned_sentences_flat(srcfile, trgfile, alignfile)
 
 def get_aligned_sentences_flat(srcfile, trgfile, alignfile):
@@ -180,33 +179,116 @@ def get_spans_from_flat_al(alignfile):
       trgspans.append((ts, ts+tl-1))
   return (srcspans, trgspans)
 
+def _get_seg_table(xmlfile):
+  ''' quickly (?) build a dict of id->start, end '''
+  table = {}
+  for seg in xmlfile.findall(".//SEG"):
+    table[seg.get('id')]=(seg.get('start_char'), seg.get('end_char'))
+  return table
+
 def get_spans_from_xml_al(alignfile, srcfile, trgfile):
   ''' using xml align files, get sentence spans '''
   srcspans = []
   trgspans = []
   alroot = ET.parse(alignfile)
   srcroot = ET.parse(srcfile)
+  srctable = _get_seg_table(srcroot)
   trgroot = ET.parse(trgfile)
+  trgtable = _get_seg_table(trgroot)
+
+  count = 0
   for align in alroot.findall(".//alignment"):
     srcsegs = align.find(".//source").get('segments').split(' ')
     trgsegs = align.find(".//translation").get('segments').split(' ')
-    try:
-      #sys.stderr.write("Finding %s start and %s end in source file %s\n" % (srcsegs[0], srcsegs[-1], srcfile))
-      ss = int(srcroot.find(".//SEG[@id='%s']" % srcsegs[0]).get('start_char'))
-      se = int(srcroot.find(".//SEG[@id='%s']" % srcsegs[-1]).get('end_char'))
-      #sys.stderr.write("Finding %s start and %s end in target file %s\n" % (trgsegs[0], trgsegs[-1], trgfile))
-      ts = int(trgroot.find(".//SEG[@id='%s']" % trgsegs[0]).get('start_char'))
-      te = int(trgroot.find(".//SEG[@id='%s']" % trgsegs[-1]).get('end_char'))
-    except AttributeError:
-      sys.stderr.write("Bad or missing segments in %s and/or %s\n" % (srcfile, trgfile))
-      continue
+    ss = int(srctable[srcsegs[0]][0])
+    se = int(srctable[srcsegs[-1]][1])
+    ts = int(trgtable[trgsegs[0]][0])
+    te = int(trgtable[trgsegs[-1]][1])
     srcspans.append((ss, se))
     trgspans.append((ts, te))
+    count+=1
+    if count % 10000 == 0:
+      sys.stderr.write('found {} spans\n'.format(count))
   return (srcspans, trgspans)
   
+def _get_seg_by_id(xmlfile):
+  ''' quickly (?) build a dict of id->seg
+  also return docid '''
+  table = {}
+  root = ET.parse(xmlfile)
+  docid = root.find('.//DOC').get('id')
+  for seg in root.findall(".//SEG"):
+    table[seg.get('id')]=seg
+  return docid, table
 
+
+def _fast_get_aligned_data(srcfile, trgfile, alignfile):
+  ''' faster than get_aligned_sentences_xml: build a table of id->node,
+  then for each element in align, patch all the data together '''
+  sdata = dd(list)
+  tdata = dd(list)
+
+  srcdoc, srctable = _get_seg_by_id(srcfile)
+  trgdoc, trgtable = _get_seg_by_id(trgfile)
+  alroot = ET.parse(alignfile)
+  for align in alroot.findall(".//alignment"):
+    srcsegs = align.find(".//source").get('segments').split(' ')
+    trgsegs = align.find(".//translation").get('segments').split(' ')
+    for doc, table, segs, data in zip((srcdoc, trgdoc), (srctable, trgtable), (srcsegs, trgsegs), (sdata, tdata)):
+      # docid: doc id of the first seg
+      # start: start of the first seg
+      # end: end of the last seg
+
+      data["DOCID"].append(doc)
+      data["START"].append(table[segs[0]].get('start_char'))
+      data["END"].append(table[segs[-1]].get('end_char'))
+      # orig: concatenation of orig text of each seg
+      
+      # tok: concatenation of token text of each seg
+      # pos: concatenation of pos text of each seg (or none)
+      # morph, morphseg: concatenation of morph, morphseg text of each seg (or none)
+
+      orig = []
+      segid = []
+      tok = []
+      pos = []
+      morph = []
+      morphseg = []
+      for seg in segs:
+        segx = table[seg]
+        orig.append(segx.find('.//ORIGINAL_TEXT').text)
+        segid.append(segx.get('id'))
+        subtok = []
+        subpos = []
+        submorph = []
+        submorphseg = []
+        for tokx in segx.findall('.//TOKEN'):
+          subtok.append(tokx.text)
+          subpos.append(tokx.get('pos') or "None")
+          for mt, mtt in morph_tok(tokx):
+            submorph.append(mt)
+            submorphseg.append(mtt)
+        tok.append(' '.join(subtok))
+        pos.append(' '.join(subpos))
+        morph.append(' '.join(submorph))
+        morphseg.append(' '.join(submorphseg))
+      data["ORIG"].append(' '.join(orig)+"\n")
+      data["POS"].append(' '.join(pos)+"\n")
+      data["MORPH"].append(' '.join(morph)+"\n")
+      data["SEGID"].append('_'.join(segid))
+      data["MORPHSEG"].append(' '.join(morphseg)+"\n")
+  for data in (sdata, tdata):
+    lengths = [len(i) for i in list(data.values())]
+    for length in lengths[1:]:
+      if length != lengths[0]:
+        sys.stderr.write("Length mismatch in "+x+": "+str(lengths))
+        sys.exit(1)
+    sys.stderr.write("{} elements in {}\n".format(lengths[0], doc))
+  return [sdata, tdata]
+
+@deprecated
 def get_aligned_sentences_xml(srcfile, trgfile, alignfile, alxml=False):
-  ''' Build sentence pairs given xml files and alignment info '''
+  ''' Build sentence pairs given xml files and alignment info (can be slow!) '''
   sdata = dd(list)
   tdata = dd(list)
   if alxml:
@@ -551,9 +633,9 @@ def get_tokens(xml):
 def morph_tok(node):
   ''' Get morph and morph tok from node if present, otherwise fall back to text '''
   if node.get("morph") is None:
-    yield "none", node.text
+    return "none", node.text
   elif node.get("morph") == "none" or node.get("morph") == "unanalyzable":
-    yield node.get("morph"), node.text
+    return node.get("morph"), node.text
   else:
     try:
       morph = node.get("morph").split(' ')
@@ -564,7 +646,7 @@ def morph_tok(node):
       try:
         yield morphtok.split('=')[1], morphtok.split(':')[0]
       except IndexError:
-        yield morphtok, morphtok
+        return morphtok, morphtok
 
 def get_segments(xml):
   ''' Get segments from xml ltf file '''

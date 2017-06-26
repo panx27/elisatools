@@ -45,6 +45,14 @@ def runselection(prefix, idfile, engfile, termfile, categories, remainder, sizes
     sys.exit(1)
   return catfile
 
+def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
+  ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
+  group = parser.add_mutually_exclusive_group()
+  dest = arg if dest is None else dest
+  group.add_argument('--%s' % arg, dest=dest, action='store_true', default=default, help=help)
+  group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
+
+
 def main():
   parser = argparse.ArgumentParser(description="Make dataset selections for experimentation",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -58,7 +66,7 @@ def main():
   parser.add_argument("--termfile", "-t", help="file of desired terms, one per line")
   parser.add_argument("--remainder", "-r", default="train", help="remainder category. Should be a new category")
   parser.add_argument("--devlstfile", "-d", default=None, help="file of desired documents for dev (subject to length constraints, must be a set called 'dev')")
-
+  addonoffarg(parser, 'allperseg', help="all selection is perseg instead of default splits [e.g. il3]", default=False)
 
 
   try:
@@ -66,6 +74,7 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
+  sys.stderr.write("Executing {}\n".format(sys.argv))
 #  reader = codecs.getreader('utf8')
 #  writer = codecs.getwriter('utf8')
 #  outfile = writer(args.outfile)
@@ -79,6 +88,10 @@ def main():
   docprefixes = ["fromsource.generic", "fromsource.tweet", "fromtarget.news", "found.generic"]
   nodocprefixes = ["fromtarget.elicitation", "fromtarget.phrasebook"]
 
+  if args.allperseg:
+    nodocprefixes.extend(docprefixes)
+    docprefixes = []
+  
   extractpath = os.path.join(indir, args.extractpath)
   #http://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
   filetypes = [subdir for subdir in next(os.walk(extractpath))[1]]

@@ -22,7 +22,7 @@ from itertools import compress
 def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbageoutdir,
              tokoutdir, cleantokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-             agiletokpath, cdectokpath, cleanpath,
+             agiletokpath, cdectokpath, cleanpath, docdec,
              stp=lputil.selected_translation_pairs, el=lputil.extract_lines,
              tweet=False, swap=False):
   ''' Find files and print them out '''
@@ -156,13 +156,14 @@ def printout(prefix, path, src, trg, outdir, origoutdir, cleanorigoutdir, garbag
     sys.exit(1)
   # run cdec tokenizer on source orig
 
-  cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, outfiles['src']['cleanorig'], outfiles["src"]["cdectoklc"], outfiles["src"]["cdectok"])
-  sys.stderr.write(cdectok_cmd+"\n")
-  try:
-    check_call(shlex.split(cdectok_cmd))
-  except CalledProcessError as e:
-    sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
-    sys.exit(1)
+  if docdec:
+    cdectok_cmd = "%s -i %s -o %s -t %s " % (cdectokpath, outfiles['src']['cleanorig'], outfiles["src"]["cdectoklc"], outfiles["src"]["cdectok"])
+    sys.stderr.write(cdectok_cmd+"\n")
+    try:
+      check_call(shlex.split(cdectok_cmd))
+    except CalledProcessError as e:
+      sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
+      sys.exit(1)
 
 '''
  Move extracted src tweets (.rsd) to translation directory
@@ -181,6 +182,13 @@ def move_extracted_tweet(datadir, src, extwtdir):
       continue
     shutil.copy('%s/%s' % (extwtdir, i),
                 '%s/%s' % (outdir, i))
+
+def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
+  ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
+  group = parser.add_mutually_exclusive_group()
+  dest = arg if dest is None else dest
+  group.add_argument('--%s' % arg, dest=dest, action='store_true', default=default, help=help)
+  group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
 
 def main():
   parser = argparse.ArgumentParser(description="extract parallel data from " \
@@ -226,7 +234,8 @@ def main():
                       help="path to cdec tokenizer binary")
   parser.add_argument("--cleanpath", default=os.path.join(scriptdir, 'clean.sh'),
                       help="path to cleaning script")
-
+  addonoffarg(parser, 'cdec', help="do cdec tokenization", default=True)
+  
   
   try:
     args = parser.parse_args()
@@ -292,7 +301,7 @@ def main():
   commonargs=[args.src, args.trg, args.outdir, origoutdir, cleanorigoutdir, garbageoutdir,
              tokoutdir, cleantokoutdir, morphtokoutdir, cdectokoutdir, cdectoklcoutdir,
              agiletokoutdir, agiletoklcoutdir, morphoutdir, posoutdir,
-              agiletokpath, cdectokpath, cleanpath]
+              agiletokpath, cdectokpath, cleanpath, args.cdec]
   for corpustuple in corpustuples:
     printout(corpustuple[0], corpustuple[1], *commonargs)
 
