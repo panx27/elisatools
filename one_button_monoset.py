@@ -19,18 +19,20 @@ def main():
   steps.append(Step('decrypt_sets.py',
                     help="decode encrypted sets"))
 
-  # extract_mono.py
-  steps.append(Step('extract_mono.py',
-                    help="get flat form mono data"))
 
   # get_tweet_by_id.rb
   steps.append(Step('get_tweet_by_id.rb',
                     help="download tweets. must have twitter gem installed " \
                     "and full internet",
                     abortOnFail=False))
-  # extract_mono_tweet.py
-  steps.append(Step('extract_mono_tweet.py',
-                    help="make twitter data look like regular mono data"))
+
+  steps.append(Step('ldc_tok.py',
+                    help="run ldc tokenizer on tweets ",
+                    abortOnFail=False))
+
+  # extract_mono.py
+  steps.append(Step('extract_mono.py',
+                    help="get flat form mono data"))
 
   steps.append(Step('make_mono_release.py',
                     help="package mono flat data"))
@@ -85,6 +87,7 @@ def main():
 
   mkdir_p(outdir)
 
+
   if args.key is None:
     stepsbyname["decrypt_sets.py"].disable()
   else:
@@ -92,29 +95,71 @@ def main():
     stepsbyname["decrypt_sets.py"].argstring="-r %s -k %s -s %s" % (expdir, args.key, setdir)
     stepsbyname["decrypt_sets.py"].run()
     start+=1
+  monodir=os.path.join(expdir, setdir, 'data', 'monolingual_text')
+  monoindirs = dirfind(monodir, "%s.ltf.zip" % setdir)
+
   # TWEET
-  if args.notweets:
+  tweetintab = os.path.join(expdir, setdir, 'docs', 'twitter_info.tab')
+  if args.notweets or not os.path.exists(tweetintab):
+    print("disabling twitter stuff")
     stepsbyname["get_tweet_by_id.rb"].disable()
-    stepsbyname["extract_mono_tweet.py"].disable()
+    stepsbyname["ldc_tok.py"].disable()
   else:
-    tweetprogpath = os.path.join(expdir, 'set0', 'tools', 'twitter-processing', 'bin')
+    print("not disabling twitter stuff; look at {}".format(tweetintab))
+    stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
+    tweetprogpaths = []
+    for toolroot in (os.path.join(expdir, 'set0'), scriptdir):
+      tweetprogpaths = dirfind(os.path.join(toolroot, 'tools'), 'get_tweet_by_id.rb')
+      if len(tweetprogpaths) > 0:
+        break
+    if len(tweetprogpaths) == 0:
+      sys.stderr.write("Can't find get_tweet_by_id.rb\n")
+      sys.exit(1)
+    else:
+      tweetprogpath = os.path.dirname(tweetprogpaths[0])
+    tweetdir = os.path.join(outdir, 'tweet', 'rsd')
 
     stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
-    tweetdir = os.path.join(outdir, 'tweet')
+    mkdir_p(tweetdir)
     stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
-    tweetintab = os.path.join(expdir, setdir, 'docs', 'twitter_info.tab')
-    if os.path.exists(tweetintab):
-      stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
-    else:
-      stepsbyname["get_tweet_by_id.rb"].disable()
+
+
     tweeterr = os.path.join(outdir, 'extract_tweet.err')
     stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
     stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
 
+        # TOKENIZE AND RELOCATE TWEETS
+    # find rb location, params file
+    toxexecpaths = []
+    thetoolroot = None
+    for toolroot in (expdir, scriptdir):
+      tokexecpaths = dirfind(os.path.join(toolroot, 'tools'), 'token_parse.rb')
+      if len(tokexecpaths) > 0:
+        thetoolroot = toolroot
+        break
+    if len(tokexecpaths) == 0:
+      sys.stderr.write("Can't find token_parse.rb\n")
+      sys.exit(1)
+    tokexec = tokexecpaths[0]
+    tokparamopts = dirfind(os.path.join(thetoolroot, 'tools'), 'yaml')
+    tokparam = "--param {}".format(tokparamopts[0]) if len(tokparamopts) > 0 else ""
+    # ugly: the base of the file monodir/mononame.zip; need to add it to monoindirs and just pass that base so it gets constructed
+    mononame = "tweets.ltf"
+    monoindirs.append(os.path.join(monodir, mononame+".zip"))
+    stepsbyname["ldc_tok.py"].argstring = "--mononame {mononame} -m {monodir} --ruby {ruby} --dldir {tweetdir} --exec {tokexec} {tokparam} --outfile {outfile}".format(
+      mononame=mononame,
+      monodir=monodir,
+      ruby=args.ruby,
+      tweetdir=tweetdir,
+      tokexec=tokexec,
+      tokparam=tokparam,
+      outfile=os.path.join(rootdir, language, 'ldc_tok.stats'))
+    stepsbyname["ldc_tok.py"].stderr = os.path.join(rootdir, language, 'ldc_tok.err')
+
   # # TODO: log tweets!
 
   # MONO
-  monoindirs = dirfind(os.path.join(expdir, setdir, 'data', 'monolingual_text'), "%s.ltf.zip" % setdir)
+
   monooutdir = os.path.join(outdir, 'mono', 'extracted')
   monoerr = os.path.join(outdir, 'extract_mono.err')
   stepsbyname["extract_mono.py"].argstring = "--no-cdec --nogarbage -i %s -o %s" % \
@@ -127,12 +172,12 @@ def main():
 
 
   # tweet 2 mono set here so that mono and tweet dirs are already established
-  if stepsbyname["get_tweet_by_id.rb"].disabled:
-    stepsbyname["extract_mono_tweet.py"].disable()
-  else:
-    stepsbyname["extract_mono_tweet.py"].argstring = "--nogarbage -i "+tweetdir+" -o "+monooutdir
-    stepsbyname["extract_mono_tweet.py"].stderr = os.path.join(outdir, 'extract_mono_tweet.err')
-    manfiles.append("tweets")
+  # if stepsbyname["get_tweet_by_id.rb"].disabled:
+  #   stepsbyname["extract_mono_tweet.py"].disable()
+  # else:
+  #   stepsbyname["extract_mono_tweet.py"].argstring = "--nogarbage -i "+tweetdir+" -o "+monooutdir
+  #   stepsbyname["extract_mono_tweet.py"].stderr = os.path.join(outdir, 'extract_mono_tweet.err')
+  #   manfiles.append("tweets")
   
   # PACKAGE
   monoxml = outfile

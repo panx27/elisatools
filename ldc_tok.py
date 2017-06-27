@@ -148,14 +148,16 @@ def relocate_ltf(dldir, lrlpdir, logfile):
     # introduce the replacement file in the new  location
     shutil.copyfile(replfile, dstfile)
 
-def zip_and_copy (workdir, indir, outfile, logfile):
+def zip_and_copy (workdir, dldir, outfile, logfile):
   ''' zip up directory tree; requires a relocation for files to all line up right '''
-  if not os.path.exists(indir):
-    sys.stderr.write("Directories not set up properly; couldn't find input {}\n".format(indir))
+  parent = os.path.dirname(dldir)
+  repldir = os.path.join(parent, 'ltf')
+  if not os.path.exists(repldir):
+    sys.stderr.write("Directories not set up properly; couldn't find input {}\n".format(repldir))
     sys.exit(1)
   # trying to get an ltf directory underneath so that zip file has ltf prefix before everything
   realwork = os.path.join(workdir, 'foo')
-  shutil.copytree(indir, os.path.join(realwork, 'ltf'))
+  shutil.copytree(repldir, os.path.join(realwork, 'ltf'))
   mkdir_p(os.path.dirname(outfile))
   shutil.make_archive(outfile, 'zip', realwork)
 
@@ -167,8 +169,8 @@ def main():
   addonoffarg(parser, 'debug', help="debug mode", default=False)
   parser.add_argument("--ruby", "-r", default="/Users/jonmay/.rvm/rubies/ruby-2.3.0/bin/ruby", help="flavor of ruby")
   parser.add_argument("--dldir", "-d", required=True, help="rsd directory containing original tweets (probably subdir of 'tweet'; an 'ltf' will be built alongside it")
-  parser.add_argument("--lrlpdir", "-l", required=True, help="the 'ltf' directory in an expanded lrlp that contains anonymized tweet files (usu. data/translation/from_xxx/xxx/ltf for lang xxx)")
-  parser.add_argument("--monodir", "-m", required=True, help="the directory in the mono tree for treating this data as monolingual (usu. data/monolingual_text)")
+  parser.add_argument("--lrlpdir", "-l", default=None, help="the 'ltf' directory in an expanded lrlp that contains anonymized tweet files (usu. data/translation/from_xxx/xxx/ltf for lang xxx)")
+  parser.add_argument("--monodir", "-m", default=None, help="the directory in the mono tree for treating this data as monolingual (usu. data/monolingual_text)")
   parser.add_argument("--mononame", default="tweets.ltf", help="monolingual ltf ball (will have 'zip' appended)")
   parser.add_argument("--exec", "-e", required=True, help="path to ldc tokenizer; usually in tools/ldclib/bin/token_parse.rb of the lrlp")
   parser.add_argument("--param", "-p", required=True, help="path to ldc tokenizer parameter set; usually tools/tokenization_parameters.v4.0.yaml in the lrlp", default=None)
@@ -192,9 +194,11 @@ def main():
   if retval != 0:
     sys.stderr.write("Error tokenizing: {}\n".format(retval))
     sys.exit(retval)
-  validate(args.dldir, args.lrlpdir, outfile, args)
-  relocate_ltf(args.dldir, args.lrlpdir, outfile)
-  zip_and_copy(workdir, args.lrlpdir, os.path.join(args.monodir, args.mononame), outfile)
+  if args.lrlpdir is not None:
+    validate(args.dldir, args.lrlpdir, outfile, args)
+    relocate_ltf(args.dldir, args.lrlpdir, outfile)
+  if args.monodir is not None:
+    zip_and_copy(workdir, args.dldir, os.path.join(args.monodir, args.mononame), outfile)
 
 if __name__ == '__main__':
   main()
