@@ -10,16 +10,18 @@ DEVSET=$6;
 
 
 mkdir -p $DST/$LANGUAGE
+# TODO: if IL needs swap (e.g. il3) add --swap below to one_button_lrlp
 if [ -n "$KEY" ]; then
-    $SCRIPTDIR/one_button_lrlp.py --evalil -t $TARBALL -l $LANGUAGE -r $DST -k $KEY -S set0 &> $DST/$LANGUAGE/one_button_lrlp.err
+    $SCRIPTDIR/one_button_lrlp.py --lexversion il3 --evalil -t $TARBALL -l $LANGUAGE -r $DST -k $KEY -S set0 --ruby /Users/jonmay/.rvm/rubies/ruby-2.3.0/bin/ruby &> $DST/$LANGUAGE/one_button_lrlp.err
 else
-    $SCRIPTDIR/one_button_lrlp.py --evalil -t $TARBALL -l $LANGUAGE -r $DST &> $DST/$LANGUAGE/one_button_lrlp.err
+    $SCRIPTDIR/one_button_lrlp.py --lexversion il3 --evalil -t $TARBALL -l $LANGUAGE -r $DST --ruby /Users/jonmay/.rvm/rubies/ruby-2.3.0/bin/ruby &> $DST/$LANGUAGE/one_button_lrlp.err
 fi
 if [[ -n "$DEVSET" ]] && [[ -e $DEVSET ]];  then
     PREFIX="-d $DEVSET";
 else
     PREFIX=""
 fi
+# TODO: use --allperseg in subselect_data if very few documents!
 $SCRIPTDIR/subselect_data.py $PREFIX -i $DST/$LANGUAGE/parallel -e filtered -l $LANGUAGE -s 10000 10000 20000 -c syscomb test dev -t $SCRIPTDIR/incidentvocab &> $DST/$LANGUAGE/subselect_data.err
 $SCRIPTDIR/one_button_package.py --noeval -l $LANGUAGE -v $VERSION -r $DST/$LANGUAGE &> $DST/$LANGUAGE/one_button_package.err
 for i in syscomb test dev train rejected; do

@@ -21,6 +21,12 @@ def strip(x):
   except:
     return None
 
+def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
+  ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
+  group = parser.add_mutually_exclusive_group()
+  dest = arg if dest is None else dest
+  group.add_argument('--%s' % arg, dest=dest, action='store_true', default=default, help=help)
+  group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
 
 
 def main():
@@ -44,7 +50,8 @@ def main():
                       default=sys.stderr, help="file to write statistics")
   parser.add_argument("--evaluation", "-e", action='store_true',
                       default=False, help="prodece source side only")
-
+  addonoffarg(parser, 'cdec', help="do cdec tokenization (not generally seen as helpful", default=False)
+  
   try:
     args = parser.parse_args()
   except IOError as msg:
@@ -152,10 +159,13 @@ def main():
         ('morphtok', 'morph-tokenized', 'LRLP_MORPH_TOKENIZED', 'both'),
         ('pos', 'pos', 'LRLP_POSTAG', 'both'),
         ('agiletok', 'agile-tokenized', 'AGILE_TOKENIZED', 'trg'),
-        ('agiletoklc', 'agile-tokenized.lc', 'AGILE_TOKENIZED_LC', 'trg'),
+        ('agiletoklc', 'agile-tokenized.lc', 'AGILE_TOKENIZED_LC', 'trg')
+      ]
+      if args.cdec:
+        name_dir_key.extend([
         ('cdectok', 'cdec-tokenized', 'CDEC_TOKENIZED', 'src'),
         ('cdectoklc', 'cdec-tokenized.lc', 'CDEC_TOKENIZED_LC', 'src'),
-        ]
+        ])
 
       idlist = []
       fhlist = [src_manifest, trg_manifest]

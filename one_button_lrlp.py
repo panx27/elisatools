@@ -60,7 +60,8 @@ def main():
                     abortOnFail=False))
 
   steps.append(Step('ldc_tok.py',
-                    help="run ldc tokenizer on tweets "))
+                    help="run ldc tokenizer on tweets ",
+                    abortOnFail=False))
 
   # extract_psm_annotation.py
   steps.append(Step('extract_psm_annotation.py',
@@ -98,6 +99,9 @@ def main():
                       help='path to gzipped tars for processing (all tars considered to be part of the same package)')
   parser.add_argument("--language", "-l", default='uzb',
                       help='three letter code of language')
+  parser.add_argument("--lexversion", "-L", default='il3',
+                      help='version of lexicon to extract (may need to create a new one)')
+
   parser.add_argument("--key", "-k", default=None,
                       help='decryption key for encrypted il')
   parser.add_argument("--set", "-S", default=None,
@@ -120,7 +124,7 @@ def main():
   parser.add_argument("--liststeps", "-x", nargs=0, action=make_action(steps),
                       help='print step list and exit')
   parser.add_argument("--ruby", default="/opt/local/bin/ruby2.2", help='path to ruby (2.1 or higher)')
-
+  addonoffarg(parser, "swap", help="swap source/target in found data (e.g. il3)", default=False)
   try:
     args = parser.parse_args()
   except IOError as msg:
@@ -153,67 +157,82 @@ def main():
     start += 1
   else:
     expdir = args.expdir
+  monodir=os.path.join(expdir, 'data', 'monolingual_text')
+  # what are the mono files? (needed for later)
+  if args.mono and args.previous is None:
+    monoindirs = dirfind(monodir, "ltf.zip")
+  else:
+    monoindirs = []
   # Patchups for the rest
   if stop > 0:
     # TWEET
-    tweetprogpaths = []
-    for toolroot in (expdir, scriptdir):
-      tweetprogpaths = dirfind(os.path.join(toolroot, 'tools'), 'get_tweet_by_id.rb')
-      if len(tweetprogpaths) > 0:
-        break
-    if len(tweetprogpaths) == 0:
-      sys.stderr.write("Can't find get_tweet_by_id.rb\n")
-      sys.exit(1)
-    else:
-      tweetprogpath = os.path.dirname(tweetprogpaths[0])
+    tweetintab = os.path.join(expdir, 'docs', 'twitter_info.tab')
     tweetdir = os.path.join(rootdir, language, 'tweet', 'rsd')
-    mkdir_p(tweetdir)
-    tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
-    stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
-
-    # just copy from previous or skip if no mono
-    if not args.mono:
-      if args.previous is None:
-        stepsbyname["get_tweet_by_id.rb"].disable()
-      else:
-        oldtweetdir = os.path.join(args.previous, 'tweet', 'rsd') #WARNING: old versions of data won't have this structure
-        stepsbyname["get_tweet_by_id.rb"].progpath = "/bin"
-        stepsbyname["get_tweet_by_id.rb"].prog = "cp"
-        stepsbyname["get_tweet_by_id.rb"].argstring = "-r {} {}".format(oldtweetdir, tweetdir)
+    if not os.path.exists(tweetintab):
+      stepsbyname["get_tweet_by_id.rb"].disable()
+      stepsbyname["ldc_tok.py"].disable()
     else:
-      stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
-      stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
-      stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
-      tweetintab = os.path.join(expdir, 'docs', 'twitter_info.tab')
-      if os.path.exists(tweetintab):
-        stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
+      tweetprogpaths = []
+      for toolroot in (expdir, scriptdir):
+        tweetprogpaths = dirfind(os.path.join(toolroot, 'tools'), 'get_tweet_by_id.rb')
+        if len(tweetprogpaths) > 0:
+          break
+      if len(tweetprogpaths) == 0:
+        sys.stderr.write("Can't find get_tweet_by_id.rb\n")
+        sys.exit(1)
       else:
-        stepsbyname["get_tweet_by_id.rb"].disable()
+        tweetprogpath = os.path.dirname(tweetprogpaths[0])
+      mkdir_p(tweetdir)
+      tweeterr = os.path.join(rootdir, language, 'extract_tweet.err')
+      stepsbyname["get_tweet_by_id.rb"].stderr = tweeterr
 
-    # TOKENIZE AND RELOCATE TWEETS
-    # find rb location, params file
-    toxexecpaths = []
-    thetoolroot = None
-    for toolroot in (expdir, scriptdir):
-      tokexecpaths = dirfind(os.path.join(toolroot, 'tools'), 'token_parse.rb')
-      if len(tokexecpaths) > 0:
-        thetoolroot = toolroot
-        break
-    if len(tokexecpaths) == 0:
-      sys.stderr.write("Can't find token_parse.rb\n")
-      sys.exit(1)
-    tokexec = tokexecpaths[0]
-    tokparamopts = dirfind(os.path.join(thetoolroot, 'tools'), 'yaml')
-    tokparam = "--param {}".format(tokparamopts[0]) if len(tokparamopts) > 0 else ""
-    lrlpdir=os.path.join(expdir, 'data', 'translation', 'from_{}'.format(language), language, 'ltf')
-    stepsbyname["ldc_tok.py"].argstring = "--ruby {ruby} --dldir {tweetdir} --lrlpdir {lrlpdir} --exec {tokexec} {tokparam} --outfile {outfile}".format(
-      ruby=args.ruby,
-      tweetdir=tweetdir,
-      lrlpdir=lrlpdir,
-      tokexec=tokexec,
-      tokparam=tokparam,
-      outfile=os.path.join(rootdir, language, 'ldc_tok.stats'))
-    stepsbyname["ldc_tok.py"].stderr = os.path.join(rootdir, language, 'ldc_tok.err')
+      # just copy from previous or skip if no mono
+      if not args.mono:
+        if args.previous is None:
+          stepsbyname["get_tweet_by_id.rb"].disable()
+        else:
+          oldtweetdir = os.path.join(args.previous, 'tweet', 'rsd') #WARNING: old versions of data won't have this structure
+          stepsbyname["get_tweet_by_id.rb"].progpath = "/bin"
+          stepsbyname["get_tweet_by_id.rb"].prog = "cp"
+          stepsbyname["get_tweet_by_id.rb"].argstring = "-r {} {}".format(oldtweetdir, tweetdir)
+      else:
+        stepsbyname["get_tweet_by_id.rb"].progpath = tweetprogpath
+        stepsbyname["get_tweet_by_id.rb"].argstring = tweetdir+" -l "+language
+        stepsbyname["get_tweet_by_id.rb"].scriptbin = args.ruby
+        if os.path.exists(tweetintab):
+          stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
+        else:
+          stepsbyname["get_tweet_by_id.rb"].disable()
+
+      # TOKENIZE AND RELOCATE TWEETS
+      # find rb location, params file
+      toxexecpaths = []
+      thetoolroot = None
+      for toolroot in (expdir, scriptdir):
+        tokexecpaths = dirfind(os.path.join(toolroot, 'tools'), 'token_parse.rb')
+        if len(tokexecpaths) > 0:
+          thetoolroot = toolroot
+          break
+      if len(tokexecpaths) == 0:
+        sys.stderr.write("Can't find token_parse.rb\n")
+        sys.exit(1)
+      tokexec = tokexecpaths[0]
+      tokparamopts = dirfind(os.path.join(thetoolroot, 'tools'), 'yaml')
+      tokparam = "--param {}".format(tokparamopts[0]) if len(tokparamopts) > 0 else ""
+      lrlpdir=os.path.join(expdir, 'data', 'translation', 'from_{}'.format(language), language, 'ltf')
+      # ugly: the base of the file monodir/mononame.zip; need to add it to monoindirs and just pass that base so it gets constructed
+      mononame = "tweets.ltf"
+      monoindirs.append(os.path.join(monodir, mononame+".zip"))
+      stepsbyname["ldc_tok.py"].argstring = "--mononame {mononame} -m {monodir} --ruby {ruby} --dldir {tweetdir} --lrlpdir {lrlpdir} --exec {tokexec} {tokparam} --outfile {outfile}".format(
+        monodir=monodir,
+        mononame=mononame,
+        ruby=args.ruby,
+        tweetdir=tweetdir,
+        lrlpdir=lrlpdir,
+        tokexec=tokexec,
+        tokparam=tokparam,
+        outfile=os.path.join(rootdir, language, 'ldc_tok.stats'))
+      stepsbyname["ldc_tok.py"].stderr = os.path.join(rootdir, language, 'ldc_tok.err')
 
     # EPHEMERA
     ephemdir = os.path.join(rootdir, language, 'ephemera')
@@ -249,8 +268,7 @@ def main():
     lexiconcleanerr = os.path.join(rootdir, language, 'clean_lexicon.err')
     lexiconnormerr = os.path.join(rootdir, language, 'normalize_lexicon.err')
     # lexicon v1.5 for y2
-    stepsbyname["extract_lexicon.py"].argstring = " -v 1.5 -i %s -o %s" % \
-                                                  (lexiconinfile, lexiconrawoutfile)
+    stepsbyname["extract_lexicon.py"].argstring = " -v {} -i {} -o {}".format(args.lexversion, lexiconinfile, lexiconrawoutfile)
     stepsbyname["extract_lexicon.py"].stderr = lexiconerr
 
     stepsbyname["clean_lexicon"].argstring = "{} {}".format(lexiconrawoutfile, lexiconoutfile)
@@ -277,8 +295,7 @@ def main():
         stepsbyname["extract_psm_annotation.py"].prog = "cp"
         stepsbyname["extract_psm_annotation.py"].argstring = "{} {}".format(oldpsm, psmoutpath)
     else:
-      psmindir = os.path.join(expdir, 'data', 'monolingual_text',
-                              'zipped', '*.psm.zip')
+      psmindir = os.path.join(monodir, 'zipped', '*.psm.zip')
       stepsbyname["extract_psm_annotation.py"].argstring = "-i %s -o %s" % \
                                                            (psmindir, psmoutpath)
 
@@ -293,9 +310,11 @@ def main():
     # PARALLEL
     paralleloutdir = os.path.join(rootdir, language, 'parallel', 'extracted')
     parallelerr = os.path.join(rootdir, language, 'extract_parallel.err')
-    stepsbyname["extract_parallel.py"].argstring="-r %s -o %s -s %s" % \
+    stepsbyname["extract_parallel.py"].argstring="--no-cdec -r %s -o %s -s %s" % \
       (expdir, paralleloutdir, language)
     stepsbyname["extract_parallel.py"].stderr = parallelerr
+    if args.swap:
+      stepsbyname["extract_parallel.py"].argstring += " --swap"
 
     filteroutdir = os.path.join(rootdir, language, 'parallel', 'filtered')
     rejectoutdir = os.path.join(rootdir, language, 'parallel', 'rejected')
@@ -318,7 +337,6 @@ def main():
         stepsbyname["extract_mono.py"].prog = "cp"
         stepsbyname["extract_mono.py"].argstring = "-r {} {}".format(oldmonodir, monooutdir)
     else:
-      monoindirs = dirfind(os.path.join(expdir, 'data', 'monolingual_text'), "ltf.zip")
       monooutdir = os.path.join(rootdir, language, 'mono', 'extracted')
       stepsbyname["extract_mono.py"].argstring = "--no-cdec -i %s -o %s" % \
                                                  (' '.join(monoindirs), monooutdir)

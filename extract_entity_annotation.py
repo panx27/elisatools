@@ -36,7 +36,7 @@ def main():
   #                     type=argparse.FileType('w'), default=sys.stdout,
   #                     help="where to write extracted semantic info")
   parser.add_argument("--outfile", "-o", help="where to write")
-  parser.add_argument("--extwtdir", "-et", help="extracted tweet rsd files dir")
+  parser.add_argument("--extwtdir", "-et", default = None, help="extracted tweet rsd files dir")
 
   try:
     args = parser.parse_args()
@@ -49,6 +49,9 @@ def main():
   if not os.path.exists(anndir):
     sys.stderr.write("No annotation directory found\n")
     sys.exit(0)
+  if twtdir is not None and not os.path.exists(twtdir):
+    sys.stderr.write("Warning: no {}\n".format(twtdir))
+    twtdir = None
   # print anndir
   for annfile in recursive_file_gen(anndir):
     if annfile.endswith("laf.xml") and \
@@ -64,7 +67,7 @@ def main():
         if docid.startswith('doc-'): # In NPC annotation, LDC uses "doc-n"
                                      # instead of original docid
             docid = os.path.basename(annfile).replace('.laf.xml', '')
-        if is_sn(docid): # No string head for TWT, need rsd file
+        if is_sn(docid) and twtdir is not None: # No string head for TWT, need rsd file
             if not os.path.isfile('%s/%s.rsd.txt' % (twtdir, docid)):
                 continue
 
@@ -90,7 +93,7 @@ def main():
             anntask = "NPC"
           xextent = xann.find('EXTENT')
           try:
-            if is_sn(docid): # No string head for TWT
+            if is_sn(docid) and twtdir is not None: # No string head for TWT
               strhead = xextent.text
               tweet = open('%s/%s.rsd.txt' % (twtdir, docid)).read()
               beg = int(xextent.get("start_char"))

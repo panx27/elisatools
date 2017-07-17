@@ -14,6 +14,7 @@ import os
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 import datetime
 import subprocess
+from subprocess import check_call, CalledProcessError
 import shlex
 from lputil import morph_tok, getgarbagemask
 from itertools import compress
@@ -56,8 +57,10 @@ def main():
                       help="target language 3 letter code")
   parser.add_argument("--nogarbage", action='store_true', default=False,
                       help="turn off garbage filtering")
-  parser.add_argument("--toksubdir", default="tokenized",
+  parser.add_argument("--toksubdir", default="raw.tokenized",
                       help="subdirectory for tokenized files")
+  parser.add_argument("--cleantoksubdir", default="tokenized",
+                      help="subdirectory for cleaned ldc-tokenized files")
   parser.add_argument("--cdectoksubdir", default="cdec-tokenized",
                       help="subdirectory for cdec-tokenized files")
   parser.add_argument("--agiletoksubdir", default="agile-tokenized",
@@ -65,14 +68,18 @@ def main():
   parser.add_argument("--morphtoksubdir", default="morph-tokenized",
                       help="subdirectory for tokenized files based on " \
                       "morphological segmentation")
+  parser.add_argument("--cleanorigsubdir", default="original",
+                      help="subdirectory for cleaned raw original")
   parser.add_argument("--morphsubdir", default="morph",
                       help="subdirectory for morphological information")
-  parser.add_argument("--origsubdir", default="original",
+  parser.add_argument("--origsubdir", default="raw.original",
                       help="subdirectory for untokenized files")
   parser.add_argument("--garbagesubdir", default="garbage",
                       help="subdirectory for garbage files (under orig)")
   parser.add_argument("--possubdir", default="pos",
                       help="subdirectory for pos tag files")
+  parser.add_argument("--cleanpath", default=os.path.join(scriptdir, 'clean.sh'),
+                      help="path to cleaning script")
   parser.add_argument("--agiletokenizer", default=os.path.join(scriptdir, 'agiletok.sh'),
                       help="path to agile tokenizer binary")
   parser.add_argument("--cdectokenizer", default=os.path.join(scriptdir,
@@ -84,17 +91,20 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
-
   tokoutdir=os.path.join(args.outdir, args.toksubdir)
   origoutdir=os.path.join(args.outdir, args.origsubdir)
+  cleantokoutdir=os.path.join(args.outdir,  args.cleantoksubdir)
+  cleanorigoutdir=os.path.join(args.outdir, args.cleanorigsubdir)
   cdectokoutdir=os.path.join(args.outdir, args.cdectoksubdir)
   agiletokoutdir=os.path.join(args.outdir, args.agiletoksubdir)
   morphtokoutdir=os.path.join(args.outdir, args.morphtoksubdir)
   morphoutdir=os.path.join(args.outdir, args.morphsubdir)
   posoutdir=os.path.join(args.outdir, args.possubdir)
-
+  cleanpath = args.cleanpath
   dirs = [args.outdir,
           tokoutdir,
+          cleantokoutdir,
+          cleanorigoutdir,
           cdectokoutdir,
           agiletokoutdir,
           origoutdir,
@@ -189,6 +199,18 @@ def main():
           sys.stderr.write("Parse error on "+ifh.name+"\n")
           continue
     orig_fh.close()
+    tok_fh.close()
+    clean_orig = os.path.join(cleanorigoutdir, "%s.flat" % inbase)
+    clean_tok =  os.path.join(cleantokoutdir, "%s.flat" % inbase)
+    for inclean, outclean in zip((orig_fh.name, tok_fh.name), (clean_orig, clean_tok)):
+      cleancmd = "{cmd} {inclean} {outclean}".format(cmd=cleanpath, inclean=inclean, outclean=outclean)
+      sys.stderr.write(cleancmd+"\n")
+      try:
+        check_call(shlex.split(cleancmd))
+      except CalledProcessError as e:
+        sys.stderr.write("Error code %d running %s\n" % (e.returncode, e.cmd))
+        sys.exit(1)
+
     ext_cmd = "%s -i %s -o %s -t %s" % (exttokenizer,
                                          orig_fh.name,
                                          os.path.join(exttokoutdir,
