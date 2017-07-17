@@ -63,6 +63,7 @@ def main():
                                                               "cdectok.sh"),
                       help="cdec tokenizer program wrapper")
   addonoffarg(parser, 'cdec', help="do cdec tokenization", default=True)
+  addonoffarg(parser, 'removesn', help="remove SN from mono zip (to avoid underscore tweets)", default=False)
   
   try:
     args = parser.parse_args()
@@ -129,6 +130,10 @@ def main():
         try:
           xobj = ET.parse(ifh)
           docid = xobj.findall(".//DOC")[0].get('id')
+          # avoid anonymized tweets in packages but not relocated downloaded mono tweets
+          if "tweets" not in inbase and args.removesn and "_SN_" in docid:
+            sys.stderr.write("SN skip: not extracting {}\n".format(docid))
+            continue
           origlines = [ x.text+"\n" for x in xobj.findall(".//ORIGINAL_TEXT") ]
           garbagemask = getgarbagemask(origlines, disabled=args.nogarbage)
           goodmask = [not x for x in garbagemask]

@@ -100,12 +100,14 @@ def main():
 
   # TWEET
   tweetintab = os.path.join(expdir, setdir, 'docs', 'twitter_info.tab')
+  notweetsinmono = True
   if args.notweets or not os.path.exists(tweetintab):
-    print("disabling twitter stuff")
+    print("disabling twitter stuff; tweets in regular mono ok")
+    notweetsinmono = False
     stepsbyname["get_tweet_by_id.rb"].disable()
     stepsbyname["ldc_tok.py"].disable()
   else:
-    print("not disabling twitter stuff; look at {}".format(tweetintab))
+    print("not disabling twitter stuff; look at {}; avoiding tweets in regular mono".format(tweetintab))
     stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
     tweetprogpaths = []
     for toolroot in (os.path.join(expdir, 'set0'), scriptdir):
@@ -164,6 +166,8 @@ def main():
   monoerr = os.path.join(outdir, 'extract_mono.err')
   stepsbyname["extract_mono.py"].argstring = "--no-cdec --nogarbage -i %s -o %s" % \
     (' '.join(monoindirs), monooutdir)
+  if notweetsinmono:
+    stepsbyname["extract_mono.py"].argstring += " --removesn"
   stepsbyname["extract_mono.py"].stderr = monoerr
 
   
