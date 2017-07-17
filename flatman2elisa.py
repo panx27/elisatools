@@ -43,12 +43,12 @@ def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
   group.add_argument('--no-%s' % arg, dest=dest, action='store_false', default=default, help="See --%s" % arg)
 
 def main():
-  parser = argparse.ArgumentParser(description="merge xml files by adding a particular node type to a particular root type",
+  parser = argparse.ArgumentParser(description="flat file and segment id man file plus existing elisa file -> new elisa hypothesis file",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("--infiles", "-i", nargs='+', type=argparse.FileType('r'), default=sys.stdin, help="input files")
-  parser.add_argument("--root", "-r", default="ELISA_LRLP_CORPUS", help="parent of merged nodes")
-  parser.add_argument("--node", "-n", default="DOCUMENT", help="type of merged nodes")
-  parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output file")
+  parser.add_argument("--infile", "-i", type=argparse.FileType('r'), default=sys.stdin, help="input file")
+  parser.add_argument("--manfile", "-m", type=argparse.FileType('r'), default=sys.stdin, help="input manifest")
+  parser.add_argument("--elisafile", "-e", type=argparse.FileType('r'), default=sys.stdin, help="model elisa file")
+  parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output xml file")
 
   workdir = tempfile.mkdtemp(prefix=os.path.basename(__file__), dir=os.getenv('TMPDIR', '/tmp'))
 
@@ -62,18 +62,28 @@ def main():
   except IOError as msg:
     parser.error(str(msg))
 
-  infiles = [prepfile(x, 'r') for x in args.infiles]
+  infile =  prepfile(args.infile, 'r')
+  manfile =  prepfile(args.manfile, 'r')
+  elisafile =  prepfile(args.elisafile, 'r')
   outfile = prepfile(args.outfile, 'w')
 
-  roots = [ET.parse(x) for x in infiles]
-  prime = roots[0].getroot()
-  if prime.tag != args.root:
-    prime = prime.find(".//%s" % args.root)
-  rest = roots[1:]
-  for doc in rest:
-    for node in doc.findall(".//%s" % args.node):
-      prime.append(node)
-  xmlstr=ET.tostring(prime, pretty_print=True, encoding='utf-8', xml_declaration=True).decode('utf-8')
+  root = ET.parse(elisafile)
+  texts = {}
+  for id, text in zip(manfile, infile):
+    texts[id.strip()]=text.strip()
+  for node in root.findall("/DOCUMENT/SEGMENT/SOURCE"):
+    id = node.get('id')
+    if id not in texts:
+      sys.stderr.write("Couldn't find {}\n".format(id))
+      continue
+    old = node.find(".//NBEST")
+    if old is not None:
+      node.remove(old)
+    nb = ET.SubElement(node, 'NBEST')
+    hyp = ET.SubElement(nb, 'HYP')
+    txt = ET.SubElement(hyp, 'TEXT')
+    txt.text = texts[id]
+  xmlstr=ET.tostring(root, pretty_print=True, encoding='utf-8', xml_declaration=True).decode('utf-8')
   outfile.write(xmlstr+"\n")
 
 if __name__ == '__main__':
