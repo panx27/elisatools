@@ -5,7 +5,7 @@
 set -e
 
 tmpdir=${TMPDIR:-/tmp}
-MTMP=$(mktemp -d --tmpdir=$tmpdir XXXXXX)
+MTMP=$(gmktemp -d --tmpdir=$tmpdir XXXXXX)
 function cleanup() {
     rm -rf $MTMP;
 }
@@ -31,5 +31,5 @@ for i in src ref tst; do
     $SCRIPTDIR/flat2nist.py -i $(find $MTMP -name "$i*") -t $i -o $MTMP/$i.xml
 done
 
-$SCRIPTDIR/mteval-v14.pl -b -c -r $MTMP/ref.xml -s $MTMP/src.xml -t $MTMP/tst.xml | grep "^BLEU" | cut -d' ' -f4
+$SCRIPTDIR/mteval-v14c.pl -b -c -r $MTMP/ref.xml -s $MTMP/src.xml -t $MTMP/tst.xml | grep "^BLEU" | cut -d' ' -f4
 
