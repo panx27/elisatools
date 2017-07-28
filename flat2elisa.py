@@ -53,7 +53,8 @@ def main():
   parser.add_argument("--outfile", "-o", nargs='?', type=argparse.FileType('w'), default=sys.stdout, help="output elisa file")
   parser.add_argument("--direction", "-d", help="translation direction", default="fromsource")
   parser.add_argument("--language", "-l", required=True, help="iso 639-3 language code of source")
-  
+  addonoffarg(parser, 'bitext', help="assume data is bitext files; src tab trg", default=False)
+
   try:
     args = parser.parse_args()
   except IOError as msg:
@@ -100,8 +101,16 @@ def main():
       outfile.write("  <{label}>{value}</{label}>\n".format(label=label, value=value))
     outfile.write("  <DIRECTION>%s</DIRECTION>\n" % args.direction)
     currstart = 0
-    for ln, line in enumerate(prepfile(infile, 'r')):
-      line = line.strip()
+    currestart = 0
+    for ln, oline in enumerate(prepfile(infile, 'r')):
+      oline = oline.strip()
+      try:
+        if args.bitext:
+          line, eline = oline.split('\t')
+        else:
+          line = oline
+      except:
+        sys.stderr.write("problem at {}\n".format(ln))
       segroot = ET.Element('SEGMENT')
       xroot = ET.SubElement(segroot, 'SOURCE')
       currend = currstart+len(line)-1
@@ -119,6 +128,23 @@ def main():
       for key, text in subelements:
         se = ET.SubElement(xroot, key)
         se.text = text
+      if args.bitext:
+        xroot = ET.SubElement(segroot, 'TARGET')
+        currend = currestart+len(eline)-1
+        efullid = "ENG"+fullid[3:]
+        xroot.set('id', "{}.{}".format(efullid, ln))
+        xroot.set('start_char', str(currestart))
+        xroot.set('end_char', str(currend))
+        currestart=currend+2 # follows most widely seen convention in LDC files
+        subelements = []
+        subelements.append(("FULL_ID_TARGET", fullid))
+        subelements.append(("MD5_HASH_SOURCE",
+                            hashlib.md5(eline.encode('utf-8')).hexdigest()))
+        subelements.append(("ORIG_RAW_TARGET", eline))
+        for key, text in subelements:
+          se = ET.SubElement(xroot, key)
+          se.text = text
+
       xmlstr = ET.tostring(segroot, pretty_print=True, encoding='utf-8',
                            xml_declaration=False).decode('utf-8')
       outfile.write(xmlstr)
