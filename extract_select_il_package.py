@@ -68,6 +68,8 @@ def main():
   parser.add_argument("--ruby", default="/Users/jonmay/.rvm/rubies/ruby-2.3.0/bin/ruby",  help="path to good ruby")
   parser.add_argument("--lex", default="il3", help="lex variant; probably have to make a new one each year")
   parser.add_argument("--key", "-k", default=None, type=str, help="set 0 key")
+  parser.add_argument("--sets", "-s", nargs='+', default=['syscomb', 'test', 'dev'], type=str, help="list of sets to make")
+  parser.add_argument("--sizes", "-z", nargs='+', default=['10000', '10000', '20000'], type=str, help="list of set sizes")
   parser.add_argument("--devset", default=None, type=str, help="set of mandatory documents in the devset")
   addonoffarg(parser, 'swap', help="swap src/translation in found files", default=True)
   addonoffarg(parser, 'allperseg', help="divide persegment instead of perdoc", default=False)
@@ -89,6 +91,8 @@ def main():
   else:
     atexit.register(cleanwork)
 
+  if len(args.sets) != len(args.sizes):
+    sys.stderr.write("sets and sizes must match!")
   outfile = prepfile(args.outfile, 'w')
   outdir=os.path.join(args.dst, args.language)
   mkdir_p(outdir)
@@ -98,15 +102,16 @@ def main():
   if args.swap:
     lrlpcmd += " --swap"
   dorun(lrlpcmd, log=outfile, cmdlog=os.path.join(outdir, 'one_button_lrlp.err'))
-  subcmd = "{script}/subselect_data.py -i {outdir}/parallel -e filtered -l {lang} -s 10000 10000 20000 -c syscomb test dev -t {script}/incidentvocab".format(script=scriptdir, outdir=outdir, lang=args.language)
+  subcmd = "{script}/subselect_data.py -i {outdir}/parallel -e filtered -l {lang} -s {sizes} -c {sets} -t {script}/incidentvocab".format(script=scriptdir, outdir=outdir, lang=args.language, sets=' '.join(args.sets), sizes=' '.join(args.sizes))
   if args.devset is not None:
     subcmd += " -d {}".format(args.devset)
   if args.allperseg:
     subcmd += " --allperseg"
   dorun(subcmd, log=outfile, cmdlog=os.path.join(outdir, 'subselect_data.err'))
-  pkgcmd = "{script}/one_button_package.py --noeval -l {lang} -y {year} -r {release} -v {version} -r {outdir}".format(script=scriptdir, year=args.year, version=args.version, release=args.release, lang=args.language, outdir=outdir)
+  pkgcmd = "{script}/one_button_package.py --sets {sets} -l {lang} -y {year} -r {release} -v {version} -r {outdir}".format(script=scriptdir, year=args.year, version=args.version, release=args.release, lang=args.language, outdir=outdir, sets=' '.join(args.sets))
   dorun(pkgcmd, log=outfile, cmdlog=os.path.join(outdir, 'one_button_package.err'))
-  for subset in ("syscomb", "test", "dev", "train", "rejected"):
+  subsets = ["train", "rejected"]+args.sets
+  for subset in subsets:
     catcmd="{script}/elisa2flat.py -f FULL_ID_SOURCE SOURCE.id ORIG_SOURCE ORIG_TARGET -i {outdir}/elisa.{lang}-eng.{subset}.y{year}r{release}.v{ver}.xml.gz -o {outdir}/{subset}.tab".format(script=scriptdir, year=args.year, subset=subset,ver=args.version, release=args.release, lang=args.language, outdir=outdir)
     dorun(catcmd, log=outfile)
     sampcmd="{script}/sample.py -i {outdir}/{subset}.tab -s 10 -o {outdir}/{subset}.samples".format(script=scriptdir, subset=subset, outdir=outdir)

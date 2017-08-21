@@ -110,7 +110,8 @@ def main():
     print("not disabling twitter stuff; look at {}; avoiding tweets in regular mono".format(tweetintab))
     stepsbyname["get_tweet_by_id.rb"].stdin = tweetintab
     tweetprogpaths = []
-    for toolroot in (os.path.join(expdir, 'set0'), scriptdir):
+    #    for toolroot in (os.path.join(expdir, 'set0'), scriptdir): # bad ldc tools for eval
+    for toolroot in (scriptdir, ):
       tweetprogpaths = dirfind(os.path.join(toolroot, 'tools'), 'get_tweet_by_id.rb')
       if len(tweetprogpaths) > 0:
         break

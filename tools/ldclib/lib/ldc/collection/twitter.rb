@@ -18,7 +18,7 @@ module LDC
           when 'hau'
             require_relative '../text/lang/hausa'
             @encoding = LDC::Text::Lang::Hausa::Encoding.new
-          when 'amh'
+          when 'amh', 'il5', 'il6'
             require_relative '../text/lang/amharic'
             @encoding = LDC::Text::Lang::Amharic::Encoding.new
           when 'som'

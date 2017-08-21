@@ -36,7 +36,8 @@ def main():
   for i in ('train', 'dev', 'test', 'syscomb', 'eval', 'rejected'):
     steps.append(Step('make_parallel_release.py',
                       name="parallel-{}".format(i),
-                      help="package parallel flat %s data" % i))
+                      help="package parallel flat %s data" % i,
+                      disabled=True))
 
   # using make_mono to do comparable
   steps.append(Step('make_mono_release.py',
@@ -65,7 +66,7 @@ def main():
   parser.add_argument("--year", "-yr", type=int, default=1, help='year of release')
   parser.add_argument("--part", "-pt", type=int, default=1, help='part of release')
   parser.add_argument("--splits", default='splits', help='where to look for prepared train/dev/test splits')
-  parser.add_argument("--noeval", action='store_true', default=False, help="don't build an eval set")
+  parser.add_argument("--sets", "-S", nargs='+', default=['syscomb', 'test', 'dev'], type=str, help="list of sets to make (in addition to train, rejected)")
   addonoffarg(parser, "mono", help="include mono data", default=True)
   parser.add_argument("--root", "-r",
                       help='path to where the flat extraction is/output belongs')
@@ -128,10 +129,9 @@ def main():
   stepsbyname["tar-ephemera"].stderr = os.path.join(rootdir, 'tar_ephemera.err')
 
   # PARALLEL RELEASES
-  for i in ('train', 'dev', 'test', 'syscomb', 'eval', 'rejected'):
-    if i == "eval" and args.noeval:
-      stepsbyname["parallel-%s" % i].disable()
-      continue
+  sets = ['train', 'rejected']+args.sets
+  for i in sets:
+    stepsbyname["parallel-%s" % i].enable()
     if i == "rejected":
       paralleloutdir = os.path.join(rootdir, 'parallel', i)
     else:

@@ -173,7 +173,8 @@ def main():
       stepsbyname["ldc_tok.py"].disable()
     else:
       tweetprogpaths = []
-      for toolroot in (expdir, scriptdir):
+      #for toolroot in (expdir, scriptdir): # bad ldc tools for eval
+      for toolroot in (scriptdir,):
         tweetprogpaths = dirfind(os.path.join(toolroot, 'tools'), 'get_tweet_by_id.rb')
         if len(tweetprogpaths) > 0:
           break
@@ -257,6 +258,10 @@ def main():
     # IL CHANGE
     if args.evalil:
       lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.xml')
+      if args.lexversion == "il6":
+        lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.zip')
+      elif args.lexversion == "il5":
+        lexiconinfile = os.path.join(expdir, 'docs', 'categoryI_dictionary', '*.txt')
     else:
       lexiconinfile = os.path.join(expdir, 'data', 'lexicon', '*.xml')
     lexiconoutdir = os.path.join(rootdir, language, 'lexicon')

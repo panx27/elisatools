@@ -65,9 +65,11 @@ def main():
       mkdir_p(prefix)
       fhs[innercatfile]=open(innercatfile, 'w')
     # doc -> file to write to
+    #print("{} -> {}".format(doc,innercatfile))
     cats[doc]=fhs[innercatfile]
     if args.backup:
       backupcats[backup(doc)]=fhs[innercatfile]
+
   # catchall remainder file
   remcatpref = os.path.join(args.prefix, args.remainder, args.postfix)
   remaindercatfile = os.path.join(remcatpref, basefile)
@@ -80,6 +82,7 @@ def main():
     doc = doc.strip()
     if doc in cats:
       fh = cats[doc]
+      #print("{}: writing to {}".format(doc, fh.name))
     elif backup(doc) in backupcats:
       fh = backupcats[backup(doc)]
       backupcount+=1

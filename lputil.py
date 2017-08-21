@@ -386,14 +386,14 @@ def pair_files(srcdir, trgdir, ext='txt', tweet=False):
     filematch = None
     if is_sn(srcfile) == tweet: # make sure it's either all tweets or none tweets
       for pat, repltmp in pats:
-        # print "Trying "+str(pat)+" on "+srcfile
+#        print("Trying "+str(pat)+" on "+srcfile)
         if re.match(pat, srcfile):
-          # print "Matched"
+#          print("Matched")
           repl = repltmp % re.match(pat, srcfile).groups()
-          # print "Using "+repl+" to match "+srcfile
+#          print("Using "+repl+" to match "+srcfile)
           for trgfile in trgfiles:
             if re.match(repl, trgfile):
-              # print "Matched to "+trgfile+"!"
+#              print("Matched to "+trgfile+"!")
               filematch= trgfile
               break # From trg file search
           if filematch is not None:
@@ -740,7 +740,7 @@ def extract_lines(s, t, sxml=True, txml=True):
 class Step:
   def __init__(self, prog, progpath=scriptdir, argstring="", stdin=None,
                stdout=None, stderr=None, help=None, call=check_call,
-               abortOnFail=True, scriptbin=None, name=None):
+               abortOnFail=True, scriptbin=None, name=None, disabled = False):
     self.prog = prog
     self.name = self.prog if name is None else name
     self.scriptbin = scriptbin
@@ -752,10 +752,12 @@ class Step:
     self.stderr = stderr
     self.call = call
     self.abortOnFail = abortOnFail
-    self.disabled = False
+    self.disabled = disabled
 
   def disable(self):
     self.disabled = True
+  def enable(self):
+    self.disabled = False
     
   def run(self):
     if self.disabled:
