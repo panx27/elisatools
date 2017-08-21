@@ -91,7 +91,7 @@ mkdir -p $EXPLOC/$NEWBASENAME;
 
 PART=0
 for TARBALL in $@; do
-    TARBALL=$PWD/$TARBALL;
+    TARBALL=$(readlink -f $TARBALL);
     if [ ! -e $TARBALL ]; then
         echo "Couldn't find $TARBALL"
         exit 1;

@@ -5,7 +5,8 @@
 set -e
 
 tmpdir=${TMPDIR:-/tmp}
-MTMP=$(gmktemp -d --tmpdir=$tmpdir XXXXXX)
+# TODO: gmktemp option?
+MTMP=$(mktemp -d --tmpdir=$tmpdir XXXXXX)
 function cleanup() {
     rm -rf $MTMP;
 }
@@ -32,4 +33,5 @@ for i in src ref tst; do
 done
 
 $SCRIPTDIR/mteval-v14c.pl -b -c -r $MTMP/ref.xml -s $MTMP/src.xml -t $MTMP/tst.xml | grep "^BLEU" | cut -d' ' -f4
+#$SCRIPTDIR/mteval-v14c.pl -b -c -r $MTMP/ref.xml -s $MTMP/src.xml -t $MTMP/tst.xml -d 3
 
