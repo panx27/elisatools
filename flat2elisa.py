@@ -111,6 +111,7 @@ def main():
           line = oline
       except:
         sys.stderr.write("problem at {}\n".format(ln))
+        continue
       segroot = ET.Element('SEGMENT')
       xroot = ET.SubElement(segroot, 'SOURCE')
       currend = currstart+len(line)-1

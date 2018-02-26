@@ -100,8 +100,10 @@ def main():
           submitseg = submitdoc.find(".//seg[@id='%s']" % segid)
           if submitseg is None:
             sys.stderr.write("Couldn't find %s in submit doc %s!\n" % (segid, docid))
-            sys.exit(1)
-          ET.SubElement(ET.SubElement(ET.SubElement(elisaseg, 'NBEST'), 'HYP'), 'TEXT').text = submitseg.text
+            thetext = "NONE"
+          else:
+            thetext = submitseg.text
+          ET.SubElement(ET.SubElement(ET.SubElement(elisaseg, 'NBEST'), 'HYP'), 'TEXT').text = thetext
   remcount=0
   for docid in removedocs:
     elisadoc = root.find(".//DOCUMENT[@id='%s']" % docid)

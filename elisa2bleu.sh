@@ -6,7 +6,7 @@ set -e
 
 tmpdir=${TMPDIR:-/tmp}
 # TODO: gmktemp option?
-MTMP=$(mktemp -d --tmpdir=$tmpdir XXXXXX)
+MTMP=$(gmktemp -d --tmpdir=$tmpdir XXXXXX)
 function cleanup() {
     rm -rf $MTMP;
 }

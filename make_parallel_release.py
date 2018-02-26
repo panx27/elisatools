@@ -51,6 +51,7 @@ def main():
   parser.add_argument("--evaluation", "-e", action='store_true',
                       default=False, help="prodece source side only")
   addonoffarg(parser, 'cdec', help="do cdec tokenization (not generally seen as helpful", default=False)
+  addonoffarg(parser, "makingunseq", help="special treatment when making unsequestered data to be compatible with eval data", default=False)
   
   try:
     args = parser.parse_args()
@@ -243,7 +244,7 @@ def main():
         subelements = []
         subelements.append(("FULL_ID_SOURCE", src_man[1]))
         # Non-tweet (ltf)
-        if corpus != 'fromsource.tweet':
+        if corpus != 'fromsource.tweet' or args.makingunseq:
           src_seg.set('id', "%s.%s.%s.%s" % (src_man[1], src_man[2], src_man[3], src_man[4]))
           src_seg.set('start_char', src_man[3])
           src_seg.set('end_char', src_man[4])
