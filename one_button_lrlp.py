@@ -148,6 +148,7 @@ def main():
   # Patchups for step 0
   argstring = "-k %s -s %s" % (args.key, args.set) if args.key is not None else ""
   argstring += " -l %s -r %s %s" % (language, rootdir, ' '.join(args.tarball))
+  sys.stderr.write("args for unpack lrlp are {}\n".format(argstring))
   stepsbyname["unpack_lrlp.sh"].argstring=argstring
 
   if start == 0:

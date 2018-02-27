@@ -9,6 +9,7 @@ import os.path
 from zipfile import ZipFile as zf
 import xml.etree.ElementTree as ET
 import gzip
+from io import TextIOWrapper
 
 def main():
   import codecs
@@ -35,7 +36,7 @@ def main():
       if not args.xml and os.path.dirname(info.filename) != 'rsd':
         continue
       # print info.filename
-      with archive.open(info, 'rU') as ifh:
+      with TextIOWrapper(archive.open(info, 'rU')) as ifh:
         if args.xml:
           xobj = ET.parse(ifh)
           if args.tokenize:

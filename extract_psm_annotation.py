@@ -13,6 +13,7 @@ import gzip
 import os
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 import datetime
+from io import TextIOWrapper
 
 # Scrape monolingual psms for posts and headlines (elsewhere)
 
@@ -47,7 +48,7 @@ def main():
       # Assume psm structure
       if os.path.dirname(info.filename) != 'psm':
         continue
-      with archive.open(info, 'rU') as ifh:
+      with TextIOWrapper(archive.open(info, 'rU')) as ifh:
         xobj = ET.parse(ifh)
         try:
           headlines = [(x.get("begin_offset"), x.get("char_length")) \

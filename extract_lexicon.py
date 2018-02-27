@@ -11,6 +11,7 @@ from zipfile import ZipFile as zf
 import os
 import datetime
 import shutil
+from io import TextIOWrapper
 
 class SkipEntry(Exception):
   pass
@@ -71,7 +72,7 @@ def main():
       for info in archive.infolist():
         if info.file_size < 20:
           continue
-        neofiles.append(archive.open(info, 'rU'))
+        neofiles.append(TextIOWrapper(archive.open(info, 'rU')))
     infiles = neofiles
   if args.version == "il5":
     for infile in infiles:

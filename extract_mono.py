@@ -18,6 +18,7 @@ from subprocess import check_call, CalledProcessError
 import shlex
 from lputil import morph_tok, getgarbagemask
 from itertools import compress
+from io import TextIOWrapper
 
 def addonoffarg(parser, arg, dest=None, default=True, help="TODO"):
   ''' add the switches --arg and --no-arg that set parser.arg to true/false, respectively'''
@@ -126,7 +127,7 @@ def main():
       if not info.filename.endswith("ltf.xml"):
         continue
       # print info.filename
-      with archive.open(info, 'rU') as ifh:
+      with TextIOWrapper(archive.open(info, 'r')) as ifh:
         try:
           xobj = ET.parse(ifh)
           docid = xobj.findall(".//DOC")[0].get('id')
