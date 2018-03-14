@@ -27,10 +27,8 @@ module LDC
           when 'ara', 'fas'
             require_relative '../text/lang/arabic'
             @encoding = LDC::Text::Lang::Arabic::Encoding.new
-          when 'cmn', 'rus', 'hun', 'vie', 'spa', 'eng', 'yor'
-            "no op"
           else
-            raise "unknown language: #{lang}"
+            "no op"
           end
         end
         @client = ::Twitter::REST::Client.new do |config|

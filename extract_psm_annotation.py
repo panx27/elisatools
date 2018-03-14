@@ -48,7 +48,7 @@ def main():
       # Assume psm structure
       if os.path.dirname(info.filename) != 'psm':
         continue
-      with TextIOWrapper(archive.open(info, 'rU')) as ifh:
+      with TextIOWrapper(archive.open(info, 'r')) as ifh:
         xobj = ET.parse(ifh)
         try:
           headlines = [(x.get("begin_offset"), x.get("char_length")) \

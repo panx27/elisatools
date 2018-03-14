@@ -72,7 +72,7 @@ def main():
       for info in archive.infolist():
         if info.file_size < 20:
           continue
-        neofiles.append(TextIOWrapper(archive.open(info, 'rU')))
+        neofiles.append(TextIOWrapper(archive.open(info, 'r')))
     infiles = neofiles
   if args.version == "il5":
     for infile in infiles:
