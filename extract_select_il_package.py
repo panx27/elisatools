@@ -65,7 +65,7 @@ def main():
   parser.add_argument("--year", "-y", type=int, default=1, help="year of the eval")
   parser.add_argument("--version", "-v", type=int, default=1, help="version of the eval")
   parser.add_argument("--release", "-r", type=int, default=1, help="release of the eval")
-  parser.add_argument("--ruby", default="/Users/jonmay/.rvm/rubies/ruby-2.3.0/bin/ruby",  help="path to good ruby")
+  parser.add_argument("--ruby", default="ruby",  help="path to good ruby")
   parser.add_argument("--lex", default="il3", help="lex variant; probably have to make a new one each year")
   parser.add_argument("--key", "-k", default=None, type=str, help="set 0 key")
   parser.add_argument("--sets", "-s", nargs='+', default=['syscomb', 'test', 'dev'], type=str, help="list of sets to make")
