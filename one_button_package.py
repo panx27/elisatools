@@ -33,7 +33,7 @@ def main():
 
 
   # make_parallel_release.py
-  for i in ('train', 'dev', 'test', 'syscomb', 'eval', 'rejected'):
+  for i in ('train', 'dev', 'test', 'syscomb', 'setE', 'rejected'):
     steps.append(Step('make_parallel_release.py',
                       name="parallel-{}".format(i),
                       help="package parallel flat %s data" % i,
@@ -143,12 +143,12 @@ def main():
                                'elisa.%s-eng.%s.y%dr%d.v%d.stats' % \
                              (language, i, args.year, args.part, args.version))
     finalitems.append(statsfile)
-    if i != "eval":
+    if i != "setE":
       finalitems.append(parallelxml)
     parallelerr = os.path.join(rootdir, 'make_parallel_release_%s.err' % i)
     pmanarg = ' '.join([re.sub('.eng.manifest', '', f) for f in os.listdir \
                       (paralleloutdir) if re.match('(.+)\.eng.manifest',f)])
-    extra = "-e" if i == "eval" else ""
+    extra = "-e" if i == "setE" else ""
     stepsbyname["parallel-%s" % i] \
       .argstring = "-r %s -l %s -c %s -s %s"% (paralleloutdir, language, pmanarg, statsfile)
     if os.path.exists(entityoutpath):
