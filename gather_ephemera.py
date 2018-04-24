@@ -20,6 +20,7 @@ manifest = {"docs":"docs",
             "README_annotations.txt":"README_annotations.txt",
             os.path.join("data", "audio"):"audio",
             os.path.join("data", "annotation", "morph_alignment"):"morph_alignment",
+            os.path.join("data", "annotation", "situation_frame"):"situation_frame",
             }
 
 # things you shouldn't transfer
