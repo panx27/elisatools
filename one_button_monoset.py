@@ -3,7 +3,7 @@
 import argparse
 import sys
 import codecs
-
+import copy
 from collections import defaultdict as dd
 import re
 import os.path
@@ -185,12 +185,13 @@ def main():
   # # TODO: log tweets!
 
   # MONO
+
   if args.engset:
     for flavor in (args.language, "eng"):
-      localmonoindirs = monoindirs
+      localmonoindirs = copy.deepcopy(monoindirs)
       monodir=os.path.join(expdir, setdir, 'data', 'monolingual_text', flavor)
       localmonoindirs.extend(dirfind(monodir, "%s_%s.ltf.zip" % (setdir, flavor)))
-
+      print(localmonoindirs)
       # JM: TODO: ugly copy. refactor!!!
       
       monooutdir = os.path.join(outdir, 'mono', 'extracted_%s' % flavor)
