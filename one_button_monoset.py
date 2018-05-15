@@ -52,6 +52,8 @@ def main():
                       help='decryption key for encrypted il')
   parser.add_argument("--notweets", "-n", action='store_true', default=None,
                       help='do not include tweets (for eval IL setE only)')
+  parser.add_argument("--engset", "-E", action='store_true', default=None,
+                      help='assume engset and ilset (for eval IL setE only)')
   parser.add_argument("--expdir", "-e",
                       help='path to where the extraction is. If starting at ' \
                       'step 0 this is ignored')
@@ -80,6 +82,25 @@ def main():
   start = args.start
   stop = args.stop + 1
 
+  if args.engset:
+    emstep = steps.pop(-1)
+    stepsbyname.pop(emstep.name)
+    mmrstep = steps.pop(-1)
+    stepsbyname.pop(mmrstep.name)
+    for flavor in (language, "eng"):
+      newem = Step('extract_mono.py',
+                   name='extract_mono_%s' % flavor,
+                   help="get flat form mono data in %s" % flavor)
+      steps.append(newem)
+      stepsbyname[newem.name] = newem
+      newmmr = Step('make_mono_release.py',
+                    name='make_mono_release_%s' % flavor,
+                    help="package mono flat data in %s" % flavor)
+      steps.append(newmmr)
+      stepsbyname[newmmr.name] = newmmr
+    stop +=2
+    
+  
   if args.expdir is None:
     expdir = os.path.join(rootdir, language, 'expanded', 'lrlp')
   else:
@@ -95,10 +116,12 @@ def main():
     stepsbyname["decrypt_sets.py"].argstring="-r %s -k %s -s %s" % (expdir, args.key, setdir)
     stepsbyname["decrypt_sets.py"].run()
     start+=1
-  monodir=os.path.join(expdir, setdir, 'data', 'monolingual_text')
-  monoindirs = dirfind(monodir, "%s.ltf.zip" % setdir)
+  # from 2018 on, setE has il and eng variants
+  monoindirs = []
 
   # TWEET
+  # hack for tweets; early set of monodir
+  monodir=os.path.join(expdir, setdir, 'data', 'monolingual_text')
   tweetintab = os.path.join(expdir, setdir, 'docs', 'twitter_info.tab')
   notweetsinmono = True
   if args.notweets or not os.path.exists(tweetintab):
@@ -162,41 +185,91 @@ def main():
   # # TODO: log tweets!
 
   # MONO
+  if args.engset:
+    for flavor in (args.language, "eng"):
+      localmonoindirs = monoindirs
+      monodir=os.path.join(expdir, setdir, 'data', 'monolingual_text', flavor)
+      localmonoindirs.extend(dirfind(monodir, "%s_%s.ltf.zip" % (setdir, flavor)))
 
-  monooutdir = os.path.join(outdir, 'mono', 'extracted')
-  monoerr = os.path.join(outdir, 'extract_mono.err')
-  stepsbyname["extract_mono.py"].argstring = "--no-cdec --nogarbage -i %s -o %s" % \
-    (' '.join(monoindirs), monooutdir)
-  if notweetsinmono:
-    stepsbyname["extract_mono.py"].argstring += " --removesn"
-  stepsbyname["extract_mono.py"].stderr = monoerr
-
-  
-  # since we package and extract all at once, use the ltf structure to declare the manifest names
-  manfiles = [x for x in map(lambda y: '.'.join(os.path.basename(y).split('.')[:-2]), monoindirs)]
+      # JM: TODO: ugly copy. refactor!!!
+      
+      monooutdir = os.path.join(outdir, 'mono', 'extracted_%s' % flavor)
+      monoerr = os.path.join(outdir, 'extract_mono_%s.err' % flavor)
+      stepsbyname["extract_mono_%s" % flavor].argstring = "--no-cdec --nogarbage -i %s -o %s" % \
+        (' '.join(localmonoindirs), monooutdir)
+      if notweetsinmono:
+        stepsbyname["extract_mono_%s" % flavor].argstring += " --removesn"
+      stepsbyname["extract_mono_%s" % flavor].stderr = monoerr
 
 
-  # tweet 2 mono set here so that mono and tweet dirs are already established
-  # if stepsbyname["get_tweet_by_id.rb"].disabled:
-  #   stepsbyname["extract_mono_tweet.py"].disable()
-  # else:
-  #   stepsbyname["extract_mono_tweet.py"].argstring = "--nogarbage -i "+tweetdir+" -o "+monooutdir
-  #   stepsbyname["extract_mono_tweet.py"].stderr = os.path.join(outdir, 'extract_mono_tweet.err')
-  #   manfiles.append("tweets")
-  
-  # PACKAGE
-  monoxml = outfile
-  monostatsfile = outfile+".stats"
-  manarg = ' '.join(manfiles)
-  monoerr = os.path.join(outdir, 'make_mono_release.err')
-  stepsbyname["make_mono_release.py"].argstring = "--no-ext -r %s -l %s -c %s -s %s | gzip > %s" % \
-                                                  (monooutdir, language, manarg, monostatsfile, monoxml)
-  stepsbyname["make_mono_release.py"].stderr = monoerr
+      # since we package and extract all at once, use the ltf structure to declare the manifest names
+      manfiles = [x for x in map(lambda y: '.'.join(os.path.basename(y).split('.')[:-2]), localmonoindirs)]
+
+
+      # tweet 2 mono set here so that mono and tweet dirs are already established
+      # if stepsbyname["get_tweet_by_id.rb"].disabled:
+      #   stepsbyname["extract_mono_tweet.py"].disable()
+      # else:
+      #   stepsbyname["extract_mono_tweet.py"].argstring = "--nogarbage -i "+tweetdir+" -o "+monooutdir
+      #   stepsbyname["extract_mono_tweet.py"].stderr = os.path.join(outdir, 'extract_mono_tweet.err')
+      #   manfiles.append("tweets")
+
+      ofcomponents = outfile.split('.')
+      localoutfile = '.'.join(ofcomponents[:-1])+(".%s." % flavor)+ofcomponents[-1]
+      print(localoutfile)
+      
+      # PACKAGE
+      monoxml = localoutfile
+      monostatsfile = localoutfile+".stats"
+      manarg = ' '.join(manfiles)
+      monoerr = os.path.join(outdir, 'make_mono_release_%s.err' % flavor)
+      stepsbyname["make_mono_release_%s" % flavor].argstring = "--no-ext -r %s -l %s -c %s -s %s | gzip > %s" % \
+                                                      (monooutdir, flavor, manarg, monostatsfile, monoxml)
+      stepsbyname["make_mono_release_%s" % flavor].stderr = monoerr
+
+
+
+
+      
+  else:
+    monodir=os.path.join(expdir, setdir, 'data', 'monolingual_text')
+    monoindirs.extend(dirfind(monodir, "%s.ltf.zip" % setdir))
+
+    
+    monooutdir = os.path.join(outdir, 'mono', 'extracted')
+    monoerr = os.path.join(outdir, 'extract_mono.err')
+    stepsbyname["extract_mono.py"].argstring = "--no-cdec --nogarbage -i %s -o %s" % \
+      (' '.join(monoindirs), monooutdir)
+    if notweetsinmono:
+      stepsbyname["extract_mono.py"].argstring += " --removesn"
+    stepsbyname["extract_mono.py"].stderr = monoerr
+
+
+    # since we package and extract all at once, use the ltf structure to declare the manifest names
+    manfiles = [x for x in map(lambda y: '.'.join(os.path.basename(y).split('.')[:-2]), monoindirs)]
+
+
+    # tweet 2 mono set here so that mono and tweet dirs are already established
+    # if stepsbyname["get_tweet_by_id.rb"].disabled:
+    #   stepsbyname["extract_mono_tweet.py"].disable()
+    # else:
+    #   stepsbyname["extract_mono_tweet.py"].argstring = "--nogarbage -i "+tweetdir+" -o "+monooutdir
+    #   stepsbyname["extract_mono_tweet.py"].stderr = os.path.join(outdir, 'extract_mono_tweet.err')
+    #   manfiles.append("tweets")
+
+    # PACKAGE
+    monoxml = outfile
+    monostatsfile = outfile+".stats"
+    manarg = ' '.join(manfiles)
+    monoerr = os.path.join(outdir, 'make_mono_release.err')
+    stepsbyname["make_mono_release.py"].argstring = "--no-ext -r %s -l %s -c %s -s %s | gzip > %s" % \
+                                                    (monooutdir, language, manarg, monostatsfile, monoxml)
+    stepsbyname["make_mono_release.py"].stderr = monoerr
 
   for step in steps[start:stop]:
     step.run()
 
-  print("Done.\nFile is %s" % outfile)
+  print("Done.\nLast file is %s" % outfile)
 
 
 if __name__ == '__main__':
